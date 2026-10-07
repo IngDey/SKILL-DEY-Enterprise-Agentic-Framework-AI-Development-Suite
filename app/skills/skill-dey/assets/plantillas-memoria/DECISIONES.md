@@ -1,0 +1,3 @@
+# DECISIONES (ADR compacto)
+## D1 · {fecha} · {título}
+Contexto: … · Decisión: … · Alternativas descartadas y por qué: …
