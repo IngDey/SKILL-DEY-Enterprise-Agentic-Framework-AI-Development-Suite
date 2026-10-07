@@ -5,7 +5,7 @@
 [![MCP Ready](https://img.shields.io/badge/MCP-Protocol%20Supported-blue.svg)](https://modelcontextprotocol.io/)
 [![Multi-Agent](https://img.shields.io/badge/Architecture-Multi--Agent-orange.svg)]()
 
-**SKILL DEY** es un marco de trabajo (*framework*) agentico de nivel empresarial diseñado para potenciar el desarrollo de software asistido por Inteligencia Artificial. 
+**SKILL DEY** es un marco de trabajo (*framework*) agentico de nivel profesional diseñado para potenciar el desarrollo de software asistido por Inteligencia Artificial. 
 
 Combina una **arquitectura multi-agente especializada**, **memoria técnica persistente**, integración nativa con **MCP (Model Context Protocol)** y un conjunto de herramientas para auditoría, diagnóstico y seguridad.
 
