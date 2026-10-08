@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/banner.png" alt="SKILL DEY: ship AI-written code that does not break your app" width="100%">
+
 # 🚀 SKILL DEY
 
 ### Ship AI-written code that doesn't break your app.
