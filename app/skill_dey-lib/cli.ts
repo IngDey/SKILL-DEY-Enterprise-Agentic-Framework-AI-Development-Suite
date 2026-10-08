@@ -20,7 +20,7 @@ import { doctor, instalarHook, reporte } from "./robustez.ts"
 
 const [cmd = "ayuda", carpeta = ".", url] = process.argv.slice(2)
 const cwd = resolve(carpeta)
-const AYUDA = `skill_dey (terminal · funciona con cualquier IA)
+const AYUDA = `skill_dey por Ing. Dey (@IngDey) · terminal, funciona con cualquier IA
   node skill_dey.mjs revisar [carpeta]          Errores de código, arranque y sitio
   node skill_dey.mjs seguridad [carpeta]        Huecos de seguridad + auditoría de dependencias + semgrep
   node skill_dey.mjs pruebas [carpeta] [url]    Suite E2E + prueba en vivo + a11y + carga + cobertura + CI

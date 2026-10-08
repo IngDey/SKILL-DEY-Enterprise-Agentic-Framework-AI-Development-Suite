@@ -1,5 +1,7 @@
 # SKILL_DEY portable — para Claude Code, Cursor, Codex u otra IA (fuera de OpenCode)
 
+> Creado por **Ing. Dey** ([@IngDey](https://github.com/IngDey))
+
 El guardián (bloqueos y verificación en vivo) solo corre dentro de OpenCode. Pero las **reglas** y las **revisiones por código** sí son portables:
 
 1. **Reglas:** pega el contenido de `agents/skill_dey.md` (entre los marcadores SKILL_DEY-AGENTE) en el archivo de instrucciones de tu IA (CLAUDE.md, .cursorrules, AGENTS.md…). Así cualquier IA sigue la ley de prioridades, la escalera de esfuerzo, el plan y la salida comprimida.

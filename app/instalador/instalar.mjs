@@ -49,7 +49,7 @@ export function elegirRapido(lista, principal) {
 }
 
 function main() {
-  console.log(`\n\x1b[36mInstalando SKILL_DEY · ${SO} ${release()} ${arch()} · ${OC}\x1b[0m\n`)
+  console.log(`\n\x1b[36mInstalando SKILL_DEY, creado por Ing. Dey (@IngDey) · ${SO} ${release()} ${arch()} · ${OC}\x1b[0m\n`)
   if (!existsSync(join(SRC, "skills", "skill-dey", "SKILL.md"))) throw new Error("No encuentro los archivos: descomprime el zip completo y ejecuta desde esa carpeta.")
   for (const d of ["skills", "agents", "commands", "tools", "plugins", "skill_dey"]) md(join(OC, d))
 
@@ -130,7 +130,7 @@ function main() {
   const falt = [["git", hay("git")], ["opencode", hay("opencode")], ["python", !!py]].filter(([, v]) => !v).map(([n]) => n)
   for (const n of falt) av(`Falta ${n}${n === "python" ? " (opcional)" : ""} en ${SO} → ${guias[n][SO] ?? guias[n].Linux}`)
   if (!falt.length) ok(`Equipo ${SO} listo (git, opencode, ${py})`)
-  console.log(`\n  \x1b[36mLISTO. Cierra y abre OpenCode y escribe normal.\x1b[0m\n`)
+  console.log(`\n  \x1b[36mLISTO. Cierra y abre OpenCode y escribe normal.\x1b[0m\n  SKILL_DEY · creado por Ing. Dey (@IngDey) · github.com/IngDey\n`)
 }
 
 const real = (p) => { try { return realpathSync(p) } catch { return p } }

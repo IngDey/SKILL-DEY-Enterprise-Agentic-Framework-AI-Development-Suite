@@ -1,5 +1,7 @@
 # Pruebas realizadas — SKILL_DEY v21 en OpenCode 1.18.33
 
+> Creado y probado por **Ing. Dey** ([@IngDey](https://github.com/IngDey))
+
 Método: OpenCode real + "modelo simulado" que ordena cada acción (comprueba que OpenCode carga y ejecuta cada pieza). La calidad de decisión con tu modelo se mide con `skills/skill-dey/evals/BANCO-DE-PRUEBAS.md`.
 
 | # | Prueba | Resultado |

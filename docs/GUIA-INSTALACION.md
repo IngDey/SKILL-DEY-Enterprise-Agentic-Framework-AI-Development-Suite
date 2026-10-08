@@ -1,5 +1,7 @@
 # SKILL_DEY para OpenCode — v26
 
+> Creado por **Ing. Dey** ([@IngDey](https://github.com/IngDey))
+
 ## Instalar / actualizar (detecta tu sistema operativo solo)
 | Sistema | Qué hacer |
 |---|---|

@@ -35,3 +35,4 @@ except Exception: print('opencode.json con comentarios: agrega "default_agent": 
 c['default_agent']='skill_dey'; c.setdefault('compaction',{}); c['compaction'].setdefault('auto',True); c['compaction'].setdefault('prune',True); json.dump(c,open(f,'w'),indent=2)
 PY
 echo "LISTO. Explorador: ${RAPIDO:-modelo principal}. Abre OpenCode y escribe normal."
+echo "SKILL_DEY - creado por Ing. Dey (@IngDey) - github.com/IngDey"

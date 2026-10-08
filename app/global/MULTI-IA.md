@@ -1,5 +1,7 @@
 # SKILL_DEY en TODAS las IAs
 
+> Creado por **Ing. Dey** ([@IngDey](https://github.com/IngDey))
+
 skill_dey funciona en cualquier asistente por tres vías (elige la que use tu IA):
 
 ## 1) Reglas nativas (todas las IAs)

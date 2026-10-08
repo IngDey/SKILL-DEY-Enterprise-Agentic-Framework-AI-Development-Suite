@@ -2567,7 +2567,7 @@ function reporte(cwd) {
 // skill_dey-lib/cli.ts
 var [cmd = "ayuda", carpeta = ".", url] = process.argv.slice(2);
 var cwd = resolve(carpeta);
-var AYUDA = `skill_dey (terminal · funciona con cualquier IA)
+var AYUDA = `skill_dey por Ing. Dey (@IngDey) · terminal, funciona con cualquier IA
   node skill_dey.mjs revisar [carpeta]          Errores de código, arranque y sitio
   node skill_dey.mjs seguridad [carpeta]        Huecos de seguridad + auditoría de dependencias + semgrep
   node skill_dey.mjs pruebas [carpeta] [url]    Suite E2E + prueba en vivo + a11y + carga + cobertura + CI

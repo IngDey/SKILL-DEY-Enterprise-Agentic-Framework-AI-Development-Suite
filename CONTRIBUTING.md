@@ -1,6 +1,6 @@
 # Contributing / Contribuir
 
-Thanks for helping make SKILL DEY better! / ¡Gracias por ayudar a mejorar SKILL DEY!
+SKILL DEY is created and maintained by **Ing. Dey** ([@IngDey](https://github.com/IngDey)). Thanks for helping make it better! / ¡Gracias por ayudar a mejorar SKILL DEY!
 
 ## Report a bug / Reportar un error
 

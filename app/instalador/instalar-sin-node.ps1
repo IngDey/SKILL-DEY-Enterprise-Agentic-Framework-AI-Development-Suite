@@ -8,7 +8,7 @@ function Av($t) { Write-Host "  [!]  $t" -ForegroundColor Yellow }
 
 try {
   if (-not (Test-Path (Join-Path $src 'skills/skill-dey/SKILL.md'))) { throw 'No encuentro los archivos. Descomprime el zip completo y ejecuta INSTALAR.bat desde la carpeta extraida.' }
-  Write-Host "`nInstalando SKILL_DEY en $oc`n" -ForegroundColor Cyan
+  Write-Host "`nInstalando SKILL_DEY (creado por Ing. Dey, @IngDey) en $oc`n" -ForegroundColor Cyan
   foreach ($d in 'skills','agents','commands','tools','plugins','skill_dey') { D (Join-Path $oc $d) }
 
   # Limpiar copias antiguas en carpetas en singular (evita duplicados)
@@ -90,7 +90,7 @@ try {
   # 8. Herramientas recomendadas en el equipo
   foreach ($t in 'git','node') { if (-not (Get-Command $t -ErrorAction SilentlyContinue)) { Av "Falta $t en este equipo (recomendado). Instalalo para aprovechar todo." } }
 
-  Write-Host "`n  LISTO. Cierra y abre OpenCode y escribe normal.`n" -ForegroundColor Cyan
+  Write-Host "`n  LISTO. Cierra y abre OpenCode y escribe normal.`n  SKILL_DEY - creado por Ing. Dey (@IngDey) - github.com/IngDey`n" -ForegroundColor Cyan
 } catch {
   Write-Host "`n  ERROR: $($_.Exception.Message)`n" -ForegroundColor Red
 }
