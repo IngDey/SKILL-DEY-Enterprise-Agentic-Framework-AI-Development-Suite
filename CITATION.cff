@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use SKILL DEY, please cite it as below."
+title: "SKILL DEY: Enterprise Agentic Framework & AI Development Suite"
+authors:
+  - alias: "IngDey"
+version: 32.0.0
+license: MIT
+repository-code: "https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite"
+date-released: 2026-10-07

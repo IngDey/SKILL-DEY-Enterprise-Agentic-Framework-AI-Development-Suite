@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="docs/banner.png" alt="SKILL DEY: ship AI-written code that does not break your app" width="100%">
+<img src="docs/banner.png" alt="SKILL DEY: ship AI-assisted code that does not break your app, created by Ing. Dey" width="100%">
 
 # 🚀 SKILL DEY
 
-### Entrega código hecho por IA que no rompe tu app.
+### Entrega código asistido por IA que no rompe tu app.
 
 Un marco de calidad agéntico para el desarrollo asistido por IA: entiende lo que pides, construye **sin romper** lo que ya funciona y no entrega nada con **errores**. Pruebas, seguridad, documentación y ahorro de tokens vienen incluidos.
 
@@ -13,8 +13,11 @@ Un marco de calidad agéntico para el desarrollo asistido por IA: entiende lo qu
 [![OpenCode](https://img.shields.io/badge/OpenCode-nativo-blue.svg)](https://opencode.ai)
 [![MCP](https://img.shields.io/badge/MCP-servidor%20incluido-8A2BE2.svg)](https://modelcontextprotocol.io/)
 [![Multi-IA](https://img.shields.io/badge/funciona%20con-Cursor%20%7C%20Windsurf%20%7C%20Claude%20%7C%20Cline%20%7C%20Codex%20%7C%20Gemini-orange.svg)](#-funciona-con-tu-ia)
+[![Hecho por IngDey](https://img.shields.io/badge/hecho%20por-IngDey-181717?logo=github)](https://github.com/IngDey)
 
 [English](README.md) · **Español**
+
+**Creado y desarrollado por [Ing. Dey (@IngDey)](https://github.com/IngDey)** · ⭐ Dale una estrella al repo si te ayuda a entregar mejor código
 
 </div>
 
@@ -178,6 +181,18 @@ docs/                             guía de instalación y registro de pruebas
 ```
 
 ---
+
+## 👤 Autor
+
+Diseñado, desarrollado y mantenido por **Ing. Dey** ([@IngDey](https://github.com/IngDey)), desarrollador experto con múltiples estudios en el área de TI y muchos años de experiencia en el campo. SKILL DEY es el resultado de esa experiencia: reglas, revisiones y protecciones prácticas aprendidas en proyectos reales. Si te ayuda, sígue a [@IngDey](https://github.com/IngDey) para novedades, dale ⭐ al repo y cuéntaselo a otros desarrolladores.
+
+**¿Construiste algo con SKILL DEY?** Agrega esta insignia a tu README:
+
+[![Built with SKILL DEY](https://img.shields.io/badge/built%20with-SKILL%20DEY-6C47FF)](https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite)
+
+```markdown
+[![Built with SKILL DEY](https://img.shields.io/badge/built%20with-SKILL%20DEY-6C47FF)](https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite)
+```
 
 ## 🤝 Contribuir
 

@@ -6,6 +6,7 @@ compatibility: opencode
 metadata:
   version: "32.0.0"
   idioma: es
+  author: IngDey
 ---
 
 # SKILL_DEY

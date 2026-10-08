@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="docs/banner.png" alt="SKILL DEY: ship AI-written code that does not break your app" width="100%">
+<img src="docs/banner.png" alt="SKILL DEY: ship AI-assisted code that does not break your app, created by Ing. Dey" width="100%">
 
 # 🚀 SKILL DEY
 
-### Ship AI-written code that doesn't break your app.
+### Ship AI-assisted code that doesn't break your app.
 
 An agentic quality framework for AI-assisted development: it understands what you ask, builds **without breaking** what already works, and refuses to hand back anything with **errors**. Tests, security, documentation and token savings come built in.
 
@@ -13,8 +13,11 @@ An agentic quality framework for AI-assisted development: it understands what yo
 [![OpenCode](https://img.shields.io/badge/OpenCode-native-blue.svg)](https://opencode.ai)
 [![MCP](https://img.shields.io/badge/MCP-server%20included-8A2BE2.svg)](https://modelcontextprotocol.io/)
 [![Multi-AI](https://img.shields.io/badge/works%20with-Cursor%20%7C%20Windsurf%20%7C%20Claude%20%7C%20Cline%20%7C%20Codex%20%7C%20Gemini-orange.svg)](#-works-with-your-ai)
+[![Made by IngDey](https://img.shields.io/badge/made%20by-IngDey-181717?logo=github)](https://github.com/IngDey)
 
 **English** · [Español](README.es.md)
+
+**Created and built by [Ing. Dey (@IngDey)](https://github.com/IngDey)** · ⭐ Star the repo if it helps you ship better code
 
 </div>
 
@@ -178,6 +181,18 @@ docs/                             install guide and test log
 ```
 
 ---
+
+## 👤 Author
+
+Designed, built and maintained by **Ing. Dey** ([@IngDey](https://github.com/IngDey)), an experienced software developer with multiple IT qualifications and many years of hands-on experience in the field. SKILL DEY is the result of that experience: practical rules, checks and safeguards learned from real projects. If it helps you, follow [@IngDey](https://github.com/IngDey) for updates, ⭐ the repo and tell other developers.
+
+**Built something with SKILL DEY?** Add this badge to your README:
+
+[![Built with SKILL DEY](https://img.shields.io/badge/built%20with-SKILL%20DEY-6C47FF)](https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite)
+
+```markdown
+[![Built with SKILL DEY](https://img.shields.io/badge/built%20with-SKILL%20DEY-6C47FF)](https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite)
+```
 
 ## 🤝 Contributing
 
