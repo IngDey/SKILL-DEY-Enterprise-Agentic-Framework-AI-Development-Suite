@@ -24,4 +24,4 @@ No necesitas comandos: escribe normal y hace todo. Atajos: `/skill_dey ayuda`.
 > El guardián automático en vivo (copias antes de cada cambio, verificación al cerrar, cambio de modelo, tablero de consumo) corre dentro de OpenCode. En otras IAs tienes las reglas + los chequeos (CLI/MCP).
 
 ---
-Creado por **Ing. Dey** ([@IngDey](https://github.com/IngDey)) · Licencia MIT
+Creado por **Ing. Dey** ([@IngDey](https://github.com/IngDey)) · Ingeniero de Sistemas, Especialista en Gerencia Informática, experto en IA, automatizaciones y análisis de procesos · Licencia MIT

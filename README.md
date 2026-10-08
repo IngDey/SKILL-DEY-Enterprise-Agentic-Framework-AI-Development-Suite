@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/banner.png" alt="SKILL DEY: ship AI-assisted code that does not break your app, created by Ing. Dey" width="100%">
+<img src="docs/banner.png" alt="SKILL DEY: ship AI-assisted code that does not break your app. Created by Ing. Dey, Systems Engineer, IT Management Specialist, AI, Automation and Process Analysis Expert" width="100%">
 
 # 🚀 SKILL DEY
 
@@ -14,10 +14,14 @@ An agentic quality framework for AI-assisted development: it understands what yo
 [![MCP](https://img.shields.io/badge/MCP-server%20included-8A2BE2.svg)](https://modelcontextprotocol.io/)
 [![Multi-AI](https://img.shields.io/badge/works%20with-Cursor%20%7C%20Windsurf%20%7C%20Claude%20%7C%20Cline%20%7C%20Codex%20%7C%20Gemini-orange.svg)](#-works-with-your-ai)
 [![Made by IngDey](https://img.shields.io/badge/made%20by-IngDey-181717?logo=github)](https://github.com/IngDey)
+[![GitHub stars](https://img.shields.io/github/stars/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite?style=social)](https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite/stargazers)
 
 **English** · [Español](README.es.md)
 
-**Created and built by [Ing. Dey (@IngDey)](https://github.com/IngDey)** · ⭐ Star the repo if it helps you ship better code
+**Created and built by [Ing. Dey (@IngDey)](https://github.com/IngDey)**<br>
+<sub>Systems Engineer · IT Management Specialist · Expert in AI, Automation & Process Analysis</sub>
+
+⭐ **Star the repo** if it helps you ship better code · [⚡ Install in 1 minute](#-quick-install)
 
 </div>
 
@@ -36,6 +40,26 @@ AI assistants write code fast, and they also break working features, leak secret
 | 🤖 **Multi-agent** | A main agent, a read-only **explorer** for big searches, a **vision** agent that turns mockups/screenshots into UI, and an **independent reviewer** that audits changes it didn't write. |
 | 📉 **Token-aware** | Small tasks don't load the skill; heavy workflows load only when needed. A usage board shows tokens, cost and time per answer. |
 | 🔌 **MCP server included** | Exposes the checks as native tools to any MCP client. |
+
+---
+
+## 🎯 Who is it for?
+
+- **Developers** who use AI daily and are tired of fixing what it broke.
+- **Tech leads and IT managers** who need AI-generated code to meet a standard: tests, security, documentation, traceability.
+- **Companies** that want to adopt AI in development with control, not by trial and error.
+- **Beginners** who build with AI and need a safety net that catches what they don't know yet.
+
+## ⚖️ Your AI alone vs. your AI with SKILL DEY
+
+| Your AI alone | With SKILL DEY |
+|---|---|
+| Says "done" without running anything | Closes the task only when the checks are green |
+| Fixes one thing, breaks another | Reviews the whole project and the impact of each change |
+| Can paste API keys into the code or read your `.env` | The guardian blocks it before it happens |
+| A bad change means rebuilding by hand | Write *"deshaz"* and your files are back |
+| Forgets everything between sessions | Decisions, rules and lessons persist in `.skill_dey/` |
+| Documentation "later" (never) | Technical manual, data dictionary, user manual and PDFs on request |
 
 ---
 
@@ -182,9 +206,47 @@ docs/                             install guide and test log
 
 ---
 
+## ❓ FAQ
+
+<details><summary><b>Is it free?</b></summary>
+
+Yes. MIT license: use it in personal and commercial projects. Just keep the credit.
+</details>
+<details><summary><b>Do I need to know how to program?</b></summary>
+
+No. You write in plain language (Spanish or English) and SKILL DEY decides how deep to go. Experienced developers get the same checks plus the CLI and MCP tools.
+</details>
+<details><summary><b>Does it send my code anywhere?</b></summary>
+
+No. The checks run on your machine and SKILL DEY has no telemetry. Its only network requests go to the site URLs you ask it to check (for example, your local app). Your code reaches a model only through the AI tool you already use.
+</details>
+<details><summary><b>Will it mess up my current setup?</b></summary>
+
+The installer backs up every config it touches (`.bak` files), only edits its own clearly marked blocks, and reinstalling is safe. See *What exactly does the installer change?* above.
+</details>
+<details><summary><b>I already have an app. Can I use it there?</b></summary>
+
+Yes. *Adoption mode* backs it up, audits it and writes a prioritized report before changing anything, and it asks before touching business logic.
+</details>
+
 ## 👤 Author
 
-Designed, built and maintained by **Ing. Dey** ([@IngDey](https://github.com/IngDey)), an experienced software developer with multiple IT qualifications and many years of hands-on experience in the field. SKILL DEY is the result of that experience: practical rules, checks and safeguards learned from real projects. If it helps you, follow [@IngDey](https://github.com/IngDey) for updates, ⭐ the repo and tell other developers.
+<table>
+<tr>
+<td width="110" align="center"><a href="https://github.com/IngDey"><img src="https://github.com/IngDey.png" width="96" alt="Ing. Dey"></a></td>
+<td>
+
+**Ing. Dey** · [@IngDey](https://github.com/IngDey)<br>
+🎓 **Systems Engineer** · **Specialist in IT Management**<br>
+🤖 Expert in **Artificial Intelligence**, **automation** and **business process analysis**
+
+</td>
+</tr>
+</table>
+
+SKILL DEY was designed, built and is maintained by Ing. Dey. It brings together two worlds: the engineering discipline of building software that works, and the management view of IT, where every change must be controlled, verified, documented and aligned with the business. The framework applies that same method to AI: analyze the process, automate what can be automated, and verify everything before calling it done.
+
+If it helps you, follow [@IngDey](https://github.com/IngDey) for updates, ⭐ the repo and share it with your team.
 
 **Built something with SKILL DEY?** Add this badge to your README:
 
@@ -200,4 +262,4 @@ Ideas, bug reports and PRs are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). 
 
 ## 📄 License
 
-[MIT](LICENSE.md) © 2026 IngDey
+[MIT](LICENSE.md) © 2026 Ing. Dey (@IngDey). Free to use, modify and distribute; please keep the credit.

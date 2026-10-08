@@ -7,3 +7,11 @@ version: 32.0.0
 license: MIT
 repository-code: "https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite"
 date-released: 2026-10-07
+abstract: "Agentic quality framework for AI-assisted development by Ing. Dey (Systems Engineer, IT Management Specialist, expert in AI, automation and process analysis). Zero-error delivery, undo, execution guardian, persistent project memory, multi-agent review and an MCP server."
+keywords:
+  - artificial intelligence
+  - ai agents
+  - model context protocol
+  - code quality
+  - automation
+  - process analysis

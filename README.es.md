@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/banner.png" alt="SKILL DEY: ship AI-assisted code that does not break your app, created by Ing. Dey" width="100%">
+<img src="docs/banner.png" alt="SKILL DEY: entrega código asistido por IA que no rompe tu app. Creado por Ing. Dey, Ingeniero de Sistemas, Especialista en Gerencia Informática, experto en IA, automatizaciones y análisis de procesos" width="100%">
 
 # 🚀 SKILL DEY
 
@@ -14,10 +14,14 @@ Un marco de calidad agéntico para el desarrollo asistido por IA: entiende lo qu
 [![MCP](https://img.shields.io/badge/MCP-servidor%20incluido-8A2BE2.svg)](https://modelcontextprotocol.io/)
 [![Multi-IA](https://img.shields.io/badge/funciona%20con-Cursor%20%7C%20Windsurf%20%7C%20Claude%20%7C%20Cline%20%7C%20Codex%20%7C%20Gemini-orange.svg)](#-funciona-con-tu-ia)
 [![Hecho por IngDey](https://img.shields.io/badge/hecho%20por-IngDey-181717?logo=github)](https://github.com/IngDey)
+[![GitHub stars](https://img.shields.io/github/stars/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite?style=social)](https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite/stargazers)
 
 [English](README.md) · **Español**
 
-**Creado y desarrollado por [Ing. Dey (@IngDey)](https://github.com/IngDey)** · ⭐ Dale una estrella al repo si te ayuda a entregar mejor código
+**Creado y desarrollado por [Ing. Dey (@IngDey)](https://github.com/IngDey)**<br>
+<sub>Ingeniero de Sistemas · Especialista en Gerencia Informática · Experto en IA, Automatizaciones y Análisis de Procesos</sub>
+
+⭐ **Dale una estrella al repo** si te ayuda a entregar mejor código · [⚡ Instálalo en 1 minuto](#-instalación-rápida)
 
 </div>
 
@@ -36,6 +40,26 @@ Las IA escriben código rápido, pero también rompen lo que funcionaba, filtran
 | 🤖 **Multi-agente** | Un agente principal, un **explorador** de solo lectura para búsquedas grandes, un agente de **visión** que convierte maquetas/capturas en UI y un **revisor independiente** que audita lo que no escribió. |
 | 📉 **Cuida los tokens** | Las tareas pequeñas no cargan la skill; los flujos pesados solo cuando hacen falta. Un tablero muestra tokens, costo y tiempo por respuesta. |
 | 🔌 **Servidor MCP incluido** | Expone las revisiones como herramientas nativas para cualquier cliente MCP. |
+
+---
+
+## 🎯 ¿Para quién es?
+
+- **Desarrolladores** que usan IA a diario y están cansados de arreglar lo que la IA rompió.
+- **Líderes técnicos y gerentes de TI** que necesitan que el código generado con IA cumpla un estándar: pruebas, seguridad, documentación y trazabilidad.
+- **Empresas** que quieren adoptar la IA en el desarrollo con control, no a prueba y error.
+- **Principiantes** que construyen con IA y necesitan una red de seguridad que atrape lo que todavía no saben.
+
+## ⚖️ Tu IA sola vs. tu IA con SKILL DEY
+
+| Tu IA sola | Con SKILL DEY |
+|---|---|
+| Dice "listo" sin ejecutar nada | Cierra la tarea solo cuando las revisiones están en verde |
+| Arregla una cosa y rompe otra | Revisa todo el proyecto y el impacto de cada cambio |
+| Puede pegar claves en el código o leer tu `.env` | El guardián lo bloquea antes de que pase |
+| Un cambio malo te obliga a rehacer a mano | Escribes *"deshaz"* y tus archivos vuelven |
+| Olvida todo entre sesiones | Decisiones, reglas y lecciones quedan en `.skill_dey/` |
+| La documentación "después" (nunca) | Manual técnico, diccionario de datos, manual de usuario y PDF cuando los pidas |
 
 ---
 
@@ -182,9 +206,47 @@ docs/                             guía de instalación y registro de pruebas
 
 ---
 
+## ❓ Preguntas frecuentes
+
+<details><summary><b>¿Es gratis?</b></summary>
+
+Sí. Licencia MIT: úsalo en proyectos personales y comerciales. Solo conserva el crédito.
+</details>
+<details><summary><b>¿Necesito saber programar?</b></summary>
+
+No. Escribes en lenguaje normal (español o inglés) y SKILL DEY decide qué tan a fondo ir. Los desarrolladores con experiencia tienen las mismas revisiones más el CLI y las herramientas MCP.
+</details>
+<details><summary><b>¿Envía mi código a algún lado?</b></summary>
+
+No. Las revisiones corren en tu equipo y SKILL DEY no tiene telemetría. Sus únicas peticiones de red van a las URL del sitio que le pides revisar (por ejemplo, tu app local). Tu código llega a un modelo solo a través de la herramienta de IA que ya usas.
+</details>
+<details><summary><b>¿Me va a dañar la configuración actual?</b></summary>
+
+El instalador respalda cada configuración que toca (archivos `.bak`), solo edita sus propios bloques marcados y reinstalar es seguro. Mira *¿Qué cambia exactamente el instalador?* más arriba.
+</details>
+<details><summary><b>Ya tengo una app. ¿Puedo usarlo ahí?</b></summary>
+
+Sí. El *modo adopción* la respalda, la audita y escribe un informe priorizado antes de cambiar nada, y pregunta antes de tocar la lógica de negocio.
+</details>
+
 ## 👤 Autor
 
-Diseñado, desarrollado y mantenido por **Ing. Dey** ([@IngDey](https://github.com/IngDey)), desarrollador experto con múltiples estudios en el área de TI y muchos años de experiencia en el campo. SKILL DEY es el resultado de esa experiencia: reglas, revisiones y protecciones prácticas aprendidas en proyectos reales. Si te ayuda, sígue a [@IngDey](https://github.com/IngDey) para novedades, dale ⭐ al repo y cuéntaselo a otros desarrolladores.
+<table>
+<tr>
+<td width="110" align="center"><a href="https://github.com/IngDey"><img src="https://github.com/IngDey.png" width="96" alt="Ing. Dey"></a></td>
+<td>
+
+**Ing. Dey** · [@IngDey](https://github.com/IngDey)<br>
+🎓 **Ingeniero de Sistemas** · **Especialista en Gerencia Informática**<br>
+🤖 Experto en **Inteligencia Artificial**, **automatizaciones** y **análisis de procesos**
+
+</td>
+</tr>
+</table>
+
+SKILL DEY fue diseñado, desarrollado y es mantenido por Ing. Dey. Une dos mundos: la disciplina de ingeniería para construir software que funciona y la visión de la gerencia informática, donde cada cambio debe estar controlado, verificado, documentado y alineado con el negocio. El framework aplica ese mismo método a la IA: analizar el proceso, automatizar lo que se puede automatizar y verificar todo antes de darlo por terminado.
+
+Si te sirve, sigue a [@IngDey](https://github.com/IngDey) para novedades, dale ⭐ al repo y compártelo con tu equipo.
 
 **¿Construiste algo con SKILL DEY?** Agrega esta insignia a tu README:
 
@@ -200,4 +262,4 @@ Ideas, reportes de errores y PRs son bienvenidos. Mira [CONTRIBUTING.md](CONTRIB
 
 ## 📄 Licencia
 
-[MIT](LICENSE.md) © 2026 IngDey
+[MIT](LICENSE.md) © 2026 Ing. Dey (@IngDey). Libre para usar, modificar y distribuir; por favor conserva el crédito.
