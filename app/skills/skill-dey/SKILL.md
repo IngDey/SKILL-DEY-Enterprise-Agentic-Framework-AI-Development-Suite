@@ -4,7 +4,7 @@ description: Crear, cambiar, corregir o revisar código sin romper la app y con 
 license: MIT
 compatibility: opencode
 metadata:
-  version: "26.0.0"
+  version: "32.0.0"
   idioma: es
 ---
 

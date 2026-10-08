@@ -4,8 +4,8 @@
 | Sistema | Qué hacer |
 |---|---|
 | **Windows** | Extrae el zip → doble clic en `INSTALAR.bat` |
-| **macOS** | Extrae el zip → doble clic en `INSTALAR.command`. **Si macOS no deja** ("no se puede abrir"): abre la app *Terminal* y pega: `bash ~/Downloads/skill_dey-opencode/instalar.sh` |
-| **Linux** | `bash instalar.sh` |
+| **macOS** | Extrae el zip → doble clic en `INSTALAR.command`. **Si macOS no deja** ("no se puede abrir"): abre la app *Terminal*, entra a la carpeta extraída (`cd` + ruta) y ejecuta: `bash INSTALAR.command` |
+| **Linux** | En la carpeta extraída: `bash INSTALAR.command` |
 
 Usa Node si está instalado (instalador principal) y, si no, un instalador de respaldo (PowerShell en Windows, bash en macOS/Linux).
 Reinstalar es seguro: actualiza todo y **conserva lo aprendido** (`~/.config/opencode/skill_dey/`).
