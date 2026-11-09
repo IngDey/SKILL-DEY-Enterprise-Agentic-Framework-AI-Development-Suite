@@ -1,0 +1,66 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "name": "skill-dey-inicio",
+            "type": "command",
+            "command": "node \"${extensionPath}${/}bin${/}skill_dey-hook.mjs\" gemini inicio",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "BeforeAgent": [
+      {
+        "hooks": [
+          {
+            "name": "skill-dey-prompt",
+            "type": "command",
+            "command": "node \"${extensionPath}${/}bin${/}skill_dey-hook.mjs\" gemini prompt",
+            "timeout": 60000
+          }
+        ]
+      }
+    ],
+    "BeforeTool": [
+      {
+        "matcher": "run_shell_command|write_file|replace|edit|read_file|read_many_files",
+        "hooks": [
+          {
+            "name": "skill-dey-antes",
+            "type": "command",
+            "command": "node \"${extensionPath}${/}bin${/}skill_dey-hook.mjs\" gemini antes",
+            "timeout": 60000
+          }
+        ]
+      }
+    ],
+    "AfterTool": [
+      {
+        "matcher": "run_shell_command|write_file|replace|edit|.*skill_dey.*",
+        "hooks": [
+          {
+            "name": "skill-dey-despues",
+            "type": "command",
+            "command": "node \"${extensionPath}${/}bin${/}skill_dey-hook.mjs\" gemini despues",
+            "timeout": 30000
+          }
+        ]
+      }
+    ],
+    "AfterAgent": [
+      {
+        "hooks": [
+          {
+            "name": "skill-dey-fin",
+            "type": "command",
+            "command": "node \"${extensionPath}${/}bin${/}skill_dey-hook.mjs\" gemini fin",
+            "timeout": 90000
+          }
+        ]
+      }
+    ]
+  }
+}

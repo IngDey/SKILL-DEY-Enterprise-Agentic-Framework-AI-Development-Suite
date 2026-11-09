@@ -1,0 +1,4 @@
+description = "SKILL DEY: auditoría (seguridad, funcionalidad, UX) sin cambiar código"
+prompt = """
+Carga la skill skill-dey. Ejecuta solo F3 y F4 sobre: {{args}} (si está vacío, todo el proyecto). NO modifiques código. Entrega la tabla de compuertas y los hallazgos priorizados con archivo:línea.
+"""

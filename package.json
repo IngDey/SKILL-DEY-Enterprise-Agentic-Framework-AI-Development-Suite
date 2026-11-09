@@ -1,0 +1,13 @@
+{
+  "name": "skill-dey-suite",
+  "private": true,
+  "description": "SKILL DEY — fuente, build y pruebas. Lo que se instala vive en app/ y hosts/.",
+  "author": "Ing. Dey (IngDey) <https://github.com/IngDey>",
+  "license": "MIT",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/guardian.test.mjs"
+  }
+}

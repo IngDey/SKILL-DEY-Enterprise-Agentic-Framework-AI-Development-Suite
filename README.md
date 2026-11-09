@@ -11,8 +11,10 @@ An agentic quality framework for AI-assisted development: it understands what yo
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#-quick-install)
 [![OpenCode](https://img.shields.io/badge/OpenCode-native-blue.svg)](https://opencode.ai)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-D97757.svg)](#claude-code)
+[![Gemini](https://img.shields.io/badge/Gemini%20CLI%20%7C%20Antigravity-native-4285F4.svg)](#gemini-cli-and-antigravity-cli)
 [![MCP](https://img.shields.io/badge/MCP-server%20included-8A2BE2.svg)](https://modelcontextprotocol.io/)
-[![Multi-AI](https://img.shields.io/badge/works%20with-Cursor%20%7C%20Windsurf%20%7C%20Claude%20%7C%20Cline%20%7C%20Codex%20%7C%20Gemini-orange.svg)](#-works-with-your-ai)
+[![Multi-AI](https://img.shields.io/badge/also-Cursor%20%7C%20Windsurf%20%7C%20Cline%20%7C%20Codex%20%7C%20Copilot-orange.svg)](#-works-with-your-ai)
 [![Made by IngDey](https://img.shields.io/badge/made%20by-IngDey-181717?logo=github)](https://github.com/IngDey)
 [![GitHub stars](https://img.shields.io/github/stars/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite?style=social)](https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite/stargazers)
 
@@ -39,7 +41,18 @@ AI assistants write code fast, and they also break working features, leak secret
 | 🧠 **Persistent project memory** | Decisions, lessons and business rules live in `.skill_dey/` (`BITACORA`, `DECISIONES`, `LECCIONES`, `NEGOCIO`, `ESTADO`, `MARCA`) so context survives across sessions. |
 | 🤖 **Multi-agent** | A main agent, a read-only **explorer** for big searches, a **vision** agent that turns mockups/screenshots into UI, and an **independent reviewer** that audits changes it didn't write. |
 | 📉 **Token-aware** | Small tasks don't load the skill; heavy workflows load only when needed. A usage board shows tokens, cost and time per answer. |
-| 🔌 **MCP server included** | Exposes the checks as native tools to any MCP client. |
+| 🔌 **MCP server included** | Exposes the checks and undo as native tools to any MCP client (protocol up to 2025-11-25). |
+| 🌐 **Native in 4 AIs** | **OpenCode, Claude Code, Gemini CLI and Antigravity CLI** with the same live guardian, the same skill and the same rules. |
+| 🏢 **Safe AI use at work** | `politicas-ia` skill: drafts and reviews your company's AI usage policy for people (what to use, what not, which data never to share). |
+
+### 🆕 What's new in version 40
+
+- **Now native in Claude Code, Gemini CLI and Antigravity CLI**, besides OpenCode, with the **same live guardian** in all four.
+- **Stronger data protection:** blocks dropping or emptying databases and tables, `DELETE` without `WHERE`, `migrate:fresh`, `prisma migrate reset`, `git reset --hard` and downloaded scripts piped into a shell.
+- **Instant `deshaz` (undo)** in Claude Code: runs by code, with zero model tokens.
+- **Modern MCP server:** negotiates the protocol up to 2025-11-25, marks destructive tools, and adds verify, undo, redo, history and freeze.
+- **New `politicas-ia` skill:** a safe-AI-use policy for the people in your company.
+- **One source of truth:** `scripts/build.mjs` generates every AI package, and 30 automated tests validate them.
 
 ---
 
@@ -87,7 +100,9 @@ flowchart LR
 
 ## ⚡ Quick install
 
-**Requirements:** [OpenCode](https://opencode.ai) (`npm i -g opencode-ai`) for the full experience. [Git](https://git-scm.com/) is recommended, and [Node.js](https://nodejs.org/) (20+) is needed for the CLI and MCP server. The installers themselves fall back to PowerShell (Windows) or bash (macOS/Linux) if Node isn't installed.
+**Requirements:** [Node.js](https://nodejs.org/) 20+ and [Git](https://git-scm.com/) (recommended: it powers full undo). Plus at least one of: [OpenCode](https://opencode.ai), [Claude Code](https://www.claude.com/product/claude-code), [Gemini CLI](https://geminicli.com) or [Antigravity CLI](https://antigravity.google).
+
+### Option 1 · One click (installs into EVERY AI you have)
 
 ```bash
 git clone https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite.git
@@ -96,36 +111,52 @@ cd SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite
 
 No Git? Download the `.zip` from [Releases](../../releases) and unzip it.
 
-| System | Run |
+| System | What to do |
 |---|---|
 | **Windows** | Double-click `INSTALAR.bat` |
 | **macOS** | Double-click `INSTALAR.command` (if macOS blocks it: `bash INSTALAR.command` in Terminal) |
 | **Linux** | `bash INSTALAR.command` |
 
-Then **restart OpenCode** and just write normally. Reinstalling is safe: it updates everything and **keeps what was learned**.
+The installer detects OpenCode, Claude Code, Gemini CLI and Antigravity CLI and sets SKILL DEY up in each. Then **restart your AI** and write normally. Reinstalling is safe: it updates everything and **keeps what was learned**.
+
+### Option 2 · From your AI
+
+<a id="claude-code"></a>**Claude Code** (inside Claude):
+
+```
+/plugin marketplace add IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite
+/plugin install skill-dey@skill-dey
+```
+
+<a id="gemini-cli-and-antigravity-cli"></a>**Gemini CLI** and **Antigravity CLI** (in a terminal, from the downloaded folder):
+
+```bash
+gemini extensions install ./hosts/gemini-cli     # Gemini CLI
+agy plugin install ./hosts/antigravity            # Antigravity CLI (Gemini CLI's successor)
+```
+
+**OpenCode:** use option 1.
 
 <details>
 <summary><b>🔍 What exactly does the installer change? (click to expand)</b></summary>
 
-Nothing is hidden. The installer:
+Nothing hidden. The installer:
 
-1. Copies the skill, agents, commands, tools and guardian plugin into `~/.config/opencode/` (or `$OPENCODE_CONFIG_DIR`).
-2. Updates your `opencode.json`: sets `default_agent` to `skill_dey` and enables context compaction. It saves a `.bak` copy first.
-3. Appends its global rules to `AGENTS.md` inside clearly marked `SKILL_DEY` blocks.
-4. Registers the MCP server in **Cursor, Windsurf, Claude Desktop and Cline** *only if they're installed*. It backs up each config as `*.antes-skill_dey.bak` and only adds/updates its own `skill_dey` entry.
-5. Detects the capabilities of your available models and tells you if `git`, `opencode` or `python` are missing, with the install command for your OS.
+1. **OpenCode:** copies the skill, agents, commands, tools and guardian plugin into `~/.config/opencode/` (or `$OPENCODE_CONFIG_DIR`); sets `default_agent` to `skill_dey` (saving `opencode.json.bak` first) and adds its rules to `AGENTS.md` inside clearly marked `SKILL_DEY` blocks.
+2. **Claude Code, Gemini CLI and Antigravity CLI** (only if installed): copies their package to `~/.config/skill_dey/paquetes/` and installs it with each AI's official command (`claude plugin install`, `gemini extensions install`, `agy plugin install`). If your AI asks for confirmation (for example "do you trust this folder?"), **you answer**.
+3. Registers the MCP server in **Cursor, Windsurf, Claude Desktop and Cline** *only if they are installed*. Each config is backed up as `*.antes-skill_dey.bak` and only the `skill_dey` entry is added or updated.
+4. Warns you if `git`, `opencode` or `python` is missing, with the install command for your OS.
 
-On Windows, the no-Node fallback runs PowerShell with `-ExecutionPolicy Bypass` for that single script only. Read it in [`app/instalador/`](app/instalador/) before running if you like.
+On Windows, the no-Node installer runs PowerShell with `-ExecutionPolicy Bypass` for that script only (and installs the OpenCode edition only). You can read it first in [`app/instalador/`](app/instalador/).
 </details>
 
 ### Verify it works
 
-- In OpenCode ask: **"¿skill_dey está funcionando?"** (is skill_dey working?). It also self-checks its 8 protections each time OpenCode opens and only warns you if something fails.
-- Or from any terminal:
-
-```bash
-node ~/.config/opencode/skill_dey/skill_dey.mjs revisar .
-```
+- **OpenCode:** ask **"¿skill_dey está funcionando?"**. It self-checks every time you open it and only warns you if something fails.
+- **Claude Code:** `/plugin` should list `skill-dey` as enabled and `/mcp` should show the `skill_dey` server.
+- **Gemini CLI:** `gemini extensions list` should show `skill-dey` with its context, skills and MCP.
+- **Antigravity CLI:** `agy plugin list` should show `skill-dey`.
+- In any of them, ask: *"try to drop the customers table"*. The guardian must block it.
 
 ---
 
@@ -140,28 +171,45 @@ You don't need commands. Write normally: *"add the field `owner` to tickets"*, *
 | `revisa la seguridad` / `prueba la app` | Security audit + automatic tester (valid data, required fields, SQL/XSS attacks, access without session), including forms rendered by JavaScript (React/SPA) |
 | `documenta la app` | Regenerates `docs/MANUAL-TECNICO.md`, `DICCIONARIO-DATOS.md`, `MANUAL-USUARIO.md`, `database/instalacion.sql` and PDFs |
 | `deshaz` | Restores the snapshot taken before your last request (redo available) |
-| `/skill_dey ayuda` | Lists every command in 6 groups |
+| `/skill_dey ayuda` | Lists every command in 6 groups (OpenCode) |
+| `/skill-dey:verificar`, `/skill-dey:auditar`, `/skill-dey:deshacer` | Shortcuts in Gemini CLI |
 
 ---
 
 ## 🌐 Works with your AI
 
-| Tool | How |
+| Tool | What it gets |
 |---|---|
-| **OpenCode** | Full experience: live guardian, automatic snapshots, model fallback, usage board |
-| **Cursor · Windsurf · Claude Desktop · Cline** | MCP server auto-registered by the installer + project rules |
-| **Claude Code · Codex · Gemini CLI · Copilot · Zed · Firebase Studio** | Project rules (`multi-ia` command) + CLI checks |
+| **OpenCode** | Full experience: live guardian, undo, automatic model switch when the quota runs out, usage board, 20+ dedicated tools |
+| **Claude Code** | Official plugin: `skill-dey` and `politicas-ia` skills, subagents (reviewer, explorer, vision), **live guardian via hooks**, zero-token `deshaz`, MCP server |
+| **Gemini CLI** | Extension: `GEMINI.md`, skills, subagents, **live guardian via hooks**, `/skill-dey:*` commands, MCP server |
+| **Antigravity CLI** | Plugin: rules, skills, subagents, **live guardian via hooks**, MCP server |
+| **Cursor · Windsurf · Claude Desktop · Cline** | MCP server registered by the installer + project rules |
+| **Codex · Copilot · Zed · Firebase Studio** | Project rules (`multi-ia` command) + CLI checks |
 
-```bash
-# Write the rules each AI reads natively (AGENTS.md, CLAUDE.md, GEMINI.md,
-# .cursorrules, .windsurfrules, copilot-instructions.md, .clinerules, ...)
-node ~/.config/opencode/skill_dey/skill_dey.mjs multi-ia .
+### What the live guardian does (all 4 AIs)
 
-# Universal CLI (any AI with a terminal)
-node ~/.config/opencode/skill_dey/skill_dey.mjs revisar|seguridad|pruebas|capacitar|movil|organizar|documentar|validar|produccion [folder] [url]
-```
+| Protection | OpenCode | Claude Code | Gemini CLI | Antigravity |
+|---|:-:|:-:|:-:|:-:|
+| Snapshot before the first change of each request + `deshaz` | ✅ | ✅ | ✅ | ✅ |
+| Blocks dropping/emptying DBs and tables, `DELETE` without `WHERE`, `migrate:fresh`, `prisma migrate reset` | ✅ | ✅ | ✅ | ✅ |
+| Requires a backup before migrating or modifying data | ✅ | ✅ | ✅ | ✅ |
+| Blocks secrets in code and reading real `.env` files | ✅ | ✅ | ✅ | ✅ |
+| Blocks `push --force`, `reset --hard`, mass deletes, `curl … \| sh` | ✅ | ✅ | ✅ | ✅ |
+| Blocks truncated code and changes outside the project or in frozen zones | ✅ | ✅ | ✅ | ✅ |
+| New dependencies only if you asked for them | ✅ | ✅ | ✅ | — |
+| Instant syntax check on every edited file | ✅ | ✅ | ✅ | ✅ (at close) |
+| Won't finish with errors or without a green verification | ✅ | ✅ | ✅ | ✅ |
+| Anti-loop (stops useless repetition) | ✅ | ✅ | ✅ | ✅ |
+| Automatic model switch on quota exhaustion · usage board | ✅ | — | — | — |
 
-Manual MCP config (any client):
+All four use **the same rules** (one file: `app/skill_dey-lib/guardia.ts`). If a guardian piece hits something unexpected, it **lets you keep working** and logs it to `~/.config/skill_dey/errores-hook.log`: it never freezes your AI.
+
+### MCP server
+
+Tools: `skill_dey_verificar`, `skill_dey_deshacer`, `skill_dey_rehacer`, `skill_dey_historial`, `skill_dey_congelar`, `skill_dey_revisar`, `skill_dey_seguridad`, `skill_dey_validar`, `skill_dey_documentar`, `skill_dey_organizar`, `skill_dey_produccion`, `skill_dey_movil`, `skill_dey_pruebas`, `skill_dey_capacitar`, `skill_dey_multi_ia`. Each one is marked read-only or destructive so your AI asks permission when it should.
+
+Manual setup (any MCP client):
 
 ```json
 {
@@ -174,33 +222,44 @@ Manual MCP config (any client):
 }
 ```
 
-MCP tools: `skill_dey_revisar`, `skill_dey_seguridad`, `skill_dey_pruebas`, `skill_dey_capacitar`, `skill_dey_organizar`, `skill_dey_documentar`, `skill_dey_validar`, `skill_dey_produccion`, `skill_dey_movil`.
+```bash
+# Rules each AI reads by itself (AGENTS.md, CLAUDE.md, GEMINI.md, .cursorrules, copilot-instructions.md, ...)
+node ~/.config/opencode/skill_dey/skill_dey.mjs multi-ia .
+# Universal CLI (any AI with a terminal)
+node ~/.config/opencode/skill_dey/skill_dey.mjs revisar|seguridad|pruebas|capacitar|movil|organizar|documentar|validar|produccion [folder] [url]
+```
 
-> **Honest note:** the *live* guardian (automatic snapshots, blocking dangerous commands, verification on close, model switching, usage board) is an OpenCode plugin and only runs there. In other AIs you get the rules plus the deterministic checks (CLI/MCP), which cover most of the value. See [`app/global/MULTI-IA.md`](app/global/MULTI-IA.md).
+> **Honest note:** the automatic model switch and the usage board rely on features only OpenCode exposes to plugins. Gemini CLI stopped serving personal accounts on June 18, 2026 and its successor is **Antigravity CLI**: SKILL DEY ships a package for both.
 
 ---
 
 ## 🧪 Tested, with receipts
 
-The repo ships a public test log with **135 documented checks** (installers, undo/redo, guardian blocks, site crawler, security tester, docs generation, model fallback and more), including the bugs found and fixed along the way: [`docs/PRUEBAS-REALIZADAS.md`](docs/PRUEBAS-REALIZADAS.md).
+- **Public log of 135 tests** for the OpenCode edition (installers, undo/redo, guardian blocks, site crawler, security tester, docs, model switch…): [`docs/PRUEBAS-REALIZADAS.md`](docs/PRUEBAS-REALIZADAS.md).
+- **30 automated tests** for the cross-platform guardian and the MCP server, using the real payload formats of Claude Code, Gemini CLI and Antigravity: `npm test`. They run on Windows, macOS and Linux on every change (GitHub Actions).
+- The plugin passes `claude plugin validate` and installs on Claude Code 2.1; the extension passes `gemini extensions validate` and installs on Gemini CLI 0.67.
+- A [10-case benchmark](app/skills/skill-dey/evals/BANCO-DE-PRUEBAS.md) and a comparer (`evals/comparar.mjs`) to measure SKILL DEY against the raw AI **with your own model**.
 
-It also includes a [10-case benchmark](app/skills/skill-dey/evals/BANCO-DE-PRUEBAS.md) and a comparer (`evals/comparar.mjs`) so you can measure SKILL DEY against the plain AI **with your own model**.
-
-Known limits, stated plainly: Windows and macOS logic was validated with PowerShell 7 and cross-platform paths, not on physical machines yet, and decision quality depends on the model you use. Reports from your setup are very welcome.
+Known limits, stated plainly: the Antigravity package follows the official plugin specification but hasn't been run with `agy` on a real machine yet (run `agy plugin validate --strict ./hosts/antigravity` and let us know). Decision quality depends on the model you use. Reports from your environment are very welcome.
 
 ---
 
 ## 📁 Repository layout
 
 ```
-INSTALAR.bat / INSTALAR.command   one-click installers
-app/                              everything that gets installed
-  skills/skill-dey/               the skill: router, levels, cycle, references, memory templates
-  agents/                         main, explorer, reviewer, vision
-  plugins/skill_dey-guardian.ts   the execution guardian
-  tools/ · skill_dey-lib/         verification, impact, undo, security, tester, docs engine
-  mcp/ · cli/                     MCP server and universal CLI
+INSTALAR.bat / INSTALAR.command   one-click installers (every AI)
+app/                              the single source
+  skill_dey-lib/                  engine: guardia.ts (guardian rules), hook.ts, mcp.ts, undo, security, tester, docs
+  skills/skill-dey/               OpenCode skill: levels, cycle, references, memory templates
+  portable/                       rules, skills (skill-dey, politicas-ia) and agents for Claude/Gemini/Antigravity
+  agents/ · commands/ · tools/    OpenCode edition
+  plugins/skill_dey-guardian.ts   OpenCode guardian
+  cli/ · mcp/ · hook/             bundled engine (no dependencies)
   instalador/                     installers (Node, PowerShell, bash) and MCP registrar
+hosts/                            generated packages: claude-code · gemini-cli · antigravity
+.claude-plugin/marketplace.json   Claude Code marketplace
+scripts/build.mjs                 builds hosts/ and the engine from app/
+tests/                            automated guardian and MCP tests
 docs/                             install guide and test log
 ```
 
@@ -223,6 +282,14 @@ No. The checks run on your machine and SKILL DEY has no telemetry. Its only netw
 <details><summary><b>Will it mess up my current setup?</b></summary>
 
 The installer backs up every config it touches (`.bak` files), only edits its own clearly marked blocks, and reinstalling is safe. See *What exactly does the installer change?* above.
+</details>
+<details><summary><b>Which AI should I use?</b></summary>
+
+The one you already use. OpenCode adds the automatic model switch and the usage board; Claude Code, Gemini CLI and Antigravity CLI get the same guardian, the same skill and the same undo. You can have it in several at once.
+</details>
+<details><summary><b>Can I turn it off for a while?</b></summary>
+
+Yes. Write `finalizar skill dey`, and `iniciar skill dey` to turn it back on. It works the same in all four AIs.
 </details>
 <details><summary><b>I already have an app. Can I use it there?</b></summary>
 

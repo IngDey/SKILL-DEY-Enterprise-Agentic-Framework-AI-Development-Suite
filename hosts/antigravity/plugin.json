@@ -1,0 +1,31 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "skill-dey",
+  "displayName": "SKILL DEY",
+  "version": "40.0.0",
+  "description": "Agentes que programan sin romper tu app: guardián en vivo, deshacer cualquier cambio, cero errores, seguridad y documentación. Por Ing. Dey.",
+  "logo": "assets/logo.png",
+  "suggestedPrompts": [
+    "Revisa este proyecto y déjalo sin errores",
+    "Deshaz el último cambio",
+    "Redacta la política de uso seguro de IA de la empresa"
+  ],
+  "author": {
+    "name": "Ing. Dey (@IngDey)",
+    "url": "https://github.com/IngDey"
+  },
+  "homepage": "https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite",
+  "repository": "https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite",
+  "license": "MIT",
+  "keywords": [
+    "ai",
+    "agents",
+    "skills",
+    "mcp",
+    "quality",
+    "security",
+    "undo",
+    "zero-errors",
+    "spanish"
+  ]
+}

@@ -16,7 +16,7 @@ import { homedir as _home } from "node:os"
 import { verificar as verificarTool } from "../tools/skill_dey.ts"
 import { documentar } from "../skill_dey-lib/documentar.ts"
 import { autoprueba } from "../skill_dey-lib/autoprueba.ts"
-import { errorJs } from "../skill_dey-lib/sintaxis.ts"
+import { SECRETO, PLACEHOLDER, PELIGROSO, TRUNCADO, SERVIDOR, DEPENDENCIA, MIGRACION, SQL_MODIFICA, esSoloLectura, respaldoBdReciente, blindarGitignore, sintaxis } from "../skill_dey-lib/guardia.ts"
 import { esProyectoAvanzado } from "../skill_dey-lib/adopcion.ts"
 import { capacidades, agenteVision, leerDisenoSinVision, esErrorDeLimite, marcarLimitado, siguienteModelo, estaLimitado, resumenModelos } from "../skill_dey-lib/modelos.ts"
 import { ejecutarComando, intencion } from "../skill_dey-lib/comandos.ts"
@@ -41,60 +41,9 @@ import { writeFileSync as _wf, appendFileSync as _af, existsSync as _ex, mkdirSy
 import { copiaPrueba } from "../skill_dey-lib/bd.ts"
 import * as Herramientas from "../tools/skill_dey.ts"
 
-const SECRETO = /(AKIA[0-9A-Z]{16}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|(password|passwd|pwd|secret|api[_-]?key|apikey|token|client_secret)\s*[:=]\s*["'][^"'\s$]{8,}["'])/i
-const PLACEHOLDER = /(process\.env|getenv|env\(|os\.environ|changeme|example|xxxx|\$\{|<[^>]+>|your[_-]|tu[_-])/i
-const PELIGROSO: [RegExp, string][] = [
-  [/git\s+push\s+.*(--force\b|-f\b)/, "push forzado"],
-  [/rm\s+-rf?\s+(\/|~|\*|\.\s*$|\$HOME)(\s|$)/, "borrado masivo"],
-  [/git\s+clean\s+-[a-z]*f[a-z]*d/, "git clean de archivos no versionados"],
-  [/\b(drop\s+database|drop\s+schema|truncate\s+table)\b/i, "borrado de base de datos"],
-  [/(migrate|migration).*(--env[= ]?prod|production)/i, "migración en producción"],
-]
-
-// Garantiza que .env y capturas nunca se suban a git (crea/completa .gitignore)
-function blindarGitignore(cwd: string): string | null {
-  const gi = join(cwd, ".gitignore")
-  const actual = existsSync(gi) ? readFileSync(gi, "utf8") : ""
-  const faltan = [".env", ".env.*", "!.env.example", ".skill_dey/shots/", ".skill_dey/.ultimo-verificar.json", ".skill_dey/respaldos-bd/", ".skill_dey/respaldos-archivos/"].filter((l) => !actual.split(/\r?\n/).map((x) => x.trim()).includes(l))
-  if (faltan.length) appendFileSync(gi, (actual && !actual.endsWith("\n") ? "\n" : "") + "# SKILL_DEY: nunca subir secretos ni temporales\n" + faltan.join("\n") + "\n")
-  const r = spawnSync("git", ["ls-files", "--cached", "--", ".env", ".env.local", ".env.production", ".env.prod"], { cwd, encoding: "utf8" })
-  const trackeados = (r.stdout || "").trim()
-  return trackeados ? trackeados.split(/\r?\n/).join(", ") : null
-}
-
-// Código truncado (los modelos gratis lo hacen y rompen archivos)
-const TRUNCADO = /(\/\/|#|\/\*|<!--|--)\s*\.{3}\s*(resto|rest|existing|c[oó]digo|code|same|sin cambios|unchanged|igual|anterior|previous|etc)|\.{3}\s*(resto del|rest of (the )?)(c[oó]digo|code|file|archivo)|(\/\/|#)\s*(aqu[ií] va|el resto|the rest|remaining code|c[oó]digo existente|existing code)\b/i
-// Servidores que nunca terminan (congelan al agente) y pruebas en modo "watch"
-const SERVIDOR = /(^|&&|;|\|\|)\s*((npm|pnpm|yarn|bun)\s+(run\s+)?(dev|start|serve|watch|preview)\b|php\s+(artisan\s+serve|-S\s)|(python3?|py)\s+manage\.py\s+runserver|nodemon\b|npx\s+(vite|next\s+dev|nodemon)|vite(\s|$)|next\s+dev|flask\s+run|uvicorn\b|rails\s+s(erver)?\b|dotnet\s+(run|watch)\b|go\s+run\b)/i
-// Instalar dependencias
-const DEPENDENCIA = /\b(npm\s+(i|install|add)|yarn\s+add|pnpm\s+(add|i|install)|bun\s+add|composer\s+require|pip3?\s+install|poetry\s+add|go\s+get|cargo\s+add|gem\s+install|dotnet\s+add\s+package)\s+(?<pkgs>[^&|;]+)/i
-const SOLO_LECTURA = /^\s*(ls|dir|cat|type|head|tail|less|grep|rg|find|wc|tree|pwd|echo|which|where|whoami|date|env|printenv|node\s+(-v|--version|--check)|npm\s+(ls|view|outdated|audit(?!\s+fix))|pip\s+(show|list)|composer\s+(show|audit)|git\s+(status|log|diff|show|branch|rev-parse|ls-files|grep|remote|config\s+--get|blame|describe|tag\s*$))\b/i
-const esSoloLectura = (cmd: string) => !/[^2]>|>>|\btee\b|\s-i\b/.test(cmd) && cmd.split(/&&|\|\||;|\|/).every((p) => !p.trim() || SOLO_LECTURA.test(p))
-
-const MIGRACION = /(artisan\s+migrate(?!:status)|prisma\s+(migrate\s+(dev|deploy|reset)|db\s+push)|knex\s+migrate:(latest|up|down|rollback)|sequelize(-cli)?\s+db:migrate|alembic\s+(upgrade|downgrade)|manage\.py\s+migrate|typeorm.*migration:(run|revert)|flyway\s+migrate|rails\s+db:(migrate|rollback)|goose\s+(up|down)|doctrine:migrations:migrate)/i
-const SQL_MODIFICA = /(psql|mysql|mariadb|sqlite3|sqlcmd|mongosh?)\b[\s\S]*\b(delete\s+from|update\s+[\w."`\[\]]+\s+set|alter\s+table|drop\s+(table|column|index)|insert\s+into|deleteMany|updateMany)\b/i
-function respaldoBdReciente(cwd: string, horas = 3): boolean {
-  const d = join(cwd, ".skill_dey", "respaldos-bd")
-  if (!existsSync(d)) return false
-  return readdirSync(d).some((f) => Date.now() - statSync(join(d, f)).mtimeMs < horas * 3_600_000)
-}
-
-function sintaxis(cwd: string, file: string): string {
-  const f = isAbsolute(file) ? file : join(cwd, file)
-  if (!existsSync(f)) return ""
-  const e = extname(f).toLowerCase()
-  if ([".js", ".mjs", ".cjs"].includes(e)) return errorJs(cwd, f)
-  const cmd = e === ".php" ? `php -l "${f}"` : e === ".py" ? `${process.platform === "win32" ? "python" : "python3"} -m py_compile "${f}"` : [".js", ".mjs", ".cjs"].includes(e) ? `node --check "${f}"` : ""
-  if (e === ".json") { try { JSON.parse(readFileSync(f, "utf8")); return "" } catch (x: any) { return `JSON inválido: ${x.message}` } }
-  if (!cmd) return ""
-  const r = spawnSync(cmd, { cwd, shell: true, encoding: "utf8", timeout: 20_000 })
-  const out = `${r.stdout ?? ""}${r.stderr ?? ""}`
-  if (r.status === 0 || /not recognized|not found|no se reconoce/i.test(out)) return ""
-  return out.split(/\r?\n/).filter((l) => l.trim() && !/^\s*at \S|^Node\.js v/.test(l)).slice(-6).join("\n")
-}
-
+// Reglas compartidas con Claude Code, Gemini y Antigravity: una sola fuente de verdad (guardia.ts)
 // ---------- AUTODIAGNÓSTICO: comprueba que cada protección esté activa ----------
-const VERSION = "32.0.0" // (no exportar: OpenCode trata cada export del plugin como un plugin)
+const VERSION = "40.0.0" // (no exportar: OpenCode trata cada export del plugin como un plugin)
 function diagnosticar(client: any, cwd: string): { ok: string[]; mal: string[] } {
   const ok: string[] = [], mal: string[] = []
   const chk = (c: boolean, bien: string, malo: string) => (c ? ok : mal).push(c ? bien : malo)

@@ -1,27 +1,28 @@
-# SKILL_DEY
+# SKILL DEY 40
 
-El estándar de desarrollo para tus apps: entiende lo que pides, construye **sin romper** la app, no entrega nada con **errores**, con pruebas profesionales, seguridad, documentación, video de capacitación y el menor gasto de tokens posible. Funciona en **OpenCode** y, como multi‑IA, también en Cursor, Windsurf, Claude Code/Desktop, Copilot, Codex, Gemini y Cline.
+El estándar de desarrollo con IA para tus apps: entiende lo que pides, construye **sin romper** la app, no entrega nada con **errores**, con pruebas profesionales, seguridad, documentación, video de capacitación y el menor gasto de tokens posible.
+
+Nativo en **OpenCode, Claude Code, Gemini CLI y Antigravity CLI**, con el mismo guardián en vivo en las cuatro. También funciona con Cursor, Windsurf, Claude Desktop, Cline, Copilot y Codex (reglas + servidor MCP).
 
 ## Instalar (elige tu sistema)
 - **Mac / Linux:** doble clic en `INSTALAR.command` (o en terminal: `bash INSTALAR.command`).
 - **Windows:** doble clic en `INSTALAR.bat`.
 
-Eso copia todo a `~/.config/opencode`, registra el servidor MCP en las IAs que tengas y deja el CLI listo. Cierra y abre OpenCode.
+Necesitas Node.js 20+ (y se recomienda Git). El instalador detecta qué IAs tienes y deja SKILL DEY en cada una. Si tu IA pregunta "¿confías en esta carpeta?", respondes tú. Luego cierra y abre tu IA.
+
+También puedes instalarlo desde tu IA:
+- **Claude Code:** `/plugin marketplace add IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite` y luego `/plugin install skill-dey@skill-dey`
+- **Gemini CLI:** `gemini extensions install ./hosts/gemini-cli`
+- **Antigravity CLI:** `agy plugin install ./hosts/antigravity`
 
 ## Usar
-No necesitas comandos: escribe normal y hace todo. Atajos: `/skill_dey ayuda`.
-
-## Multi‑IA (otras IAs)
-- Reglas para todas: dentro de tu proyecto → `node ~/.config/opencode/skill_dey/skill_dey.mjs multi-ia .`
-- Registrar el MCP en tus IAs (un comando): `node ~/.config/opencode/skill_dey/registrar-mcp.mjs`
-- CLI en cualquier terminal: `node ~/.config/opencode/skill_dey/skill_dey.mjs <revisar|seguridad|pruebas|capacitar|movil|organizar|documentar>`
-- Guía completa de conexión: `~/.config/opencode/skill_dey/MULTI-IA.md`
+No necesitas comandos: escribe normal. `deshaz` revierte el último cambio. `finalizar skill dey` / `iniciar skill dey` lo apagan y encienden.
 
 ## Carpetas de este paquete
-- `app/` — todo lo que se instala (no necesitas abrirlo; lo usa el instalador).
-- `docs/` — guía de instalación detallada y el registro de pruebas.
-
-> El guardián automático en vivo (copias antes de cada cambio, verificación al cerrar, cambio de modelo, tablero de consumo) corre dentro de OpenCode. En otras IAs tienes las reglas + los chequeos (CLI/MCP).
+- `app/` — la fuente única (motor, guardián, skills, agentes, instaladores).
+- `hosts/` — los paquetes listos para Claude Code, Gemini CLI y Antigravity CLI.
+- `docs/` — guía de instalación, notas de versión y registro de pruebas.
+- `tests/` — pruebas automáticas (`npm test`).
 
 ---
 Creado por **Ing. Dey** ([@IngDey](https://github.com/IngDey)) · Ingeniero de Sistemas, Especialista en Gerencia Informática, experto en IA, automatizaciones y análisis de procesos · Licencia MIT

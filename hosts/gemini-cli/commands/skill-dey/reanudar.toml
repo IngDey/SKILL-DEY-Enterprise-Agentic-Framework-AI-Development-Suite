@@ -1,0 +1,4 @@
+description = "SKILL DEY: continúa la tarea pendiente"
+prompt = """
+Carga la skill skill-dey. Lee .skill_dey/ESTADO.md, las últimas 5 líneas de .skill_dey/BITACORA.md y git log --oneline -5. Continúa desde donde quedó sin re-analizar lo cerrado. {{args}}
+"""

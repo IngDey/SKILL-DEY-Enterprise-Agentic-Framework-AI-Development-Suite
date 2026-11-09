@@ -71,7 +71,7 @@ try {
   $pf = Join-Path $oc 'skill_dey/PREFERENCIAS.md'; $tiene = Get-Content $pf -Raw -Encoding UTF8
   $falt = (Get-Content (Join-Path $src 'global/PREFERENCIAS.md') -Encoding UTF8) | Where-Object { $_.StartsWith([string][char]0x2B50) -and -not $tiene.Contains(($_.Split(']')[0] + ']')) }
   if ($falt) { [IO.File]::WriteAllText($pf, ($tiene.TrimEnd() + "`n" + ($falt -join "`n") + "`n"), (New-Object Text.UTF8Encoding $false)) }
-  [IO.File]::WriteAllText((Join-Path $oc 'skill_dey/VERSION'), '32.0.0')
+  [IO.File]::WriteAllText((Join-Path $oc 'skill_dey/VERSION'), '40.0.0')
   Ok 'Memoria global (lo aprendido se conserva)'
 
   # 6. Reglas globales AGENTS.md (bloque SKILL_DEY reemplazable)

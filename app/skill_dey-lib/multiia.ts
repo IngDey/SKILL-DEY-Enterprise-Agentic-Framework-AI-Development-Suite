@@ -1,6 +1,6 @@
 // SKILL_DEY — MULTI-IA (gratis, 0 tokens del modelo): escribe las MISMAS reglas de skill_dey en el formato nativo de
 // cada asistente, para que trabajen igual en cualquiera. Los chequeos deterministas se llaman con el CLI universal
-// (node skill_dey.mjs <acción>) o con el servidor MCP. El guardián EN VIVO sigue siendo solo de OpenCode.
+// (node skill_dey.mjs <acción>) o con el servidor MCP. El guardián EN VIVO corre en OpenCode, Claude Code, Gemini CLI y Antigravity.
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 

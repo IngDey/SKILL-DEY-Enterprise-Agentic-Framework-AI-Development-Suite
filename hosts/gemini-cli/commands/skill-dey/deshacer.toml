@@ -1,0 +1,4 @@
+description = "SKILL DEY: deshace el último cambio de la IA"
+prompt = """
+Usa la herramienta skill_dey_deshacer (pasos: {{args}} o 1) e informa en 2 líneas qué quedó restaurado.
+"""

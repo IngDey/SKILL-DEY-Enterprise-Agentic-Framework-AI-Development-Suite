@@ -1,0 +1,39 @@
+# SKILL DEY · pruebas en Windows, macOS y Linux en cada cambio
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  pruebas:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [20, 22]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Git para las pruebas de deshacer
+        run: |
+          git config --global user.email ci@skill-dey.local
+          git config --global user.name "SKILL DEY CI"
+          git config --global init.defaultBranch main
+      - name: Pruebas del guardián y del servidor MCP
+        run: npm test
+  paquetes-al-dia:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: hosts/ debe estar generado desde app/
+        run: |
+          node scripts/build.mjs --sin-bundle
+          git diff --stat --exit-code -- hosts .claude-plugin || (echo "::error::Corre node scripts/build.mjs y sube los cambios" && exit 1)

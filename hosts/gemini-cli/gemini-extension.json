@@ -1,0 +1,16 @@
+{
+  "name": "skill-dey",
+  "version": "40.0.0",
+  "description": "Agentes de IA que programan sin romper tu app: guardián en vivo, deshacer cualquier cambio, cero errores, seguridad y documentación automática.",
+  "contextFileName": "GEMINI.md",
+  "mcpServers": {
+    "skill_dey": {
+      "command": "node",
+      "args": [
+        "${extensionPath}${/}bin${/}skill_dey-mcp.mjs",
+        "--carpeta",
+        "${workspacePath}"
+      ]
+    }
+  }
+}

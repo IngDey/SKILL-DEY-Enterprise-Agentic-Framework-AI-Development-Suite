@@ -1,4 +1,29 @@
-# SKILL_DEY para OpenCode — v26
+# SKILL DEY v40 — guía de instalación
+
+## Instalar en todas tus IAs de una vez
+1. Instala [Node.js](https://nodejs.org/) 20+ y, recomendado, [Git](https://git-scm.com/).
+2. Descarga el `.zip` de la última release (o `git clone`) y descomprímelo.
+3. Doble clic en `INSTALAR.bat` (Windows) o `INSTALAR.command` (macOS/Linux).
+4. El instalador detecta **OpenCode, Claude Code, Gemini CLI y Antigravity CLI** y deja SKILL DEY en cada una. Si una IA pregunta "¿confías en esta carpeta?", contesta tú.
+5. Cierra y abre tu IA. Prueba: *"intenta borrar la tabla clientes"* → el guardián debe bloquearlo.
+
+## Instalar a mano en una sola IA
+| IA | Comando |
+|---|---|
+| Claude Code | Dentro de Claude: `/plugin marketplace add IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite` y `/plugin install skill-dey@skill-dey` |
+| Gemini CLI | `gemini extensions install ./hosts/gemini-cli` |
+| Antigravity CLI | `agy plugin install ./hosts/antigravity` (validar: `agy plugin validate --strict ./hosts/antigravity`) |
+| OpenCode | El instalador (abajo, detalle de lo que copia) |
+
+## Desinstalar
+- Claude Code: `/plugin uninstall skill-dey@skill-dey`
+- Gemini CLI: `gemini extensions uninstall skill-dey`
+- Antigravity CLI: `agy plugin uninstall skill-dey` (o desde Customizations > Installed)
+- OpenCode: borra `~/.config/opencode/skills/skill-dey`, `agents/skill_dey*.md`, `commands/skill_dey*.md`, `tools/skill_dey.ts`, `plugins/skill_dey-guardian.ts` y quita `default_agent` de `opencode.json`.
+
+---
+
+# Edición OpenCode (detalle)
 
 > Creado por **Ing. Dey** ([@IngDey](https://github.com/IngDey))
 

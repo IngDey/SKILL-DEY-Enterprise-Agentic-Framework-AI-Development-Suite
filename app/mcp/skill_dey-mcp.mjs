@@ -1,13 +1,16 @@
-// skill_dey-lib/mcp.ts
+#!/usr/bin/env node
+// SKILL DEY 40.0.0 · generado por scripts/build.mjs desde app/skill_dey-lib/mcp.ts — no editar a mano
+// app/skill_dey-lib/mcp.ts
 import { createInterface } from "node:readline";
-import { resolve } from "node:path";
+import { resolve as resolve2, join as join20 } from "node:path";
+import { mkdirSync as mkdirSync12, writeFileSync as writeFileSync13, appendFileSync, existsSync as existsSync15 } from "node:fs";
 
-// skill_dey-lib/escaneo.ts
+// app/skill_dey-lib/escaneo.ts
 import { spawnSync as spawnSync3 } from "node:child_process";
 import { existsSync, readFileSync as readFileSync2, statSync as statSync2 } from "node:fs";
 import { join as join3 } from "node:path";
 
-// skill_dey-lib/sintaxis.ts
+// app/skill_dey-lib/sintaxis.ts
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, rmSync } from "node:fs";
 import { join, basename, isAbsolute } from "node:path";
@@ -37,7 +40,7 @@ function errorJs(cwd, archivo) {
 `);
 }
 
-// skill_dey-lib/listar.ts
+// app/skill_dey-lib/listar.ts
 import { spawnSync as spawnSync2 } from "node:child_process";
 import { readdirSync, statSync } from "node:fs";
 import { join as join2, relative } from "node:path";
@@ -81,7 +84,7 @@ function listarArchivos(cwd, maxFiles = 20000) {
   return out;
 }
 
-// skill_dey-lib/escaneo.ts
+// app/skill_dey-lib/escaneo.ts
 var WIN = process.platform === "win32";
 var IGN2 = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage|\.venv|venv|__pycache__|\.next|\.nuxt|storage|bootstrap[\\/]cache)([\\/]|$)|\.min\.(js|css)$|\.bundle\.js$/;
 var sh = (c, cwd, t = 300000) => {
@@ -164,7 +167,7 @@ function revisarTodo(cwd) {
   return { ok: errores === 0, lineas: L, errores };
 }
 
-// skill_dey-lib/seguridad.ts
+// app/skill_dey-lib/seguridad.ts
 import { existsSync as existsSync2, readFileSync as readFileSync3, statSync as statSync3 } from "node:fs";
 import { join as join4 } from "node:path";
 var IGN3 = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage|\.venv|venv|__pycache__|\.next|storage|tests?|__tests__|spec|migrations?)([\\/]|$)|\.min\.js$/i;
@@ -238,11 +241,11 @@ function resumenSeguridad(cwd) {
   return { lineas: [`⚠ seguridad: ${H.length} hueco(s) → corrige los CRÍTICO/ALTO antes de entregar:`, ...H.map((h) => `   [${h.prioridad}] ${h.texto} → ${h.donde.slice(0, 3).join(", ")}`)], criticos };
 }
 
-// skill_dey-lib/organizar.ts
+// app/skill_dey-lib/organizar.ts
 import { readFileSync as readFileSync5 } from "node:fs";
 import { join as join6, basename as basename3, dirname } from "node:path";
 
-// skill_dey-lib/extras.ts
+// app/skill_dey-lib/extras.ts
 import { spawnSync as spawnSync4 } from "node:child_process";
 import { existsSync as existsSync3, readFileSync as readFileSync4, writeFileSync as writeFileSync2, statSync as statSync4 } from "node:fs";
 import { join as join5, basename as basename2 } from "node:path";
@@ -265,11 +268,11 @@ function formatear(cwd, soloCambiados = true) {
   const r = [];
   const prettier = existe(".prettierrc", ".prettierrc.json", ".prettierrc.js", "prettier.config.js") || /"prettier"/.test(leer2(join5(cwd, "package.json")));
   if (prettier && existsSync3(join5(cwd, "node_modules", ".bin", "prettier"))) {
-    const js2 = files.filter((f) => /\.(m?[jt]sx?|cjs|vue|svelte|css|scss|json|html|md)$/.test(f));
-    if (js2.length || !soloCambiados) {
-      const t = sh2(`npx --no-install prettier --write ${soloCambiados ? js2.map((f) => `"${f}"`).join(" ") : "."}`, cwd);
+    const js = files.filter((f) => /\.(m?[jt]sx?|cjs|vue|svelte|css|scss|json|html|md)$/.test(f));
+    if (js.length || !soloCambiados) {
+      const t = sh2(`npx --no-install prettier --write ${soloCambiados ? js.map((f) => `"${f}"`).join(" ") : "."}`, cwd);
       if (t.code === 0)
-        r.push(`prettier: ${js2.length || "todos"} archivo(s)`);
+        r.push(`prettier: ${js.length || "todos"} archivo(s)`);
     }
   }
   if (existe("vendor/bin/php-cs-fixer", ".php-cs-fixer.php", ".php-cs-fixer.dist.php")) {
@@ -294,7 +297,7 @@ function formatear(cwd, soloCambiados = true) {
 }
 function validacionServidor(cwd) {
   const req = new Set;
-  for (const f of archivos(cwd).filter((f2) => /\.(html|php|vue|[jt]sx|blade\.php|twig)$/.test(f2)))
+  for (const f of archivos(cwd).filter((f) => /\.(html|php|vue|[jt]sx|blade\.php|twig)$/.test(f)))
     for (const m of leer2(join5(cwd, f)).matchAll(/<(?:input|select|textarea)[^>]*\brequired\b[^>]*>/gi)) {
       const n = m[0].match(/name=["']([\w[\]]+)["']/)?.[1];
       if (n)
@@ -363,7 +366,7 @@ function erroresProduccion(cwd) {
 Corrige por causa raíz el más frecuente primero (references/depuracion.md).`;
 }
 
-// skill_dey-lib/organizar.ts
+// app/skill_dey-lib/organizar.ts
 var leer3 = (p) => {
   try {
     return readFileSync5(p, "utf8");
@@ -376,7 +379,7 @@ var archivos2 = (cwd) => listarArchivos(cwd).filter((f) => !IGN4.test(f));
 var COD = /\.(m?[jt]sx?|cjs|vue|svelte|php|py|go|java|cs|rb)$/;
 function duplicados(cwd, files) {
   const vistos = new Map;
-  for (const f of files.filter((f2) => COD.test(f2))) {
+  for (const f of files.filter((f) => COD.test(f))) {
     const ls = leer3(join6(cwd, f)).split(/\r?\n/);
     for (let i = 0;i + 6 < ls.length; i += 6) {
       const bloque = ls.slice(i, i + 6).map((l) => l.trim()).filter(Boolean);
@@ -410,7 +413,7 @@ function huerfanos(cwd, files) {
 }
 function fueraDeLugar(cwd, files) {
   const r = [];
-  for (const f of files.filter((f2) => COD.test(f2))) {
+  for (const f of files.filter((f) => COD.test(f))) {
     const d = dirname(f).toLowerCase(), t = leer3(join6(cwd, f)).slice(0, 4000);
     if (/(controller|controlador)/i.test(basename3(f)) && !/controller|controlador|routes?|app|src/i.test(d))
       r.push(`${f} parece un controlador fuera de controllers/`);
@@ -448,12 +451,12 @@ function organizar(cwd) {
 `);
 }
 
-// skill_dey-lib/documentar.ts
+// app/skill_dey-lib/documentar.ts
 import { spawnSync as spawnSync6 } from "node:child_process";
 import { existsSync as existsSync5, readFileSync as readFileSync8, writeFileSync as writeFileSync3, mkdirSync as mkdirSync3, readdirSync as readdirSync2, statSync as statSync6 } from "node:fs";
 import { join as join9, relative as relative2, basename as basename5 } from "node:path";
 
-// skill_dey-lib/manual.ts
+// app/skill_dey-lib/manual.ts
 import { readFileSync as readFileSync6 } from "node:fs";
 import { join as join7, basename as basename4 } from "node:path";
 var cache = new Map;
@@ -587,7 +590,7 @@ ${bloque}
   return { doc, fichas };
 }
 
-// skill_dey-lib/bd.ts
+// app/skill_dey-lib/bd.ts
 import { spawnSync as spawnSync5 } from "node:child_process";
 import { readFileSync as readFileSync7, copyFileSync, existsSync as existsSync4, mkdirSync as mkdirSync2 } from "node:fs";
 import { join as join8, isAbsolute as isAbsolute2 } from "node:path";
@@ -640,7 +643,7 @@ function volcarEsquema(cwd) {
   return { sql: r.ok ? r.out : "", motor: { mysql: "MySQL/MariaDB", pg: "PostgreSQL", sqlite: "SQLite" }[c.motor] };
 }
 
-// skill_dey-lib/documentar.ts
+// app/skill_dey-lib/documentar.ts
 var IGN5 = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage|\.venv|venv|__pycache__)([\\/]|$)/;
 function archivos3(cwd) {
   const g = spawnSync6("git", ["ls-files", "-co", "--exclude-standard"], { cwd, encoding: "utf8", maxBuffer: 1e8 });
@@ -675,8 +678,8 @@ function desdeSQL(txt, origen) {
         continue;
       const pk = l.match(/^primary\s+key\s*\(([^)]+)\)/i);
       if (pk) {
-        pk[1].split(",").forEach((c2) => {
-          const x = cols.find((k) => k.nombre === c2.replace(/[`"\s]/g, ""));
+        pk[1].split(",").forEach((c) => {
+          const x = cols.find((k) => k.nombre === c.replace(/[`"\s]/g, ""));
           if (x)
             x.clave = "PK";
         });
@@ -760,9 +763,9 @@ function esquema(cwd) {
   let tablas = [];
   for (const f of sqlArchivos)
     tablas.push(...desdeSQL(leer6(join9(cwd, f)), f));
-  for (const f of fs.filter((f2) => f2.endsWith("schema.prisma")))
+  for (const f of fs.filter((f) => f.endsWith("schema.prisma")))
     tablas.push(...desdePrisma(leer6(join9(cwd, f)), f));
-  for (const f of fs.filter((f2) => /migrations?[\\/].*\.php$/.test(f2)).sort())
+  for (const f of fs.filter((f) => /migrations?[\\/].*\.php$/.test(f)).sort())
     tablas.push(...desdeLaravel(leer6(join9(cwd, f)), f));
   let motorVivo = "";
   if (!tablas.length) {
@@ -833,9 +836,9 @@ function documentar(cwd) {
     let script = "";
     const prisma = fs.find((f) => f.endsWith("schema.prisma"));
     if (prisma && existsSync5(join9(cwd, "node_modules", ".bin", process.platform === "win32" ? "prisma.cmd" : "prisma"))) {
-      const r2 = spawnSync6("npx", ["--no-install", "prisma", "migrate", "diff", "--from-empty", "--to-schema-datamodel", prisma, "--script"], { cwd, encoding: "utf8", shell: process.platform === "win32", timeout: 120000 });
-      if (r2.status === 0)
-        script = r2.stdout;
+      const r = spawnSync6("npx", ["--no-install", "prisma", "migrate", "diff", "--from-empty", "--to-schema-datamodel", prisma, "--script"], { cwd, encoding: "utf8", shell: process.platform === "win32", timeout: 120000 });
+      if (r.status === 0)
+        script = r.stdout;
     }
     const ddl = (ts) => ts.map((t) => `CREATE TABLE IF NOT EXISTS ${t.nombre} (
 ${t.columnas.map((c) => `  ${c.nombre} ${c.tipo}${c.nulo ? "" : " NOT NULL"}${c.defecto ? " DEFAULT " + c.defecto : ""}${c.clave === "PK" ? " PRIMARY KEY" : c.clave === "UNIQUE" ? " UNIQUE" : ""}`).concat(t.columnas.filter((c) => c.clave?.startsWith("FK → ")).map((c) => `  FOREIGN KEY (${c.nombre}) REFERENCES ${c.clave.slice(5).replace(".", "(")})`)).join(`,
@@ -870,14 +873,14 @@ ${script.trim()}
     hecho.push("database/instalacion.sql");
   }
   const ex = leer6(join9(cwd, ".env.example")).split(/\r?\n/).filter((l) => /^\s*[A-Z_][A-Z0-9_]*\s*=/.test(l)).map((l) => {
-    const [k, ...r2] = l.split("=");
-    const coment = r2.join("=").split("#").slice(1).join("#").trim();
+    const [k, ...r] = l.split("=");
+    const coment = r.join("=").split("#").slice(1).join("#").trim();
     return `| ${k.trim()} | ${coment} |`;
   });
   const scripts = [...Object.entries(pkg?.scripts ?? {}).map(([k, v]) => `| npm run ${k} | ${v} |`), ...Object.entries(comp?.scripts ?? {}).map(([k, v]) => `| composer ${k} | ${Array.isArray(v) ? v.join(" && ") : v} |`)];
   const stack = [pkg && "Node.js", comp && "PHP (Composer)", fs.some((f) => f.endsWith(".php")) && !comp && "PHP", fs.some((f) => f.endsWith(".py")) && "Python", fs.some((f) => /\.(tsx?|jsx)$/.test(f)) && "TypeScript/JSX", pkg?.dependencies?.react && "React", pkg?.dependencies?.vue && "Vue", pkg?.dependencies?.express && "Express", comp?.require?.["laravel/framework"] && "Laravel"].filter(Boolean).join(" · ");
   const rutas = [];
-  for (const f of fs.filter((f2) => /\.(m?[jt]s|php|py)$/.test(f2)).slice(0, 800)) {
+  for (const f of fs.filter((f) => /\.(m?[jt]s|php|py)$/.test(f)).slice(0, 800)) {
     const t = leer6(join9(cwd, f));
     for (const m of t.matchAll(/(?:app|router|Route)(?:\.|::)(get|post|put|patch|delete)\s*\(\s*['"]([^'"]+)['"]/gi))
       rutas.push(`| ${m[1].toUpperCase()} | ${m[2]} | ${f} |`);
@@ -918,13 +921,13 @@ Cómo usar la aplicación, pantalla por pantalla.
   return `Documentación actualizada: ${hecho.join(" · ")}`;
 }
 
-// skill_dey-lib/pdf.ts
+// app/skill_dey-lib/pdf.ts
 import { spawnSync as spawnSync8 } from "node:child_process";
 import { readFileSync as readFileSync10, writeFileSync as writeFileSync5, existsSync as existsSync7, mkdirSync as mkdirSync5 } from "node:fs";
 import { join as join11, basename as basename6 } from "node:path";
 import { tmpdir as tmpdir3 } from "node:os";
 
-// skill_dey-lib/app.ts
+// app/skill_dey-lib/app.ts
 import { spawn, spawnSync as spawnSync7 } from "node:child_process";
 import { existsSync as existsSync6, readFileSync as readFileSync9, mkdirSync as mkdirSync4, writeFileSync as writeFileSync4, readdirSync as readdirSync3 } from "node:fs";
 import { join as join10, relative as relative3 } from "node:path";
@@ -1058,14 +1061,14 @@ function asegurarPlaywright(cwdProyecto) {
   }
   return pj;
 }
-function rutasAProbar(cwd, archivos4) {
+function rutasAProbar(cwd, archivos) {
   const root = docrootPhp(cwd);
-  const php2 = archivos4.filter((f) => f.endsWith(".php") && !/vendor|config|includes?|lib|src\/|app\/|clases?|models?|controllers?/i.test(f)).map((f) => "/" + relative3(root, join10(cwd, f)).replace(/\\/g, "/")).filter((r) => !r.startsWith("/.."));
-  const html = archivos4.filter((f) => f.endsWith(".html")).map((f) => "/" + relative3(root, join10(cwd, f)).replace(/\\/g, "/")).filter((r) => !r.startsWith("/.."));
-  return [...new Set(["/", ...php2, ...html])].slice(0, 6);
+  const php = archivos.filter((f) => f.endsWith(".php") && !/vendor|config|includes?|lib|src\/|app\/|clases?|models?|controllers?/i.test(f)).map((f) => "/" + relative3(root, join10(cwd, f)).replace(/\\/g, "/")).filter((r) => !r.startsWith("/.."));
+  const html = archivos.filter((f) => f.endsWith(".html")).map((f) => "/" + relative3(root, join10(cwd, f)).replace(/\\/g, "/")).filter((r) => !r.startsWith("/.."));
+  return [...new Set(["/", ...php, ...html])].slice(0, 6);
 }
 
-// skill_dey-lib/pdf.ts
+// app/skill_dey-lib/pdf.ts
 var leer7 = (p) => {
   try {
     return readFileSync10(p, "utf8");
@@ -1216,13 +1219,13 @@ function documentosPdf(cwd) {
   return `PDF generados: ${hechos.join(" · ") || "ninguno"}${faltan.length ? ` · no se pudo: ${faltan.join(", ")} (¿sin navegador de pruebas?)` : ""}`;
 }
 
-// skill_dey-lib/testpro.ts
+// app/skill_dey-lib/testpro.ts
 import { spawnSync as spawnSync13 } from "node:child_process";
 import { writeFileSync as writeFileSync9, readFileSync as readFileSync14, mkdirSync as mkdirSync8, existsSync as existsSync11 } from "node:fs";
 import { join as join16, basename as basename8 } from "node:path";
 import { tmpdir as tmpdir5 } from "node:os";
 
-// skill_dey-lib/procesos.ts
+// app/skill_dey-lib/procesos.ts
 import { spawn as spawn2, spawnSync as spawnSync9 } from "node:child_process";
 import { existsSync as existsSync8, readFileSync as readFileSync11, mkdirSync as mkdirSync6, writeFileSync as writeFileSync6, readdirSync as readdirSync4 } from "node:fs";
 import { join as join12, basename as basename7 } from "node:path";
@@ -1488,7 +1491,7 @@ async function arranqueLimpio(cwd, espera = Number(process.env.SKILL_DEY_ARRANQU
   return { lista, notas };
 }
 
-// skill_dey-lib/calidad.ts
+// app/skill_dey-lib/calidad.ts
 import { spawnSync as spawnSync10 } from "node:child_process";
 import { writeFileSync as writeFileSync7 } from "node:fs";
 import { join as join13 } from "node:path";
@@ -1566,7 +1569,7 @@ async function carga(base, rutas, usuarios = 20, rondas = 3) {
   return L.length ? [`\uD83C\uDFCB carga (concurrencia):`, ...L.map((x) => "   " + x)] : [];
 }
 
-// skill_dey-lib/movil.ts
+// app/skill_dey-lib/movil.ts
 import { spawnSync as spawnSync11 } from "node:child_process";
 import { existsSync as existsSync9, readFileSync as readFileSync12 } from "node:fs";
 import { join as join14 } from "node:path";
@@ -1588,7 +1591,7 @@ function revisarMovil(cwd) {
   const run = (cmd) => spawnSync11(cmd, { cwd, shell: true, encoding: "utf8", timeout: 300000, maxBuffer: 50000000 });
   const L = [];
   let fallas = 0;
-  const hay3 = (bin) => {
+  const hay = (bin) => {
     try {
       return spawnSync11(bin, ["--version"], { shell: true, timeout: 15000 }).status === 0;
     } catch {
@@ -1597,7 +1600,7 @@ function revisarMovil(cwd) {
   };
   if (tipo === "flutter") {
     L.push("\uD83D\uDCF1 Flutter detectado");
-    if (hay3("flutter")) {
+    if (hay("flutter")) {
       const a = run("flutter analyze");
       const okA = a.status === 0;
       if (!okA)
@@ -1640,7 +1643,7 @@ function revisarMovil(cwd) {
   return { ok: fallas === 0, fallas, lineas: L };
 }
 
-// skill_dey-lib/pro.ts
+// app/skill_dey-lib/pro.ts
 import { spawnSync as spawnSync12 } from "node:child_process";
 import { existsSync as existsSync10, readFileSync as readFileSync13, writeFileSync as writeFileSync8, mkdirSync as mkdirSync7 } from "node:fs";
 import { join as join15 } from "node:path";
@@ -1767,7 +1770,7 @@ function extrasPro(cwd, rutas) {
   return L;
 }
 
-// skill_dey-lib/testpro.ts
+// app/skill_dey-lib/testpro.ts
 var leer10 = (p) => {
   try {
     return readFileSync14(p, "utf8");
@@ -1859,17 +1862,17 @@ function correrUnitarias(cwd) {
     }
   })();
   const L = [];
-  const run2 = (cmd) => spawnSync13(cmd, { cwd, shell: true, encoding: "utf8", timeout: 300000, maxBuffer: 50000000 });
+  const run = (cmd) => spawnSync13(cmd, { cwd, shell: true, encoding: "utf8", timeout: 300000, maxBuffer: 50000000 });
   if (pkg?.scripts?.test && !/no test specified/.test(pkg.scripts.test)) {
-    const r = run2("npm test --silent");
+    const r = run("npm test --silent");
     const ok = r.status === 0;
     L.push(`${ok ? "PASS" : "FAIL"} · unitarias (npm test): ${(r.stdout + r.stderr).split(`
 `).filter((x) => /pass|fail|✓|✗|Tests:|test/i.test(x)).slice(-2).join(" ").slice(0, 120) || (ok ? "ok" : "revisa salida")}`);
   } else if (existsSync11(join16(cwd, "phpunit.xml")) || existsSync11(join16(cwd, "phpunit.xml.dist")) || existsSync11(join16(cwd, "vendor", "bin", "phpunit"))) {
-    const r = run2(existsSync11(join16(cwd, "vendor", "bin", "phpunit")) ? '"vendor/bin/phpunit"' : "phpunit");
+    const r = run(existsSync11(join16(cwd, "vendor", "bin", "phpunit")) ? '"vendor/bin/phpunit"' : "phpunit");
     L.push(`${r.status === 0 ? "PASS" : "FAIL"} · unitarias PHP (phpunit)`);
   } else if (existsSync11(join16(cwd, "pytest.ini")) || existsSync11(join16(cwd, "tests")) && listarArchivos(cwd).some((f) => /test_.*\.py$|_test\.py$/.test(f))) {
-    const r = run2("python -m pytest -q");
+    const r = run("python -m pytest -q");
     L.push(`${r.status === 0 ? "PASS" : "FAIL"} · unitarias Python (pytest)`);
   } else
     L.push("⏭ unitarias: el proyecto no tiene runner configurado (puedo generar un ejemplo si quieres)");
@@ -1942,7 +1945,7 @@ async function pruebasProfesionales(cwd, url) {
   }
 }
 
-// skill_dey-lib/video.ts
+// app/skill_dey-lib/video.ts
 import { spawnSync as spawnSync14 } from "node:child_process";
 import { writeFileSync as writeFileSync10, readFileSync as readFileSync15, mkdirSync as mkdirSync9, existsSync as existsSync12, unlinkSync } from "node:fs";
 import { join as join17, basename as basename9 } from "node:path";
@@ -1964,20 +1967,20 @@ var hayFfmpeg = () => {
 var SEG = 5;
 function guion(cwd) {
   const root = docrootPhp(cwd);
-  const archivos4 = listarArchivos(cwd).filter((f) => /\.(php|html)$/i.test(f) && !/vendor|config|includes?|conexion|node_modules|\/lib\/|\/docs\/|\/tests?\/|\.skill_dey/i.test(f));
+  const archivos = listarArchivos(cwd).filter((f) => /\.(php|html)$/i.test(f) && !/vendor|config|includes?|conexion|node_modules|\/lib\/|\/docs\/|\/tests?\/|\.skill_dey/i.test(f));
   const pasos = [];
   const vistas = new Set;
-  for (const f of archivos4) {
+  for (const f of archivos) {
     const src = leer11(join17(cwd, f));
     const ruta0 = "/" + f.replace(root + "/", "").replace(/\\/g, "/");
     const r = ruta0.startsWith("/..") ? "/" + basename9(f) : ruta0;
     if (vistas.has(r))
       continue;
     const h1 = src.match(/<h1[^>]*>([^<]{2,60})</i)?.[1]?.trim() || src.match(/<title[^>]*>([^<]{2,60})</i)?.[1]?.trim();
-    const campos2 = [...src.matchAll(/<(?:input|select|textarea)\b[^>]*name\s*=\s*["']([^"']+)/gi)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
+    const campos = [...src.matchAll(/<(?:input|select|textarea)\b[^>]*name\s*=\s*["']([^"']+)/gi)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
     const tieneForm = /<form/i.test(src);
     const titulo = (h1 || basename9(f).replace(/\.(php|html)$/i, "")).slice(0, 60);
-    const texto = tieneForm && campos2.length ? `Completa los campos (${campos2.join(", ")}) y usa el botón para guardar.` : `Pantalla "${titulo}".`;
+    const texto = tieneForm && campos.length ? `Completa los campos (${campos.join(", ")}) y usa el botón para guardar.` : `Pantalla "${titulo}".`;
     pasos.push({ ruta: r, titulo, texto });
     vistas.add(r);
     if (pasos.length >= 10)
@@ -2100,22 +2103,346 @@ file '${hechos[hechos.length - 1].img}'
   }
 }
 
-// skill_dey-lib/mcp.ts
-var dir = (a) => resolve(a?.carpeta || process.cwd());
+// app/skill_dey-lib/respaldo.ts
+import { spawnSync as spawnSync15 } from "node:child_process";
+import { existsSync as existsSync13, mkdirSync as mkdirSync10, readFileSync as readFileSync16, writeFileSync as writeFileSync11, copyFileSync as copyFileSync2, unlinkSync as unlinkSync2, readdirSync as readdirSync5, statSync as statSync7, rmSync as rmSync2 } from "node:fs";
+import { join as join18, dirname as dirname3, resolve, relative as relative4, isAbsolute as isAbsolute3 } from "node:path";
+import { homedir as homedir2 } from "node:os";
+var ID = { GIT_AUTHOR_NAME: "SKILL_DEY", GIT_AUTHOR_EMAIL: "skill_dey@local", GIT_COMMITTER_NAME: "SKILL_DEY", GIT_COMMITTER_EMAIL: "skill_dey@local" };
+var EXCLUIR = [
+  ":(exclude,glob)**/.skill_dey/**",
+  ":(exclude,glob)**/node_modules/**",
+  ":(exclude,glob)**/vendor/**",
+  ":(exclude,glob)**/.venv/**",
+  ":(exclude,glob)**/venv/**",
+  ":(exclude,glob)**/dist/**",
+  ":(exclude,glob)**/build/**",
+  ":(exclude,glob)**/.next/**",
+  ":(exclude,glob)**/.nuxt/**",
+  ":(exclude,glob)**/coverage/**",
+  ":(exclude,glob)**/__pycache__/**"
+];
+var PROTEGIDO = /(^|\/)(\.env(?!\.example$)(\..*)?|\.skill_dey\/.*)$/;
+var MAX_FOTOS = 60;
+function git(cwd, args, env = {}) {
+  const r = spawnSync15("git", args, { cwd, encoding: "utf8", maxBuffer: 200000000, timeout: 120000, env: { ...process.env, ...ID, ...env } });
+  return { ok: r.status === 0, out: (r.stdout ?? "").trim(), err: (r.stderr ?? "").trim(), sinGit: !!r.error };
+}
+var hayGit = (cwd) => !git(cwd, ["--version"]).sinGit;
+var esRepo = (cwd) => git(cwd, ["rev-parse", "--is-inside-work-tree"]).out === "true";
+var raiz = (cwd) => git(cwd, ["rev-parse", "--show-toplevel"]).out || cwd;
+function asegurarRepo(cwd) {
+  if (!hayGit(cwd))
+    return false;
+  if (esRepo(cwd))
+    return true;
+  const r = resolve(cwd);
+  if (r === resolve(homedir2()) || r === resolve("/") || /^[A-Za-z]:\\?$/.test(r))
+    return false;
+  return git(cwd, ["init", "-q"]).ok;
+}
+function listar(cwd, grupo) {
+  const r = git(cwd, ["for-each-ref", "--sort=-refname", "--format=%(refname) %(objectname) %(contents:subject)", `refs/skill_dey/${grupo}/`]);
+  if (!r.ok || !r.out)
+    return [];
+  return r.out.split(`
+`).map((l) => {
+    const [ref, commit, ...resto] = l.split(" ");
+    const subj = resto.join(" ");
+    const m = subj.match(/^skill_dey\[(\w[\w-]*)\] (.*)$/);
+    return { ref, commit, ts: Number(ref.split("/").pop()), tipo: m?.[1] ?? "?", nota: m?.[2] ?? subj };
+  });
+}
+function foto(cwd, grupo, tipo, nota) {
+  if (!asegurarRepo(cwd))
+    return null;
+  const root = raiz(cwd);
+  const idx = join18(root, git(root, ["rev-parse", "--git-dir"]).out || ".git", "skill_dey-index");
+  const env = { GIT_INDEX_FILE: isAbsolute3(idx) ? idx : join18(root, idx) };
+  const head = git(root, ["rev-parse", "--verify", "-q", "HEAD"]).out;
+  git(root, head ? ["read-tree", "HEAD"] : ["read-tree", "--empty"], env);
+  if (!git(root, ["add", "-A", "--", ".", ...EXCLUIR], env).ok)
+    return null;
+  const secretos = git(root, ["ls-files"], env).out.split(`
+`).filter((f) => f && PROTEGIDO.test(f));
+  for (let i = 0;i < secretos.length; i += 200)
+    git(root, ["rm", "--cached", "-q", "--", ...secretos.slice(i, i + 200)], env);
+  const tree = git(root, ["write-tree"], env).out;
+  if (!tree)
+    return null;
+  const ultima = listar(root, grupo)[0];
+  if (ultima && git(root, ["rev-parse", `${ultima.commit}^{tree}`]).out === tree)
+    return ultima.commit;
+  const c = git(root, ["commit-tree", tree, ...head ? ["-p", head] : [], "-m", `skill_dey[${tipo}] ${nota.replace(/\s+/g, " ").slice(0, 150)}`]).out;
+  if (!c)
+    return null;
+  const ts = Date.now();
+  git(root, ["update-ref", `refs/skill_dey/${grupo}/${ts}`, c]);
+  for (const vieja of listar(root, grupo).slice(MAX_FOTOS))
+    git(root, ["update-ref", "-d", vieja.ref]);
+  return c;
+}
+function aplicar(root, commit) {
+  const actuales = new Set(git(root, ["ls-files", "-co", "--exclude-standard", "--", ".", ...EXCLUIR]).out.split(`
+`).filter(Boolean));
+  const destino = new Set(git(root, ["ls-tree", "-r", "--name-only", commit]).out.split(`
+`).filter(Boolean));
+  const idx = join18(root, git(root, ["rev-parse", "--git-dir"]).out || ".git", "skill_dey-index");
+  const env = { GIT_INDEX_FILE: isAbsolute3(idx) ? idx : join18(root, idx) };
+  git(root, ["read-tree", commit], env);
+  for (const f of destino)
+    if (PROTEGIDO.test(f))
+      destino.delete(f);
+  const lista = [...destino];
+  for (let i = 0;i < lista.length; i += 500)
+    git(root, ["checkout-index", "-f", "--", ...lista.slice(i, i + 500)], env);
+  const borrados = [];
+  for (const f of actuales)
+    if (!destino.has(f) && !PROTEGIDO.test(f)) {
+      try {
+        unlinkSync2(join18(root, f));
+        borrados.push(f);
+      } catch {}
+    }
+  return { restaurados: destino.size, borrados };
+}
+function difResumen(root, desde, hasta) {
+  return git(root, ["diff", "--stat", "--stat-width=90", desde, hasta]).out.split(`
+`).slice(-12).join(`
+`);
+}
+function deshacer(cwd, pasos = 1) {
+  if (!esRepo(cwd))
+    return deshacerSinGit(cwd);
+  const root = raiz(cwd);
+  const fotos = listar(root, "pasos");
+  if (!fotos.length)
+    return "No hay cambios de SKILL_DEY para deshacer en este proyecto.";
+  const n = Math.min(Math.max(1, pasos), fotos.length);
+  const objetivo = fotos[n - 1];
+  const actual = foto(root, "rehacer", "antes-de-deshacer", `estado antes de deshacer ${n} paso(s)`);
+  const r = aplicar(root, objetivo.commit);
+  for (const f of fotos.slice(0, n)) {
+    git(root, ["update-ref", `refs/skill_dey/deshecho/${f.ts}`, f.commit]);
+    git(root, ["update-ref", "-d", f.ref]);
+  }
+  return [
+    `↩ Deshecho(s) ${n} cambio(s). Proyecto restaurado a como estaba antes de: "${objetivo.nota}" (${new Date(objetivo.ts).toLocaleString()}).`,
+    actual ? difResumen(root, actual, objetivo.commit) : "",
+    r.borrados.length ? `Archivos creados por el cambio y eliminados: ${r.borrados.slice(0, 10).join(", ")}${r.borrados.length > 10 ? "…" : ""}` : "",
+    "Se puede REHACER si fue un error. .env y archivos ignorados no se tocaron. Si hubo migraciones de BD, revierte también la BD (ver respaldos-bd)."
+  ].filter(Boolean).join(`
+`);
+}
+function rehacer(cwd) {
+  if (!esRepo(cwd))
+    return "Rehacer solo está disponible en proyectos con git.";
+  const root = raiz(cwd);
+  const r = listar(root, "rehacer")[0];
+  if (!r)
+    return "No hay nada para rehacer.";
+  const r2 = aplicar(root, r.commit);
+  git(root, ["update-ref", "-d", r.ref]);
+  const d = listar(root, "deshecho")[0];
+  if (d) {
+    git(root, ["update-ref", `refs/skill_dey/pasos/${d.ts}`, d.commit]);
+    git(root, ["update-ref", "-d", d.ref]);
+  }
+  return `↪ Rehecho: el proyecto volvió al estado anterior al deshacer. ${r2.borrados.length ? "Eliminados: " + r2.borrados.join(", ") : ""}`;
+}
+function historial(cwd) {
+  if (!esRepo(cwd)) {
+    const d = join18(cwd, ".skill_dey", "respaldos-archivos");
+    const l = existsSync13(d) ? readdirSync5(d).sort().reverse().slice(0, 15) : [];
+    return l.length ? `Respaldos (sin git):
+` + l.map((x, i) => `${i + 1}. ${x}`).join(`
+`) : "Sin respaldos.";
+  }
+  const root = raiz(cwd);
+  const f = listar(root, "pasos");
+  const lineas = f.slice(0, 15).map((x, i) => `${i + 1}. ${new Date(x.ts).toLocaleString()} · antes de: ${x.nota}`);
+  const reh = listar(root, "rehacer").length;
+  return (lineas.length ? `Cambios que se pueden deshacer (1 = el último):
+` + lineas.join(`
+`) : "No hay cambios para deshacer.") + (reh ? `
+(${reh} deshacer reversible con rehacer)` : "");
+}
+function deshacerSinGit(cwd) {
+  const base = join18(cwd, ".skill_dey", "respaldos-archivos");
+  const turnos = existsSync13(base) ? readdirSync5(base).sort().reverse() : [];
+  if (!turnos.length)
+    return "No hay respaldos para deshacer (instala git para protección completa).";
+  const dir = join18(base, turnos[0]);
+  const m = JSON.parse(readFileSync16(join18(dir, "manifiesto.json"), "utf8"));
+  const hecho = [];
+  for (const a of m.archivos) {
+    const dst = join18(cwd, a.ruta);
+    if (a.existia) {
+      mkdirSync10(dirname3(dst), { recursive: true });
+      copyFileSync2(join18(dir, "archivos", a.ruta), dst);
+      hecho.push("restaurado " + a.ruta);
+    } else if (existsSync13(dst)) {
+      unlinkSync2(dst);
+      hecho.push("eliminado " + a.ruta);
+    }
+  }
+  rmSync2(dir, { recursive: true, force: true });
+  return `↩ Deshecho el último cambio (sin git):
+${hecho.join(`
+`)}`;
+}
+
+// app/skill_dey-lib/multiia.ts
+import { writeFileSync as writeFileSync12, mkdirSync as mkdirSync11, existsSync as existsSync14, readFileSync as readFileSync17 } from "node:fs";
+import { join as join19 } from "node:path";
+function reglasPortables() {
+  return `# Reglas de trabajo — SKILL_DEY (portátil)
+Trabaja como SKILL_DEY en este proyecto, con esta ley y este flujo.
+
+**Prioridad fija:** sin error > preciso > rápido > pocos tokens. Recorta ruido, nunca pasos que evitan errores.
+**Entiende primero:** di en 1 línea "Entendí: <qué y para qué>"; deduce lo implícito (validación, permisos, vacío/error, móvil). Si es ambiguo y caro de deshacer, pregunta 1 cosa con opciones.
+**Nunca rompas la app:** antes de cambios grandes, respaldo (git add/commit o copia); deja siempre cómo deshacer. Cambios quirúrgicos; no inventes nombres, rutas ni APIs; dependencia nueva → propón y espera OK.
+**Cero errores:** al terminar, no entregues nada con errores de código ni de consola. Si 3 intentos no quedan en verde, cambia de enfoque (diagnóstico sistemático) y si no, revierte y explica.
+**Acciones finales** (video, pruebas profesionales, publicar): no las hagas solas; ofrécelas con 1 pregunta cuando el proyecto esté listo.
+
+**Chequeos deterministas (0 tokens): usa el CLI de skill_dey en la terminal** (funciona en Mac/Windows/Linux):
+- \`node ~/.config/opencode/skill_dey/skill_dey.mjs revisar [carpeta]\`   — errores de código/arranque/sitio
+- \`... seguridad [carpeta]\`   — huecos de seguridad + auditoría de dependencias
+- \`... pruebas [carpeta] [url]\`   — suite E2E + prueba en vivo + a11y + carga + cobertura + CI
+- \`... capacitar [carpeta] [url]\`   — video subtitulado de capacitación
+- \`... organizar | documentar | validar | rendimiento | produccion | movil [carpeta]\`
+(si no tienes Node, pídele a la IA que corra la acción equivalente a mano siguiendo estas reglas).
+Las IAs con MCP pueden usar el servidor \`skill_dey-mcp\` para llamar estos chequeos como herramientas.`;
+}
+var DESTINOS = [
+  { archivo: "AGENTS.md" },
+  { archivo: "CLAUDE.md" },
+  { archivo: "GEMINI.md" },
+  { archivo: ".cursorrules" },
+  { archivo: join19(".cursor", "rules", "skill_dey.mdc"), pre: `---
+description: SKILL_DEY
+alwaysApply: true
+---
+
+` },
+  { archivo: ".windsurfrules" },
+  { archivo: join19(".github", "copilot-instructions.md") },
+  { archivo: ".clinerules" },
+  { archivo: ".rules" },
+  { archivo: join19(".idx", "airules.md") }
+];
+function instalarMultiIA(cwd) {
+  const reglas = reglasPortables();
+  const marca = "<!-- SKILL_DEY:inicio -->";
+  const fin = "<!-- SKILL_DEY:fin -->";
+  const bloque = `${marca}
+${reglas}
+${fin}
+`;
+  const hechos = [];
+  for (const d of DESTINOS) {
+    const ruta = join19(cwd, d.archivo);
+    try {
+      mkdirSync11(join19(ruta, ".."), { recursive: true });
+      let contenido = "";
+      try {
+        contenido = existsSync14(ruta) ? readFileSync17(ruta, "utf8") : "";
+      } catch {}
+      if (contenido.includes(marca)) {
+        contenido = contenido.replace(new RegExp(`${marca}[\\s\\S]*?${fin}\\n?`), bloque);
+      } else {
+        contenido = contenido ? contenido.trimEnd() + `
+
+` + (d.pre ?? "") + bloque : (d.pre ?? "") + bloque;
+      }
+      writeFileSync12(ruta, contenido);
+      hechos.push(d.archivo);
+    } catch (e) {
+      hechos.push(d.archivo + " (no se pudo: " + e.message + ")");
+    }
+  }
+  mkdirSync11(join19(cwd, ".skill_dey"), { recursive: true });
+  writeFileSync12(join19(cwd, ".skill_dey", "MULTI-IA.md"), `# SKILL_DEY multi-IA
+Reglas escritas para: ${DESTINOS.map((d) => d.archivo).join(", ")}
+
+${reglasPortables()}`);
+  return {
+    ok: true,
+    lineas: [
+      `\uD83C\uDF10 Multi-IA: reglas de skill_dey escritas para ${hechos.length} asistentes → ${hechos.join(", ")}`,
+      "   Cada IA (Claude Code, Cursor, Windsurf, Copilot, Codex, Gemini, Cline, Zed, IDX) las lee de su propio archivo.",
+      "   Chequeos: `node ~/.config/opencode/skill_dey/skill_dey.mjs <revisar|seguridad|pruebas|...>` o el servidor MCP skill_dey-mcp.",
+      "   Nota: el guardián automático en vivo (copias, verificación al cerrar, cambio de modelo) solo corre dentro de OpenCode."
+    ]
+  };
+}
+
+// app/skill_dey-lib/mcp.ts
+var VERSION = "40.0.0";
+var PROTOCOLOS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
+console.log = console.info = console.warn = console.debug = (...a) => process.stderr.write(a.map(String).join(" ") + `
+`);
+var argCarpeta = (() => {
+  const i = process.argv.indexOf("--carpeta");
+  return i > 0 ? process.argv[i + 1] : "";
+})();
+var PLANTILLA = /\$\{[^}]+\}/;
+var carpetaPorDefecto = () => [argCarpeta, process.env.CLAUDE_PROJECT_DIR, process.env.GEMINI_PROJECT_DIR, process.env.WORKSPACE_PATH, process.cwd()].find((x) => x && !PLANTILLA.test(x));
+var dir = (a) => resolve2(a?.carpeta && !PLANTILLA.test(a.carpeta) ? a.carpeta : carpetaPorDefecto());
 var T = {
-  skill_dey_revisar: { desc: "Revisa errores de código, arranque y sitio. Solo informa.", run: (a) => revisarTodo(dir(a)).lineas.join(`
+  skill_dey_verificar: {
+    titulo: "Verificar (cero errores)",
+    soloLectura: false,
+    desc: "Revisa TODO el proyecto (sintaxis, tipos, lint, arranque, seguridad básica). Úsala para cerrar cualquier cambio: debe salir ✅. Deja constancia para el guardián.",
+    run: (a) => {
+      const c = dir(a);
+      const r = revisarTodo(c);
+      try {
+        mkdirSync12(join20(c, ".skill_dey"), { recursive: true });
+        writeFileSync13(join20(c, ".skill_dey", ".ultimo-verificar.json"), JSON.stringify({ ok: r.ok, ts: Date.now(), errores: r.errores, origen: "mcp" }));
+      } catch {}
+      return [...r.lineas, r.ok ? "✅ todo verde" : `❌ ${r.errores} problema(s): corrige y vuelve a verificar`].join(`
+`);
+    }
+  },
+  skill_dey_deshacer: {
+    titulo: "Deshacer",
+    destructiva: true,
+    desc: "Devuelve el proyecto a como estaba antes del último cambio de la IA (o de N cambios). No toca .env. Se puede rehacer.",
+    extra: { pasos: { type: "integer", minimum: 1, maximum: 60, description: "cuántos cambios deshacer (defecto 1)" } },
+    run: (a) => deshacer(dir(a), Number(a?.pasos) || 1)
+  },
+  skill_dey_rehacer: { titulo: "Rehacer", destructiva: true, desc: "Revierte el último deshacer.", run: (a) => rehacer(dir(a)) },
+  skill_dey_historial: { titulo: "Historial de cambios", soloLectura: true, desc: "Lista los cambios que se pueden deshacer (1 = el último).", run: (a) => historial(dir(a)) },
+  skill_dey_congelar: {
+    titulo: "Congelar ruta",
+    soloLectura: false,
+    requeridos: ["ruta"],
+    desc: "Marca una carpeta o archivo como intocable (el guardián bloquea cambios ahí). Solo si el usuario lo pide.",
+    extra: { ruta: { type: "string", description: "ruta relativa al proyecto, ej. pagos/" } },
+    run: (a) => {
+      const c = dir(a);
+      const f = join20(c, ".skill_dey", "CONGELADO.txt");
+      mkdirSync12(join20(c, ".skill_dey"), { recursive: true });
+      appendFileSync(f, (existsSync15(f) ? "" : `# rutas que no se tocan sin permiso
+`) + String(a.ruta).trim() + `
+`);
+      return "\uD83E\uDDCA congelado: " + a.ruta;
+    }
+  },
+  skill_dey_revisar: { titulo: "Revisar", soloLectura: true, desc: "Revisa errores de código, arranque y sitio. Solo informa.", run: (a) => revisarTodo(dir(a)).lineas.join(`
 `) },
-  skill_dey_seguridad: { desc: "Huecos de seguridad + auditoría de dependencias (npm/composer) + semgrep si está.", run: (a) => {
+  skill_dey_seguridad: { titulo: "Seguridad", soloLectura: true, desc: "Huecos de seguridad + auditoría de dependencias (npm/composer) + semgrep si está.", run: (a) => {
     const c = dir(a);
     return [...resumenSeguridad(c).lineas, ...auditarDependencias(c), semgrep(c)].filter(Boolean).join(`
 `);
   } },
-  skill_dey_pruebas: { desc: "Testeo profesional: suite E2E + prueba en vivo + a11y + carga + cobertura + CI.", run: async (a) => (await pruebasProfesionales(dir(a), a?.url)).lineas.join(`
+  skill_dey_pruebas: { titulo: "Pruebas profesionales", desc: "Suite E2E + prueba en vivo + accesibilidad + carga + cobertura + CI. Solo cuando el usuario lo pida.", run: async (a) => (await pruebasProfesionales(dir(a), a?.url)).lineas.join(`
 `) },
-  skill_dey_capacitar: { desc: "Graba un video subtitulado de capacitación (docs/capacitacion).", run: async (a) => (await capacitar(dir(a), a?.url)).lineas.join(`
+  skill_dey_capacitar: { titulo: "Video de capacitación", desc: "Graba un video subtitulado de capacitación (docs/capacitacion). Solo cuando el usuario lo pida.", run: async (a) => (await capacitar(dir(a), a?.url)).lineas.join(`
 `) },
-  skill_dey_organizar: { desc: "Ordena el proyecto: formato, estructura, duplicados, capas.", run: (a) => organizar(dir(a)) },
-  skill_dey_documentar: { desc: "Manual de usuario/técnico, diccionario y script de BD + PDF.", run: (a) => {
+  skill_dey_organizar: { titulo: "Organizar proyecto", desc: "Ordena el proyecto: formato, estructura, duplicados, capas.", run: (a) => organizar(dir(a)) },
+  skill_dey_documentar: { titulo: "Documentar", desc: "Manual de usuario/técnico, diccionario de datos y script de BD + PDF.", run: (a) => {
     const c = dir(a);
     const d = documentar(c);
     let p = "";
@@ -2125,51 +2452,88 @@ var T = {
     return d + `
 ` + p;
   } },
-  skill_dey_validar: { desc: "Campos obligatorios sin validar en servidor + código sugerido.", run: (a) => validacionServidor(dir(a)) },
-  skill_dey_produccion: { desc: "Errores del log del servidor agrupados + estado de Sentry.", run: (a) => {
+  skill_dey_validar: { titulo: "Validación en servidor", soloLectura: true, desc: "Campos obligatorios sin validar en servidor + código sugerido.", run: (a) => validacionServidor(dir(a)) },
+  skill_dey_produccion: { titulo: "Errores de producción", soloLectura: true, desc: "Errores del log del servidor agrupados + estado de Sentry.", run: (a) => {
     const c = dir(a);
     return [erroresProduccion(c), sentryCheck(c)].filter(Boolean).join(`
 `);
   } },
-  skill_dey_movil: { desc: "App Flutter/React Native: analizador y pruebas del stack.", run: (a) => revisarMovil(dir(a)).lineas.join(`
+  skill_dey_movil: { titulo: "App móvil", soloLectura: true, desc: "App Flutter/React Native: analizador y pruebas del stack.", run: (a) => revisarMovil(dir(a)).lineas.join(`
+`) },
+  skill_dey_multi_ia: { titulo: "Reglas para todas las IAs", desc: "Escribe las reglas de SKILL_DEY en AGENTS.md, CLAUDE.md, GEMINI.md, Cursor, Copilot… sin pisar lo existente.", run: (a) => instalarMultiIA(dir(a)).lineas.join(`
 `) }
 };
 var toolDefs = Object.entries(T).map(([name, t]) => ({
   name,
+  title: t.titulo,
   description: t.desc,
-  inputSchema: { type: "object", properties: { carpeta: { type: "string", description: "ruta del proyecto (opcional)" }, url: { type: "string", description: "url si la app ya corre (opcional)" } } }
+  inputSchema: {
+    type: "object",
+    properties: { carpeta: { type: "string", description: "ruta absoluta del proyecto (opcional; por defecto la carpeta abierta)" }, url: { type: "string", description: "url si la app ya corre (opcional)" }, ...t.extra ?? {} },
+    ...t.requeridos ? { required: t.requeridos } : {}
+  },
+  annotations: { title: t.titulo, readOnlyHint: !!t.soloLectura, destructiveHint: !!t.destructiva, idempotentHint: !!t.soloLectura, openWorldHint: false }
 }));
-var enviar = (msg) => process.stdout.write(JSON.stringify(msg) + `
+var enviar = (msg) => {
+  process.stdout.write(JSON.stringify(msg) + `
 `);
+};
 var ok = (id, result) => enviar({ jsonrpc: "2.0", id, result });
-var err = (id, message) => enviar({ jsonrpc: "2.0", id, error: { code: -32000, message } });
-var rl = createInterface({ input: process.stdin });
-rl.on("line", async (linea) => {
-  let m;
+var err = (id, code, message) => enviar({ jsonrpc: "2.0", id, error: { code, message } });
+async function atender(m) {
+  const { id, method, params } = m ?? {};
+  const responde = typeof id !== "undefined" && id !== null;
   try {
-    m = JSON.parse(linea);
-  } catch {
-    return;
-  }
-  const { id, method, params } = m;
-  try {
-    if (method === "initialize")
-      return ok(id, { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "skill_dey", version: "32.0.0" } });
-    if (method === "notifications/initialized")
+    if (method === "initialize") {
+      const pedida = params?.protocolVersion;
+      return ok(id, { protocolVersion: PROTOCOLOS.includes(pedida) ? pedida : PROTOCOLOS[0], capabilities: { tools: { listChanged: false } }, serverInfo: { name: "skill_dey", title: "SKILL DEY", version: VERSION }, instructions: "Chequeos deterministas de SKILL DEY (0 tokens). Cierra cada cambio con skill_dey_verificar en verde; si el usuario dice 'deshaz', usa skill_dey_deshacer." });
+    }
+    if (typeof method === "string" && method.startsWith("notifications/"))
       return;
+    if (method === "ping")
+      return ok(id, {});
     if (method === "tools/list")
       return ok(id, { tools: toolDefs });
     if (method === "tools/call") {
       const t = T[params?.name];
       if (!t)
-        return err(id, "herramienta desconocida: " + params?.name);
-      const texto = await t.run(params?.arguments ?? {});
-      return ok(id, { content: [{ type: "text", text: String(texto) }] });
+        return err(id, -32602, "herramienta desconocida: " + params?.name);
+      try {
+        const texto = await t.run(params?.arguments ?? {});
+        return ok(id, { content: [{ type: "text", text: String(texto) }] });
+      } catch (e) {
+        return ok(id, { content: [{ type: "text", text: `❌ ${params?.name}: ${String(e?.message ?? e)}` }], isError: true });
+      }
     }
-    if (typeof id !== "undefined")
-      return err(id, "método no soportado: " + method);
+    if (responde)
+      return err(id, -32601, "método no soportado: " + method);
   } catch (e) {
-    if (typeof id !== "undefined")
-      err(id, String(e?.message ?? e));
+    if (responde)
+      err(id, -32603, String(e?.message ?? e));
   }
-});
+}
+function iniciar() {
+  const rl = createInterface({ input: process.stdin });
+  rl.on("line", (linea) => {
+    if (!linea.trim())
+      return;
+    let m;
+    try {
+      m = JSON.parse(linea);
+    } catch {
+      return err(null, -32700, "JSON inválido");
+    }
+    if (Array.isArray(m)) {
+      for (const x of m)
+        atender(x);
+      return;
+    }
+    atender(m);
+  });
+}
+if (process.argv[1] && /skill_dey-mcp\.(mjs|ts|js)$/.test(process.argv[1]))
+  iniciar();
+export {
+  atender,
+  iniciar
+};

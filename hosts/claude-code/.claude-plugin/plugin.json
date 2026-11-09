@@ -1,0 +1,23 @@
+{
+  "name": "skill-dey",
+  "version": "40.0.0",
+  "description": "Agentes de IA que programan sin romper tu app: guardián en vivo, deshacer cualquier cambio, cero errores, seguridad y documentación automática.",
+  "author": {
+    "name": "Ing. Dey (@IngDey)",
+    "url": "https://github.com/IngDey"
+  },
+  "homepage": "https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite",
+  "repository": "https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite",
+  "license": "MIT",
+  "keywords": [
+    "ai",
+    "agents",
+    "skills",
+    "mcp",
+    "quality",
+    "security",
+    "undo",
+    "zero-errors",
+    "spanish"
+  ]
+}

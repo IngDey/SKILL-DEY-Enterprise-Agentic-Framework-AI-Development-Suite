@@ -1,12 +1,14 @@
-// skill_dey-lib/cli.ts
+#!/usr/bin/env node
+// SKILL DEY 40.0.0 · generado por scripts/build.mjs desde app/skill_dey-lib/cli.ts — no editar a mano
+// app/skill_dey-lib/cli.ts
 import { resolve } from "node:path";
 
-// skill_dey-lib/documentar.ts
+// app/skill_dey-lib/documentar.ts
 import { spawnSync as spawnSync2 } from "node:child_process";
 import { existsSync as existsSync2, readFileSync as readFileSync3, writeFileSync, mkdirSync as mkdirSync2, readdirSync, statSync } from "node:fs";
 import { join as join3, relative, basename as basename2 } from "node:path";
 
-// skill_dey-lib/manual.ts
+// app/skill_dey-lib/manual.ts
 import { readFileSync } from "node:fs";
 import { join, basename } from "node:path";
 var cache = new Map;
@@ -140,7 +142,7 @@ ${bloque}
   return { doc, fichas };
 }
 
-// skill_dey-lib/bd.ts
+// app/skill_dey-lib/bd.ts
 import { spawnSync } from "node:child_process";
 import { readFileSync as readFileSync2, copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { join as join2, isAbsolute } from "node:path";
@@ -207,7 +209,7 @@ function contar(cwd, sql) {
   return Number.isFinite(n) ? { ok: true, n } : { ok: false, error: "la consulta no devolvió un número" };
 }
 
-// skill_dey-lib/documentar.ts
+// app/skill_dey-lib/documentar.ts
 var IGN = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage|\.venv|venv|__pycache__)([\\/]|$)/;
 function archivos(cwd) {
   const g = spawnSync2("git", ["ls-files", "-co", "--exclude-standard"], { cwd, encoding: "utf8", maxBuffer: 1e8 });
@@ -242,8 +244,8 @@ function desdeSQL(txt, origen) {
         continue;
       const pk = l.match(/^primary\s+key\s*\(([^)]+)\)/i);
       if (pk) {
-        pk[1].split(",").forEach((c2) => {
-          const x = cols.find((k) => k.nombre === c2.replace(/[`"\s]/g, ""));
+        pk[1].split(",").forEach((c) => {
+          const x = cols.find((k) => k.nombre === c.replace(/[`"\s]/g, ""));
           if (x)
             x.clave = "PK";
         });
@@ -327,9 +329,9 @@ function esquema(cwd) {
   let tablas = [];
   for (const f of sqlArchivos)
     tablas.push(...desdeSQL(leer3(join3(cwd, f)), f));
-  for (const f of fs.filter((f2) => f2.endsWith("schema.prisma")))
+  for (const f of fs.filter((f) => f.endsWith("schema.prisma")))
     tablas.push(...desdePrisma(leer3(join3(cwd, f)), f));
-  for (const f of fs.filter((f2) => /migrations?[\\/].*\.php$/.test(f2)).sort())
+  for (const f of fs.filter((f) => /migrations?[\\/].*\.php$/.test(f)).sort())
     tablas.push(...desdeLaravel(leer3(join3(cwd, f)), f));
   let motorVivo = "";
   if (!tablas.length) {
@@ -400,9 +402,9 @@ function documentar(cwd) {
     let script = "";
     const prisma = fs.find((f) => f.endsWith("schema.prisma"));
     if (prisma && existsSync2(join3(cwd, "node_modules", ".bin", process.platform === "win32" ? "prisma.cmd" : "prisma"))) {
-      const r2 = spawnSync2("npx", ["--no-install", "prisma", "migrate", "diff", "--from-empty", "--to-schema-datamodel", prisma, "--script"], { cwd, encoding: "utf8", shell: process.platform === "win32", timeout: 120000 });
-      if (r2.status === 0)
-        script = r2.stdout;
+      const r = spawnSync2("npx", ["--no-install", "prisma", "migrate", "diff", "--from-empty", "--to-schema-datamodel", prisma, "--script"], { cwd, encoding: "utf8", shell: process.platform === "win32", timeout: 120000 });
+      if (r.status === 0)
+        script = r.stdout;
     }
     const ddl = (ts) => ts.map((t) => `CREATE TABLE IF NOT EXISTS ${t.nombre} (
 ${t.columnas.map((c) => `  ${c.nombre} ${c.tipo}${c.nulo ? "" : " NOT NULL"}${c.defecto ? " DEFAULT " + c.defecto : ""}${c.clave === "PK" ? " PRIMARY KEY" : c.clave === "UNIQUE" ? " UNIQUE" : ""}`).concat(t.columnas.filter((c) => c.clave?.startsWith("FK → ")).map((c) => `  FOREIGN KEY (${c.nombre}) REFERENCES ${c.clave.slice(5).replace(".", "(")})`)).join(`,
@@ -437,14 +439,14 @@ ${script.trim()}
     hecho.push("database/instalacion.sql");
   }
   const ex = leer3(join3(cwd, ".env.example")).split(/\r?\n/).filter((l) => /^\s*[A-Z_][A-Z0-9_]*\s*=/.test(l)).map((l) => {
-    const [k, ...r2] = l.split("=");
-    const coment = r2.join("=").split("#").slice(1).join("#").trim();
+    const [k, ...r] = l.split("=");
+    const coment = r.join("=").split("#").slice(1).join("#").trim();
     return `| ${k.trim()} | ${coment} |`;
   });
   const scripts = [...Object.entries(pkg?.scripts ?? {}).map(([k, v]) => `| npm run ${k} | ${v} |`), ...Object.entries(comp?.scripts ?? {}).map(([k, v]) => `| composer ${k} | ${Array.isArray(v) ? v.join(" && ") : v} |`)];
   const stack = [pkg && "Node.js", comp && "PHP (Composer)", fs.some((f) => f.endsWith(".php")) && !comp && "PHP", fs.some((f) => f.endsWith(".py")) && "Python", fs.some((f) => /\.(tsx?|jsx)$/.test(f)) && "TypeScript/JSX", pkg?.dependencies?.react && "React", pkg?.dependencies?.vue && "Vue", pkg?.dependencies?.express && "Express", comp?.require?.["laravel/framework"] && "Laravel"].filter(Boolean).join(" · ");
   const rutas = [];
-  for (const f of fs.filter((f2) => /\.(m?[jt]s|php|py)$/.test(f2)).slice(0, 800)) {
+  for (const f of fs.filter((f) => /\.(m?[jt]s|php|py)$/.test(f)).slice(0, 800)) {
     const t = leer3(join3(cwd, f));
     for (const m of t.matchAll(/(?:app|router|Route)(?:\.|::)(get|post|put|patch|delete)\s*\(\s*['"]([^'"]+)['"]/gi))
       rutas.push(`| ${m[1].toUpperCase()} | ${m[2]} | ${f} |`);
@@ -485,12 +487,12 @@ Cómo usar la aplicación, pantalla por pantalla.
   return `Documentación actualizada: ${hecho.join(" · ")}`;
 }
 
-// skill_dey-lib/escaneo.ts
+// app/skill_dey-lib/escaneo.ts
 import { spawnSync as spawnSync5 } from "node:child_process";
 import { existsSync as existsSync3, readFileSync as readFileSync5, statSync as statSync3 } from "node:fs";
 import { join as join6 } from "node:path";
 
-// skill_dey-lib/sintaxis.ts
+// app/skill_dey-lib/sintaxis.ts
 import { spawnSync as spawnSync3 } from "node:child_process";
 import { readFileSync as readFileSync4, writeFileSync as writeFileSync2, rmSync } from "node:fs";
 import { join as join4, basename as basename3, isAbsolute as isAbsolute2 } from "node:path";
@@ -520,7 +522,7 @@ function errorJs(cwd, archivo) {
 `);
 }
 
-// skill_dey-lib/listar.ts
+// app/skill_dey-lib/listar.ts
 import { spawnSync as spawnSync4 } from "node:child_process";
 import { readdirSync as readdirSync2, statSync as statSync2 } from "node:fs";
 import { join as join5, relative as relative2 } from "node:path";
@@ -564,7 +566,7 @@ function listarArchivos(cwd, maxFiles = 20000) {
   return out;
 }
 
-// skill_dey-lib/escaneo.ts
+// app/skill_dey-lib/escaneo.ts
 var WIN = process.platform === "win32";
 var IGN3 = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage|\.venv|venv|__pycache__|\.next|\.nuxt|storage|bootstrap[\\/]cache)([\\/]|$)|\.min\.(js|css)$|\.bundle\.js$/;
 var sh = (c, cwd, t = 300000) => {
@@ -647,7 +649,7 @@ function revisarTodo(cwd) {
   return { ok: errores === 0, lineas: L, errores };
 }
 
-// skill_dey-lib/adopcion.ts
+// app/skill_dey-lib/adopcion.ts
 import { existsSync as existsSync4, readFileSync as readFileSync6, statSync as statSync4 } from "node:fs";
 import { join as join7 } from "node:path";
 var IGN4 = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage|\.venv|venv|__pycache__|\.next|storage|tests?|__tests__|spec)([\\/]|$)|\.min\.js$/i;
@@ -692,7 +694,7 @@ function analizar(cwd) {
     add("ALTO", "seguridad", "Páginas sin control de sesión mientras otras sí lo tienen (¿acceso sin login?)", paginas.filter((f) => !conSesion.includes(f) && !/login|logout|index|registro|register|recuperar|forgot|public|api[\\/]health/i.test(f) && /(echo|print|<\?=|<html|<form|<table|<div|json_encode)/i.test(leer4(join7(cwd, f)))));
   add("MEDIO", "seguridad", "Errores silenciados (@, catch vacío, error_reporting(0)): ocultan fallas reales", [...buscar(/(^|[^\w])@(\$\w+->|mysqli_|mysql_|pg_|file_|fopen|unlink|mkdir|json_)|error_reporting\(\s*0\s*\)/, php), ...buscar(/catch\s*(\([^)]*\))?\s*\{\s*\}/, js), ...buscar(/except\s*:\s*pass|except Exception\s*:\s*pass/, py)]);
   const estados = new Map;
-  for (const f of files.filter((f2) => php(f2) || js(f2) || py(f2)))
+  for (const f of files.filter((f) => php(f) || js(f) || py(f)))
     leer4(join7(cwd, f)).split(/\r?\n/).forEach((l, i) => {
       for (const m of l.matchAll(/(?:[=!]==?|case|in_array\([^,]+,|IN\s*\()\s*\[?\s*["']([A-Za-zÁÉÍÓÚáéíóúñÑ ]{3,25})["']/g)) {
         const k = m[1].toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
@@ -708,7 +710,7 @@ function analizar(cwd) {
     if (variantes.size > 1)
       add("MEDIO", "lógica", `Mismo estado/valor escrito distinto (${[...variantes.keys()].map((x) => `"${x}"`).join(" vs ")}): comparaciones que fallan en silencio`, [...variantes.values()].flat());
   const requeridosFront = new Set;
-  for (const f of files.filter((f2) => /\.(html|php|vue|[jt]sx|blade\.php|twig)$/.test(f2)))
+  for (const f of files.filter((f) => /\.(html|php|vue|[jt]sx|blade\.php|twig)$/.test(f)))
     for (const m of leer4(join7(cwd, f)).matchAll(/<(?:input|select|textarea)[^>]*\brequired\b[^>]*>/gi)) {
       const n = m[0].match(/name=["']([\w\[\]]+)["']/)?.[1];
       if (n)
@@ -736,17 +738,17 @@ function analizar(cwd) {
   return H.sort((a, b) => orden[a.prioridad] - orden[b.prioridad]);
 }
 
-// skill_dey-lib/empalme.ts
+// app/skill_dey-lib/empalme.ts
 import { spawnSync as spawnSync8 } from "node:child_process";
 import { existsSync as existsSync7, readFileSync as readFileSync10, writeFileSync as writeFileSync6, mkdirSync as mkdirSync6, statSync as statSync5, readdirSync as readdirSync5 } from "node:fs";
 import { join as join11, basename as basename5 } from "node:path";
 
-// skill_dey-lib/procesos.ts
+// app/skill_dey-lib/procesos.ts
 import { spawn as spawn2, spawnSync as spawnSync7 } from "node:child_process";
 import { existsSync as existsSync6, readFileSync as readFileSync8, mkdirSync as mkdirSync4, writeFileSync as writeFileSync4, readdirSync as readdirSync4 } from "node:fs";
 import { join as join9, basename as basename4 } from "node:path";
 
-// skill_dey-lib/app.ts
+// app/skill_dey-lib/app.ts
 import { spawn, spawnSync as spawnSync6 } from "node:child_process";
 import { existsSync as existsSync5, readFileSync as readFileSync7, mkdirSync as mkdirSync3, writeFileSync as writeFileSync3, readdirSync as readdirSync3 } from "node:fs";
 import { join as join8, relative as relative3 } from "node:path";
@@ -880,14 +882,14 @@ function asegurarPlaywright(cwdProyecto) {
   }
   return pj;
 }
-function rutasAProbar(cwd, archivos2) {
+function rutasAProbar(cwd, archivos) {
   const root = docrootPhp(cwd);
-  const php = archivos2.filter((f) => f.endsWith(".php") && !/vendor|config|includes?|lib|src\/|app\/|clases?|models?|controllers?/i.test(f)).map((f) => "/" + relative3(root, join8(cwd, f)).replace(/\\/g, "/")).filter((r) => !r.startsWith("/.."));
-  const html = archivos2.filter((f) => f.endsWith(".html")).map((f) => "/" + relative3(root, join8(cwd, f)).replace(/\\/g, "/")).filter((r) => !r.startsWith("/.."));
+  const php = archivos.filter((f) => f.endsWith(".php") && !/vendor|config|includes?|lib|src\/|app\/|clases?|models?|controllers?/i.test(f)).map((f) => "/" + relative3(root, join8(cwd, f)).replace(/\\/g, "/")).filter((r) => !r.startsWith("/.."));
+  const html = archivos.filter((f) => f.endsWith(".html")).map((f) => "/" + relative3(root, join8(cwd, f)).replace(/\\/g, "/")).filter((r) => !r.startsWith("/.."));
   return [...new Set(["/", ...php, ...html])].slice(0, 6);
 }
 
-// skill_dey-lib/procesos.ts
+// app/skill_dey-lib/procesos.ts
 var WIN3 = process.platform === "win32";
 var DEV = /\b(node|nodemon|tsx|ts-node|vite|next|nuxt|npm|npx|pnpm|yarn|bun|deno|php|php-cgi|artisan|python\d*|uvicorn|gunicorn|flask|java|dotnet|ruby|rails|go|air|webpack|esbuild)\b/i;
 var SISTEMA = /\b(systemd|launchd|explorer|svchost|wininit|lsass|csrss|winlogon|services\.exe|kernel|WindowServer|loginwindow|sshd|postgres|mysqld|mariadbd|redis-server|mongod|docker|com\.docker|opencode)\b/i;
@@ -1150,7 +1152,7 @@ async function arranqueLimpio(cwd, espera = Number(process.env.SKILL_DEY_ARRANQU
   return { lista, notas };
 }
 
-// skill_dey-lib/reglas.ts
+// app/skill_dey-lib/reglas.ts
 import { readFileSync as readFileSync9, writeFileSync as writeFileSync5, mkdirSync as mkdirSync5 } from "node:fs";
 import { join as join10 } from "node:path";
 import { homedir as homedir2 } from "node:os";
@@ -1202,7 +1204,7 @@ function listar(cwd) {
 `);
 }
 
-// skill_dey-lib/empalme.ts
+// app/skill_dey-lib/empalme.ts
 var leer6 = (p) => {
   try {
     return readFileSync10(p, "utf8");
@@ -1287,7 +1289,7 @@ function empalme(cwd) {
 Completa a mano solo: "Qué es" (si quedó vacío) y "Contactos".`;
 }
 
-// skill_dey-lib/saber.ts
+// app/skill_dey-lib/saber.ts
 import { existsSync as existsSync8, readFileSync as readFileSync11, writeFileSync as writeFileSync7, mkdirSync as mkdirSync7, appendFileSync } from "node:fs";
 import { join as join12 } from "node:path";
 import { spawnSync as spawnSync9 } from "node:child_process";
@@ -1315,7 +1317,7 @@ function notasVersion(cwd) {
 ` + doc;
 }
 
-// skill_dey-lib/extras.ts
+// app/skill_dey-lib/extras.ts
 import { spawnSync as spawnSync10 } from "node:child_process";
 import { existsSync as existsSync9, readFileSync as readFileSync12, writeFileSync as writeFileSync8, statSync as statSync6 } from "node:fs";
 import { join as join13, basename as basename6 } from "node:path";
@@ -1367,7 +1369,7 @@ function formatear(cwd, soloCambiados = true) {
 }
 function validacionServidor(cwd) {
   const req = new Set;
-  for (const f of archivos2(cwd).filter((f2) => /\.(html|php|vue|[jt]sx|blade\.php|twig)$/.test(f2)))
+  for (const f of archivos2(cwd).filter((f) => /\.(html|php|vue|[jt]sx|blade\.php|twig)$/.test(f)))
     for (const m of leer7(join13(cwd, f)).matchAll(/<(?:input|select|textarea)[^>]*\brequired\b[^>]*>/gi)) {
       const n = m[0].match(/name=["']([\w[\]]+)["']/)?.[1];
       if (n)
@@ -1436,7 +1438,7 @@ function erroresProduccion(cwd) {
 Corrige por causa raíz el más frecuente primero (references/depuracion.md).`;
 }
 
-// skill_dey-lib/organizar.ts
+// app/skill_dey-lib/organizar.ts
 import { readFileSync as readFileSync13 } from "node:fs";
 import { join as join14, basename as basename7, dirname as dirname2 } from "node:path";
 var leer8 = (p) => {
@@ -1451,7 +1453,7 @@ var archivos3 = (cwd) => listarArchivos(cwd).filter((f) => !IGN5.test(f));
 var COD = /\.(m?[jt]sx?|cjs|vue|svelte|php|py|go|java|cs|rb)$/;
 function duplicados(cwd, files) {
   const vistos = new Map;
-  for (const f of files.filter((f2) => COD.test(f2))) {
+  for (const f of files.filter((f) => COD.test(f))) {
     const ls = leer8(join14(cwd, f)).split(/\r?\n/);
     for (let i = 0;i + 6 < ls.length; i += 6) {
       const bloque = ls.slice(i, i + 6).map((l) => l.trim()).filter(Boolean);
@@ -1485,7 +1487,7 @@ function huerfanos(cwd, files) {
 }
 function fueraDeLugar(cwd, files) {
   const r = [];
-  for (const f of files.filter((f2) => COD.test(f2))) {
+  for (const f of files.filter((f) => COD.test(f))) {
     const d = dirname2(f).toLowerCase(), t = leer8(join14(cwd, f)).slice(0, 4000);
     if (/(controller|controlador)/i.test(basename7(f)) && !/controller|controlador|routes?|app|src/i.test(d))
       r.push(`${f} parece un controlador fuera de controllers/`);
@@ -1523,7 +1525,7 @@ function organizar(cwd) {
 `);
 }
 
-// skill_dey-lib/pdf.ts
+// app/skill_dey-lib/pdf.ts
 import { spawnSync as spawnSync11 } from "node:child_process";
 import { readFileSync as readFileSync14, writeFileSync as writeFileSync9, existsSync as existsSync10, mkdirSync as mkdirSync9 } from "node:fs";
 import { join as join15, basename as basename8 } from "node:path";
@@ -1678,7 +1680,7 @@ function documentosPdf(cwd) {
   return `PDF generados: ${hechos.join(" · ") || "ninguno"}${faltan.length ? ` · no se pudo: ${faltan.join(", ")} (¿sin navegador de pruebas?)` : ""}`;
 }
 
-// skill_dey-lib/seguridad.ts
+// app/skill_dey-lib/seguridad.ts
 import { existsSync as existsSync11, readFileSync as readFileSync15, statSync as statSync8 } from "node:fs";
 import { join as join16 } from "node:path";
 var IGN6 = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage|\.venv|venv|__pycache__|\.next|storage|tests?|__tests__|spec|migrations?)([\\/]|$)|\.min\.js$/i;
@@ -1752,13 +1754,13 @@ function resumenSeguridad(cwd) {
   return { lineas: [`⚠ seguridad: ${H.length} hueco(s) → corrige los CRÍTICO/ALTO antes de entregar:`, ...H.map((h) => `   [${h.prioridad}] ${h.texto} → ${h.donde.slice(0, 3).join(", ")}`)], criticos };
 }
 
-// skill_dey-lib/testpro.ts
+// app/skill_dey-lib/testpro.ts
 import { spawnSync as spawnSync15 } from "node:child_process";
 import { writeFileSync as writeFileSync12, readFileSync as readFileSync18, mkdirSync as mkdirSync11, existsSync as existsSync14 } from "node:fs";
 import { join as join20, basename as basename9 } from "node:path";
 import { tmpdir as tmpdir5 } from "node:os";
 
-// skill_dey-lib/calidad.ts
+// app/skill_dey-lib/calidad.ts
 import { spawnSync as spawnSync12 } from "node:child_process";
 import { writeFileSync as writeFileSync10 } from "node:fs";
 import { join as join17 } from "node:path";
@@ -1836,7 +1838,7 @@ async function carga(base, rutas, usuarios = 20, rondas = 3) {
   return L.length ? [`\uD83C\uDFCB carga (concurrencia):`, ...L.map((x) => "   " + x)] : [];
 }
 
-// skill_dey-lib/movil.ts
+// app/skill_dey-lib/movil.ts
 import { spawnSync as spawnSync13 } from "node:child_process";
 import { existsSync as existsSync12, readFileSync as readFileSync16 } from "node:fs";
 import { join as join18 } from "node:path";
@@ -1858,7 +1860,7 @@ function revisarMovil(cwd) {
   const run = (cmd) => spawnSync13(cmd, { cwd, shell: true, encoding: "utf8", timeout: 300000, maxBuffer: 50000000 });
   const L = [];
   let fallas = 0;
-  const hay3 = (bin) => {
+  const hay = (bin) => {
     try {
       return spawnSync13(bin, ["--version"], { shell: true, timeout: 15000 }).status === 0;
     } catch {
@@ -1867,7 +1869,7 @@ function revisarMovil(cwd) {
   };
   if (tipo === "flutter") {
     L.push("\uD83D\uDCF1 Flutter detectado");
-    if (hay3("flutter")) {
+    if (hay("flutter")) {
       const a = run("flutter analyze");
       const okA = a.status === 0;
       if (!okA)
@@ -1910,7 +1912,7 @@ function revisarMovil(cwd) {
   return { ok: fallas === 0, fallas, lineas: L };
 }
 
-// skill_dey-lib/pro.ts
+// app/skill_dey-lib/pro.ts
 import { spawnSync as spawnSync14 } from "node:child_process";
 import { existsSync as existsSync13, readFileSync as readFileSync17, writeFileSync as writeFileSync11, mkdirSync as mkdirSync10 } from "node:fs";
 import { join as join19 } from "node:path";
@@ -2037,7 +2039,7 @@ function extrasPro(cwd, rutas) {
   return L;
 }
 
-// skill_dey-lib/testpro.ts
+// app/skill_dey-lib/testpro.ts
 var leer12 = (p) => {
   try {
     return readFileSync18(p, "utf8");
@@ -2129,17 +2131,17 @@ function correrUnitarias(cwd) {
     }
   })();
   const L = [];
-  const run2 = (cmd) => spawnSync15(cmd, { cwd, shell: true, encoding: "utf8", timeout: 300000, maxBuffer: 50000000 });
+  const run = (cmd) => spawnSync15(cmd, { cwd, shell: true, encoding: "utf8", timeout: 300000, maxBuffer: 50000000 });
   if (pkg?.scripts?.test && !/no test specified/.test(pkg.scripts.test)) {
-    const r = run2("npm test --silent");
+    const r = run("npm test --silent");
     const ok = r.status === 0;
     L.push(`${ok ? "PASS" : "FAIL"} · unitarias (npm test): ${(r.stdout + r.stderr).split(`
 `).filter((x) => /pass|fail|✓|✗|Tests:|test/i.test(x)).slice(-2).join(" ").slice(0, 120) || (ok ? "ok" : "revisa salida")}`);
   } else if (existsSync14(join20(cwd, "phpunit.xml")) || existsSync14(join20(cwd, "phpunit.xml.dist")) || existsSync14(join20(cwd, "vendor", "bin", "phpunit"))) {
-    const r = run2(existsSync14(join20(cwd, "vendor", "bin", "phpunit")) ? '"vendor/bin/phpunit"' : "phpunit");
+    const r = run(existsSync14(join20(cwd, "vendor", "bin", "phpunit")) ? '"vendor/bin/phpunit"' : "phpunit");
     L.push(`${r.status === 0 ? "PASS" : "FAIL"} · unitarias PHP (phpunit)`);
   } else if (existsSync14(join20(cwd, "pytest.ini")) || existsSync14(join20(cwd, "tests")) && listarArchivos(cwd).some((f) => /test_.*\.py$|_test\.py$/.test(f))) {
-    const r = run2("python -m pytest -q");
+    const r = run("python -m pytest -q");
     L.push(`${r.status === 0 ? "PASS" : "FAIL"} · unitarias Python (pytest)`);
   } else
     L.push("⏭ unitarias: el proyecto no tiene runner configurado (puedo generar un ejemplo si quieres)");
@@ -2212,7 +2214,7 @@ async function pruebasProfesionales(cwd, url) {
   }
 }
 
-// skill_dey-lib/video.ts
+// app/skill_dey-lib/video.ts
 import { spawnSync as spawnSync16 } from "node:child_process";
 import { writeFileSync as writeFileSync13, readFileSync as readFileSync19, mkdirSync as mkdirSync12, existsSync as existsSync15, unlinkSync } from "node:fs";
 import { join as join21, basename as basename10 } from "node:path";
@@ -2234,20 +2236,20 @@ var hayFfmpeg = () => {
 var SEG = 5;
 function guion(cwd) {
   const root = docrootPhp(cwd);
-  const archivos4 = listarArchivos(cwd).filter((f) => /\.(php|html)$/i.test(f) && !/vendor|config|includes?|conexion|node_modules|\/lib\/|\/docs\/|\/tests?\/|\.skill_dey/i.test(f));
+  const archivos = listarArchivos(cwd).filter((f) => /\.(php|html)$/i.test(f) && !/vendor|config|includes?|conexion|node_modules|\/lib\/|\/docs\/|\/tests?\/|\.skill_dey/i.test(f));
   const pasos = [];
   const vistas = new Set;
-  for (const f of archivos4) {
+  for (const f of archivos) {
     const src = leer13(join21(cwd, f));
     const ruta0 = "/" + f.replace(root + "/", "").replace(/\\/g, "/");
     const r = ruta0.startsWith("/..") ? "/" + basename10(f) : ruta0;
     if (vistas.has(r))
       continue;
     const h1 = src.match(/<h1[^>]*>([^<]{2,60})</i)?.[1]?.trim() || src.match(/<title[^>]*>([^<]{2,60})</i)?.[1]?.trim();
-    const campos2 = [...src.matchAll(/<(?:input|select|textarea)\b[^>]*name\s*=\s*["']([^"']+)/gi)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
+    const campos = [...src.matchAll(/<(?:input|select|textarea)\b[^>]*name\s*=\s*["']([^"']+)/gi)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
     const tieneForm = /<form/i.test(src);
     const titulo = (h1 || basename10(f).replace(/\.(php|html)$/i, "")).slice(0, 60);
-    const texto = tieneForm && campos2.length ? `Completa los campos (${campos2.join(", ")}) y usa el botón para guardar.` : `Pantalla "${titulo}".`;
+    const texto = tieneForm && campos.length ? `Completa los campos (${campos.join(", ")}) y usa el botón para guardar.` : `Pantalla "${titulo}".`;
     pasos.push({ ruta: r, titulo, texto });
     vistas.add(r);
     if (pasos.length >= 10)
@@ -2370,7 +2372,7 @@ file '${hechos[hechos.length - 1].img}'
   }
 }
 
-// skill_dey-lib/multiia.ts
+// app/skill_dey-lib/multiia.ts
 import { writeFileSync as writeFileSync14, mkdirSync as mkdirSync13, existsSync as existsSync16, readFileSync as readFileSync20 } from "node:fs";
 import { join as join22 } from "node:path";
 function reglasPortables() {
@@ -2410,11 +2412,11 @@ alwaysApply: true
   { archivo: join22(".idx", "airules.md") }
 ];
 function instalarMultiIA(cwd) {
-  const reglas2 = reglasPortables();
+  const reglas = reglasPortables();
   const marca = "<!-- SKILL_DEY:inicio -->";
   const fin = "<!-- SKILL_DEY:fin -->";
   const bloque = `${marca}
-${reglas2}
+${reglas}
 ${fin}
 `;
   const hechos = [];
@@ -2455,7 +2457,7 @@ ${reglasPortables()}`);
   };
 }
 
-// skill_dey-lib/robustez.ts
+// app/skill_dey-lib/robustez.ts
 import { existsSync as existsSync17, readFileSync as readFileSync21, statSync as statSync9, writeFileSync as writeFileSync15, chmodSync, mkdirSync as mkdirSync14 } from "node:fs";
 import { join as join23 } from "node:path";
 import { homedir as homedir3 } from "node:os";
@@ -2529,7 +2531,7 @@ node "${mjs}" revisar . || { echo "SKILL_DEY: hay errores, corrígelos (o usa --
 }
 function reporte(cwd) {
   const d = join23(cwd, ".skill_dey");
-  const leer14 = (f) => {
+  const leer = (f) => {
     try {
       return readFileSync21(join23(d, f), "utf8");
     } catch {
@@ -2537,10 +2539,10 @@ function reporte(cwd) {
     }
   };
   const L = ["\uD83D\uDCD1 Reporte de uso de skill_dey en este proyecto:"];
-  const cons = leer14("CONSUMO.md").trim().split(`
+  const cons = leer("CONSUMO.md").trim().split(`
 `).filter((l) => l.includes("|"));
   L.push(cons.length ? `   consultas registradas: ${cons.length} · última: ${cons[cons.length - 1].slice(0, 90)}` : "   (sin CONSUMO.md todavía)");
-  const ap = leer14("APRENDIZAJE.md").split(`
+  const ap = leer("APRENDIZAJE.md").split(`
 `).filter((l) => l.trim().startsWith("❌"));
   if (ap.length) {
     const cont = {};
@@ -2553,18 +2555,18 @@ function reporte(cwd) {
       L.push(`      (${c}×) ${k.slice(0, 88)}`);
   } else
     L.push("   fallos aprendidos: 0");
-  const pp = leer14("PRUEBAS-PROFESIONALES.md");
+  const pp = leer("PRUEBAS-PROFESIONALES.md");
   if (pp)
     L.push("   último testeo: " + (pp.split(`
 `).find((l) => /prueba en vivo|cobertura|✅|❌/.test(l)) || "").trim().slice(0, 88));
-  const huecos = leer14("HUECOS.md").split(`
+  const huecos = leer("HUECOS.md").split(`
 `).filter((l) => l.trim().startsWith("-"));
   if (huecos.length)
     L.push(`   skills que faltaron: ${huecos.length}`);
   return L;
 }
 
-// skill_dey-lib/cli.ts
+// app/skill_dey-lib/cli.ts
 var [cmd = "ayuda", carpeta = ".", url] = process.argv.slice(2);
 var cwd = resolve(carpeta);
 var AYUDA = `skill_dey por Ing. Dey (@IngDey) · terminal, funciona con cualquier IA

@@ -1,0 +1,45 @@
+{
+  "skill-dey": {
+    "enabled": true,
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "node ./scripts/skill_dey-hook.mjs antigravity inicio"
+      }
+    ],
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "node ./scripts/skill_dey-hook.mjs antigravity prompt"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ./scripts/skill_dey-hook.mjs antigravity antes"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ./scripts/skill_dey-hook.mjs antigravity despues"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "node ./scripts/skill_dey-hook.mjs antigravity fin"
+      }
+    ]
+  }
+}

@@ -172,3 +172,16 @@ No probado: Windows/macOS físicos (lógica probada con PowerShell 7 y rutas mul
 133. Tokens: costo fijo por mensaje 1.889 → ~1.022 (agente 605 + descripciones 417); skill (689) solo carga en N2/N3 ✅
 134. Modo portable (PORTABLE.md): reglas pegables en Claude Code/Cursor + revisiones por código con el CLI en cualquier terminal; honesto: el guardián en vivo es solo OpenCode ✅
 135. Autoprueba 19/19; anti-vueltas y comandos OK en OpenCode real ✅
+
+## v40 — nativo en Claude Code, Gemini CLI y Antigravity CLI
+136. Guardián multiplataforma (hooks) con una sola fuente de reglas (`guardia.ts`) compartida con OpenCode ✅
+137. 30 pruebas automáticas (`npm test`) con los formatos reales de cada IA: bloqueos de BD/tablas, `DELETE` sin `WHERE`, `migrate:fresh`, `prisma migrate reset`, secretos, `.env`, push forzado, `reset --hard`, `curl | sh`, código truncado, fuera del proyecto, zona congelada, dependencias no pedidas, anti-vueltas, servidor en primer plano, modo watch ✅
+138. Deshacer: copia antes del primer cambio del pedido y `deshaz` restaura (Claude Code sin gastar turno del modelo; Gemini con contexto) ✅
+139. Cero errores al cerrar: sintaxis rota bloquea el cierre; luego exige `skill_dey_verificar` en verde una vez; commit final bloqueado sin verificación posterior ✅
+140. Falla abierto: entrada inválida o error interno → deja trabajar y anota en `~/.config/skill_dey/errores-hook.log` ✅
+141. Bug corregido (venía de versiones anteriores): `git push -f` sin rama no se detectaba como push forzado ✅
+142. Servidor MCP: negocia protocolo (2025-06-18 → 2025-06-18; desconocido → 2025-11-25), anotaciones solo lectura/destructiva, `ping`, error -32602 en herramienta desconocida, errores de herramienta con `isError`, stdout protegido de `console.log` ✅
+143. Claude Code 2.1.321: `claude plugin validate` del plugin y del marketplace sin avisos; instalación y reinstalación con el instalador ✅
+144. Gemini CLI 0.67.0: `gemini extensions validate` OK; instala y lista contexto, MCP y las 2 skills; reinstalación OK ✅
+145. Antigravity CLI: paquete según la especificación oficial de plugins; **pendiente** probar con `agy` en un equipo real (no disponible en el entorno de pruebas) ⏳
+146. Guardián de OpenCode compila con las reglas compartidas; tipos verificados con TypeScript 5 ✅

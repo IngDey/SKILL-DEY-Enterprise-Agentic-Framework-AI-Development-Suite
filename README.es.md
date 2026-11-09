@@ -11,8 +11,10 @@ Un marco de calidad agéntico para el desarrollo asistido por IA: entiende lo qu
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 [![Plataformas](https://img.shields.io/badge/plataforma-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#-instalación-rápida)
 [![OpenCode](https://img.shields.io/badge/OpenCode-nativo-blue.svg)](https://opencode.ai)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-D97757.svg)](#claude-code)
+[![Gemini](https://img.shields.io/badge/Gemini%20CLI%20%7C%20Antigravity-nativo-4285F4.svg)](#gemini-cli-y-antigravity-cli)
 [![MCP](https://img.shields.io/badge/MCP-servidor%20incluido-8A2BE2.svg)](https://modelcontextprotocol.io/)
-[![Multi-IA](https://img.shields.io/badge/funciona%20con-Cursor%20%7C%20Windsurf%20%7C%20Claude%20%7C%20Cline%20%7C%20Codex%20%7C%20Gemini-orange.svg)](#-funciona-con-tu-ia)
+[![Multi-IA](https://img.shields.io/badge/también-Cursor%20%7C%20Windsurf%20%7C%20Cline%20%7C%20Codex%20%7C%20Copilot-orange.svg)](#-funciona-con-tu-ia)
 [![Hecho por IngDey](https://img.shields.io/badge/hecho%20por-IngDey-181717?logo=github)](https://github.com/IngDey)
 [![GitHub stars](https://img.shields.io/github/stars/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite?style=social)](https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite/stargazers)
 
@@ -39,7 +41,18 @@ Las IA escriben código rápido, pero también rompen lo que funcionaba, filtran
 | 🧠 **Memoria técnica persistente** | Decisiones, lecciones y reglas de negocio viven en `.skill_dey/` (`BITACORA`, `DECISIONES`, `LECCIONES`, `NEGOCIO`, `ESTADO`, `MARCA`) y el contexto sobrevive entre sesiones. |
 | 🤖 **Multi-agente** | Un agente principal, un **explorador** de solo lectura para búsquedas grandes, un agente de **visión** que convierte maquetas/capturas en UI y un **revisor independiente** que audita lo que no escribió. |
 | 📉 **Cuida los tokens** | Las tareas pequeñas no cargan la skill; los flujos pesados solo cuando hacen falta. Un tablero muestra tokens, costo y tiempo por respuesta. |
-| 🔌 **Servidor MCP incluido** | Expone las revisiones como herramientas nativas para cualquier cliente MCP. |
+| 🔌 **Servidor MCP incluido** | Expone las revisiones y el deshacer como herramientas nativas para cualquier cliente MCP (protocolo hasta 2025-11-25). |
+| 🌐 **Nativo en 4 IAs** | **OpenCode, Claude Code, Gemini CLI y Antigravity CLI** con el mismo guardián en vivo, la misma skill y las mismas reglas. |
+| 🏢 **Uso seguro de IA en la empresa** | Skill `politicas-ia`: redacta y revisa la política de uso de IA para las personas (qué usar, qué no, qué datos nunca compartir). |
+
+### 🆕 Novedades de la versión 40
+
+- **Ahora nativo en Claude Code, Gemini CLI y Antigravity CLI**, además de OpenCode, con el **mismo guardián en vivo** en las cuatro.
+- **Más protección de datos:** bloquea borrar o vaciar bases de datos y tablas, `DELETE` sin `WHERE`, `migrate:fresh`, `prisma migrate reset`, `git reset --hard` y scripts descargados que se ejecutan sin revisar.
+- **`deshaz` instantáneo** en Claude Code: se ejecuta por código, sin gastar tokens del modelo.
+- **Servidor MCP moderno:** negocia el protocolo hasta 2025-11-25, marca qué herramientas son destructivas y suma verificar, deshacer, rehacer, historial y congelar.
+- **Nueva skill `politicas-ia`:** política de uso seguro de IA para las personas de tu empresa.
+- **Una sola fuente:** `scripts/build.mjs` genera los paquetes de cada IA y 30 pruebas automáticas los validan.
 
 ---
 
@@ -87,7 +100,9 @@ flowchart LR
 
 ## ⚡ Instalación rápida
 
-**Requisitos:** [OpenCode](https://opencode.ai) (`npm i -g opencode-ai`) para la experiencia completa. Se recomienda [Git](https://git-scm.com/), y [Node.js](https://nodejs.org/) (20+) es necesario para el CLI y el servidor MCP. Los instaladores usan PowerShell (Windows) o bash (macOS/Linux) si no tienes Node.
+**Requisitos:** [Node.js](https://nodejs.org/) 20+ y [Git](https://git-scm.com/) (recomendado: así funciona el deshacer completo). Y al menos una de estas IAs: [OpenCode](https://opencode.ai), [Claude Code](https://www.claude.com/product/claude-code), [Gemini CLI](https://geminicli.com) o [Antigravity CLI](https://antigravity.google).
+
+### Opción 1 · Un clic (instala en TODAS las IAs que tengas)
 
 ```bash
 git clone https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite.git
@@ -102,30 +117,46 @@ cd SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite
 | **macOS** | Doble clic en `INSTALAR.command` (si macOS lo bloquea: `bash INSTALAR.command` en Terminal) |
 | **Linux** | `bash INSTALAR.command` |
 
-Luego **reinicia OpenCode** y escribe normal. Reinstalar es seguro: actualiza todo y **conserva lo aprendido**.
+El instalador detecta OpenCode, Claude Code, Gemini CLI y Antigravity CLI y deja SKILL DEY en cada una. Luego **reinicia tu IA** y escribe normal. Reinstalar es seguro: actualiza todo y **conserva lo aprendido**.
+
+### Opción 2 · Desde tu IA
+
+<a id="claude-code"></a>**Claude Code** (dentro de Claude):
+
+```
+/plugin marketplace add IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite
+/plugin install skill-dey@skill-dey
+```
+
+<a id="gemini-cli-y-antigravity-cli"></a>**Gemini CLI** y **Antigravity CLI** (en la terminal, desde la carpeta descargada):
+
+```bash
+gemini extensions install ./hosts/gemini-cli     # Gemini CLI
+agy plugin install ./hosts/antigravity            # Antigravity CLI (el sucesor de Gemini CLI)
+```
+
+**OpenCode:** usa la opción 1.
 
 <details>
 <summary><b>🔍 ¿Qué cambia exactamente el instalador? (clic para ver)</b></summary>
 
 No hay nada oculto. El instalador:
 
-1. Copia la skill, los agentes, comandos, herramientas y el plugin guardián en `~/.config/opencode/` (o `$OPENCODE_CONFIG_DIR`).
-2. Actualiza tu `opencode.json`: pone `default_agent` en `skill_dey` y activa la compactación de contexto. Antes guarda una copia `.bak`.
-3. Agrega sus reglas globales a `AGENTS.md` dentro de bloques `SKILL_DEY` claramente marcados.
-4. Registra el servidor MCP en **Cursor, Windsurf, Claude Desktop y Cline** *solo si están instalados*. Respalda cada configuración como `*.antes-skill_dey.bak` y solo agrega o actualiza su entrada `skill_dey`.
-5. Detecta las capacidades de tus modelos y te avisa si falta `git`, `opencode` o `python`, con el comando de instalación para tu sistema.
+1. **OpenCode:** copia la skill, los agentes, comandos, herramientas y el plugin guardián en `~/.config/opencode/` (o `$OPENCODE_CONFIG_DIR`); pone `default_agent` en `skill_dey` (antes guarda `opencode.json.bak`) y agrega sus reglas a `AGENTS.md` dentro de bloques `SKILL_DEY` marcados.
+2. **Claude Code, Gemini CLI y Antigravity CLI** (solo si están instalados): copia su paquete a `~/.config/skill_dey/paquetes/` y lo instala con el comando oficial de cada IA (`claude plugin install`, `gemini extensions install`, `agy plugin install`). Si tu IA pide confirmación (por ejemplo "¿confías en esta carpeta?"), **respondes tú**.
+3. Registra el servidor MCP en **Cursor, Windsurf, Claude Desktop y Cline** *solo si están instalados*. Respalda cada configuración como `*.antes-skill_dey.bak` y solo agrega o actualiza su entrada `skill_dey`.
+4. Te avisa si falta `git`, `opencode` o `python`, con el comando de instalación para tu sistema.
 
-En Windows, el instalador sin Node ejecuta PowerShell con `-ExecutionPolicy Bypass` solo para ese script. Puedes leerlo antes en [`app/instalador/`](app/instalador/).
+En Windows, el instalador sin Node ejecuta PowerShell con `-ExecutionPolicy Bypass` solo para ese script (y solo instala la edición OpenCode). Puedes leerlo antes en [`app/instalador/`](app/instalador/).
 </details>
 
 ### Comprueba que funciona
 
-- En OpenCode pregunta: **"¿skill_dey está funcionando?"**. Además se autodiagnostica sus 8 protecciones cada vez que abres OpenCode y solo te avisa si algo falla.
-- O desde cualquier terminal:
-
-```bash
-node ~/.config/opencode/skill_dey/skill_dey.mjs revisar .
-```
+- **OpenCode:** pregunta **"¿skill_dey está funcionando?"**. Se autodiagnostica cada vez que lo abres y solo te avisa si algo falla.
+- **Claude Code:** `/plugin` debe mostrar `skill-dey` habilitado y `/mcp` el servidor `skill_dey`.
+- **Gemini CLI:** `gemini extensions list` debe mostrar `skill-dey` con su contexto, skills y MCP.
+- **Antigravity CLI:** `agy plugin list` debe mostrar `skill-dey`.
+- En cualquiera, pídele: *"intenta borrar la tabla clientes"*. El guardián debe bloquearlo.
 
 ---
 
@@ -140,28 +171,45 @@ No necesitas comandos. Escribe normal: *"agrega el campo responsable a tickets"*
 | `revisa la seguridad` / `prueba la app` | Auditoría de seguridad + probador automático (datos válidos, obligatorios, ataques SQL/XSS, acceso sin sesión), incluso en formularios dibujados por JavaScript (React/SPA) |
 | `documenta la app` | Regenera `docs/MANUAL-TECNICO.md`, `DICCIONARIO-DATOS.md`, `MANUAL-USUARIO.md`, `database/instalacion.sql` y los PDF |
 | `deshaz` | Restaura la foto tomada antes de tu último pedido (se puede rehacer) |
-| `/skill_dey ayuda` | Lista todos los comandos en 6 grupos |
+| `/skill_dey ayuda` | Lista todos los comandos en 6 grupos (OpenCode) |
+| `/skill-dey:verificar`, `/skill-dey:auditar`, `/skill-dey:deshacer` | Atajos en Gemini CLI |
 
 ---
 
 ## 🌐 Funciona con tu IA
 
-| Herramienta | Cómo |
+| Herramienta | Qué recibe |
 |---|---|
-| **OpenCode** | Experiencia completa: guardián en vivo, fotos automáticas, cambio de modelo, tablero de consumo |
+| **OpenCode** | Experiencia completa: guardián en vivo, deshacer, cambio automático de modelo al agotarse el cupo, tablero de consumo, 20+ herramientas propias |
+| **Claude Code** | Plugin oficial: skills `skill-dey` y `politicas-ia`, subagentes (revisor, explorador, visión), **guardián en vivo con hooks**, `deshaz` sin gastar tokens, servidor MCP |
+| **Gemini CLI** | Extensión: `GEMINI.md`, skills, subagentes, **guardián en vivo con hooks**, comandos `/skill-dey:*`, servidor MCP |
+| **Antigravity CLI** | Plugin: reglas, skills, subagentes, **guardián en vivo con hooks**, servidor MCP |
 | **Cursor · Windsurf · Claude Desktop · Cline** | Servidor MCP registrado por el instalador + reglas del proyecto |
-| **Claude Code · Codex · Gemini CLI · Copilot · Zed · Firebase Studio** | Reglas del proyecto (comando `multi-ia`) + chequeos por CLI |
+| **Codex · Copilot · Zed · Firebase Studio** | Reglas del proyecto (comando `multi-ia`) + chequeos por CLI |
 
-```bash
-# Escribe las reglas que cada IA lee sola (AGENTS.md, CLAUDE.md, GEMINI.md,
-# .cursorrules, .windsurfrules, copilot-instructions.md, .clinerules, ...)
-node ~/.config/opencode/skill_dey/skill_dey.mjs multi-ia .
+### Qué hace el guardián en vivo (las 4 IAs)
 
-# CLI universal (cualquier IA con terminal)
-node ~/.config/opencode/skill_dey/skill_dey.mjs revisar|seguridad|pruebas|capacitar|movil|organizar|documentar|validar|produccion [carpeta] [url]
-```
+| Protección | OpenCode | Claude Code | Gemini CLI | Antigravity |
+|---|:-:|:-:|:-:|:-:|
+| Copia antes del primer cambio de cada pedido + `deshaz` | ✅ | ✅ | ✅ | ✅ |
+| Bloquea borrar o vaciar BD/tablas, `DELETE` sin `WHERE`, `migrate:fresh`, `prisma migrate reset` | ✅ | ✅ | ✅ | ✅ |
+| Exige respaldo antes de migrar o modificar datos | ✅ | ✅ | ✅ | ✅ |
+| Bloquea secretos en código y leer `.env` reales | ✅ | ✅ | ✅ | ✅ |
+| Bloquea `push --force`, `reset --hard`, borrados masivos, `curl … \| sh` | ✅ | ✅ | ✅ | ✅ |
+| Bloquea código truncado y cambios fuera del proyecto o en zonas congeladas | ✅ | ✅ | ✅ | ✅ |
+| Dependencias nuevas solo si las pediste | ✅ | ✅ | ✅ | — |
+| Sintaxis revisada al instante en cada archivo editado | ✅ | ✅ | ✅ | ✅ (al cerrar) |
+| No deja terminar con errores ni sin verificación verde | ✅ | ✅ | ✅ | ✅ |
+| Anti-vueltas (corta repeticiones inútiles) | ✅ | ✅ | ✅ | ✅ |
+| Cambio automático de modelo al agotarse el cupo · tablero de consumo | ✅ | — | — | — |
 
-Configuración MCP manual (cualquier cliente):
+Todas usan **las mismas reglas** (un solo archivo: `app/skill_dey-lib/guardia.ts`). Si una pieza del guardián falla por algo inesperado, **deja trabajar** y lo anota en `~/.config/skill_dey/errores-hook.log`: nunca congela tu IA.
+
+### Servidor MCP
+
+Herramientas: `skill_dey_verificar`, `skill_dey_deshacer`, `skill_dey_rehacer`, `skill_dey_historial`, `skill_dey_congelar`, `skill_dey_revisar`, `skill_dey_seguridad`, `skill_dey_validar`, `skill_dey_documentar`, `skill_dey_organizar`, `skill_dey_produccion`, `skill_dey_movil`, `skill_dey_pruebas`, `skill_dey_capacitar`, `skill_dey_multi_ia`. Cada una marca si es de solo lectura o destructiva, para que tu IA pida permiso cuando corresponde.
+
+Configuración manual (cualquier cliente MCP):
 
 ```json
 {
@@ -174,33 +222,44 @@ Configuración MCP manual (cualquier cliente):
 }
 ```
 
-Herramientas MCP: `skill_dey_revisar`, `skill_dey_seguridad`, `skill_dey_pruebas`, `skill_dey_capacitar`, `skill_dey_organizar`, `skill_dey_documentar`, `skill_dey_validar`, `skill_dey_produccion`, `skill_dey_movil`.
+```bash
+# Reglas que cada IA lee sola (AGENTS.md, CLAUDE.md, GEMINI.md, .cursorrules, copilot-instructions.md, ...)
+node ~/.config/opencode/skill_dey/skill_dey.mjs multi-ia .
+# CLI universal (cualquier IA con terminal)
+node ~/.config/opencode/skill_dey/skill_dey.mjs revisar|seguridad|pruebas|capacitar|movil|organizar|documentar|validar|produccion [carpeta] [url]
+```
 
-> **Nota honesta:** el guardián *en vivo* (fotos automáticas, bloqueo de comandos peligrosos, verificación al cerrar, cambio de modelo, tablero de consumo) es un plugin de OpenCode y solo corre ahí. En otras IAs tienes las reglas más los chequeos deterministas (CLI/MCP), que cubren la mayor parte del valor. Mira [`app/global/MULTI-IA.md`](app/global/MULTI-IA.md).
+> **Nota honesta:** el cambio automático de modelo y el tablero de consumo dependen de funciones que solo OpenCode expone a los plugins. Gemini CLI dejó de atender cuentas personales el 18 de junio de 2026 y su sucesor es **Antigravity CLI**: SKILL DEY trae paquete para los dos.
 
 ---
 
 ## 🧪 Probado, con evidencia
 
-El repo incluye un registro público con **135 pruebas documentadas** (instaladores, deshacer/rehacer, bloqueos del guardián, rastreador del sitio, probador de seguridad, generación de documentación, cambio de modelo y más), con los errores que se encontraron y corrigieron: [`docs/PRUEBAS-REALIZADAS.md`](docs/PRUEBAS-REALIZADAS.md).
+- **Registro público de 135 pruebas** de la edición OpenCode (instaladores, deshacer/rehacer, bloqueos del guardián, rastreador del sitio, probador de seguridad, documentación, cambio de modelo…): [`docs/PRUEBAS-REALIZADAS.md`](docs/PRUEBAS-REALIZADAS.md).
+- **30 pruebas automáticas** del guardián multiplataforma y del servidor MCP con los formatos reales de Claude Code, Gemini CLI y Antigravity: `npm test`. Corren en Windows, macOS y Linux en cada cambio (GitHub Actions).
+- El plugin pasa `claude plugin validate` y se instala con Claude Code 2.1; la extensión pasa `gemini extensions validate` y se instala con Gemini CLI 0.67.
+- Un [banco de 10 casos](app/skills/skill-dey/evals/BANCO-DE-PRUEBAS.md) y un comparador (`evals/comparar.mjs`) para medir SKILL DEY contra la IA directa **con tu propio modelo**.
 
-También trae un [banco de 10 casos](app/skills/skill-dey/evals/BANCO-DE-PRUEBAS.md) y un comparador (`evals/comparar.mjs`) para medir SKILL DEY contra la IA directa **con tu propio modelo**.
-
-Límites conocidos, dichos con claridad: la lógica de Windows y macOS se validó con PowerShell 7 y rutas multiplataforma, aún no en equipos físicos, y la calidad de las decisiones depende del modelo que uses. Los reportes de tu entorno son muy bienvenidos.
+Límites conocidos, dichos con claridad: el paquete de Antigravity sigue la especificación oficial de plugins, pero aún no se probó con `agy` en un equipo real (corre `agy plugin validate --strict ./hosts/antigravity` y cuéntanos). La calidad de las decisiones depende del modelo que uses. Los reportes de tu entorno son muy bienvenidos.
 
 ---
 
 ## 📁 Estructura del repositorio
 
 ```
-INSTALAR.bat / INSTALAR.command   instaladores de un clic
-app/                              todo lo que se instala
-  skills/skill-dey/               la skill: enrutador, niveles, ciclo, referencias, plantillas de memoria
-  agents/                         principal, explorador, revisor, visión
-  plugins/skill_dey-guardian.ts   el guardián de ejecución
-  tools/ · skill_dey-lib/         verificación, impacto, deshacer, seguridad, probador, motor de docs
-  mcp/ · cli/                     servidor MCP y CLI universal
+INSTALAR.bat / INSTALAR.command   instaladores de un clic (todas las IAs)
+app/                              la fuente única
+  skill_dey-lib/                  motor: guardia.ts (reglas del guardián), hook.ts, mcp.ts, deshacer, seguridad, probador, docs
+  skills/skill-dey/               la skill de OpenCode: niveles, ciclo, referencias, plantillas de memoria
+  portable/                       reglas, skills (skill-dey, politicas-ia) y agentes para Claude/Gemini/Antigravity
+  agents/ · commands/ · tools/    edición OpenCode
+  plugins/skill_dey-guardian.ts   guardián de OpenCode
+  cli/ · mcp/ · hook/             motor empaquetado (sin dependencias)
   instalador/                     instaladores (Node, PowerShell, bash) y registrador MCP
+hosts/                            paquetes generados: claude-code · gemini-cli · antigravity
+.claude-plugin/marketplace.json   marketplace de Claude Code
+scripts/build.mjs                 genera hosts/ y el motor desde app/
+tests/                            pruebas automáticas del guardián y del MCP
 docs/                             guía de instalación y registro de pruebas
 ```
 
@@ -223,6 +282,14 @@ No. Las revisiones corren en tu equipo y SKILL DEY no tiene telemetría. Sus ún
 <details><summary><b>¿Me va a dañar la configuración actual?</b></summary>
 
 El instalador respalda cada configuración que toca (archivos `.bak`), solo edita sus propios bloques marcados y reinstalar es seguro. Mira *¿Qué cambia exactamente el instalador?* más arriba.
+</details>
+<details><summary><b>¿Qué IA me conviene?</b></summary>
+
+La que ya uses. En OpenCode tienes además el cambio automático de modelo y el tablero de consumo; en Claude Code, Gemini CLI y Antigravity CLI tienes el mismo guardián, la misma skill y el mismo deshacer. Puedes tenerlo en varias a la vez.
+</details>
+<details><summary><b>¿Puedo apagarlo un rato?</b></summary>
+
+Sí. Escribe `finalizar skill dey` y luego `iniciar skill dey` para volver a encenderlo. Funciona igual en las cuatro IAs.
 </details>
 <details><summary><b>Ya tengo una app. ¿Puedo usarlo ahí?</b></summary>
 

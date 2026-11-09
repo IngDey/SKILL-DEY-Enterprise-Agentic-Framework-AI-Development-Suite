@@ -14,7 +14,7 @@ cp "$SRC/agents/skill_dey.md" "$OC/agents/"; cp "$SRC/agents/skill_dey-vision.md
 PROV=$(python3 -c "import json,os;f='$OC/opencode.json';f=f if os.path.exists(f) else f+'c';print(json.load(open(f)).get('model','').split('/')[0])" 2>/dev/null || true)
 RAPIDO=$(opencode models 2>/dev/null | grep -E '^[^ ]+/[^ ]+$' | grep -iE 'claude-haiku|haiku-4|gpt-[0-9.]+-mini|gpt-5-mini|o4-mini|gemini-[0-9.]+-flash|grok-code-fast|deepseek-chat' | grep -viE -- '-fin\b|preview|exp|embed|audio|image|tts|flash-lite' | { if [ -n "$PROV" ]; then grep "^$PROV/"; else cat >/dev/null; fi; } | head -1 || true)
 if [ -n "$RAPIDO" ]; then awk -v m="$RAPIDO" '{print} /^mode: subagent$/{print "model: " m}' "$SRC/agents/skill_dey-explorador.md" > "$OC/agents/skill_dey-explorador.md"; else cp "$SRC/agents/skill_dey-explorador.md" "$OC/agents/"; fi
-echo "32.0.0" > "$OC/skill_dey/VERSION"
+echo "40.0.0" > "$OC/skill_dey/VERSION"
 for f in LECCIONES-GLOBALES.md PREFERENCIAS.md; do [ -f "$OC/skill_dey/$f" ] || cp "$SRC/global/$f" "$OC/skill_dey/"; done
 [ -f "$OC/package.json" ] || cp "$SRC/package.json" "$OC/"
 python3 - "$OC" "$SRC" <<'PY'

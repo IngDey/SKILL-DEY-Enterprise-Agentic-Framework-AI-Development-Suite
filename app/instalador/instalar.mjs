@@ -65,6 +65,8 @@ function main() {
   if (existsSync(viejaPref) && !existsSync(nuevaPref)) copyFileSync(viejaPref, nuevaPref)
   rmSync(join(OC, "skills", "skill-dey"), { recursive: true, force: true })
   cpSync(join(SRC, "skills", "skill-dey"), join(OC, "skills", "skill-dey"), { recursive: true }); ok("Skill skill_dey")
+  rmSync(join(OC, "skills", "politicas-ia"), { recursive: true, force: true })
+  cpSync(join(SRC, "portable", "skills", "politicas-ia"), join(OC, "skills", "politicas-ia"), { recursive: true }); ok("Skill politicas-ia (uso seguro de IA para las personas)")
   copyFileSync(join(SRC, "tools", "skill_dey.ts"), join(OC, "tools", "skill_dey.ts")); ok("Herramientas skill_dey_verificar · skill_dey_impacto · skill_dey_leccion · skill_dey_recordar · skill_dey_deshacer")
   rmSync(join(OC, "skill_dey-lib"), { recursive: true, force: true }); cpSync(join(SRC, "skill_dey-lib"), join(OC, "skill_dey-lib"), { recursive: true })
   copyFileSync(join(SRC, "plugins", "skill_dey-guardian.ts"), join(OC, "plugins", "skill_dey-guardian.ts")); ok("Plugin guardián + respaldo automático (deshacer siempre disponible)")
@@ -111,7 +113,7 @@ function main() {
   for (const f of ["LECCIONES-GLOBALES.md", "PREFERENCIAS.md"]) if (!existsSync(join(OC, "skill_dey", f))) copyFileSync(join(SRC, "global", f), join(OC, "skill_dey", f))
   { const pf = join(OC, "skill_dey", "PREFERENCIAS.md"); const tiene = readFileSync(pf, "utf8"); const faltan = readFileSync(join(SRC, "global", "PREFERENCIAS.md"), "utf8").split(/\r?\n/).filter((l) => l.startsWith("⭐") && !tiene.includes(l.split("]")[0] + "]"))
     if (faltan.length) writeFileSync(pf, tiene.trimEnd() + "\n" + faltan.join("\n") + "\n") }
-  esc(join(OC, "skill_dey", "VERSION"), "32.0.0")
+  esc(join(OC, "skill_dey", "VERSION"), "40.0.0")
   ok("Memoria global (lo aprendido se conserva)")
 
   const ag = join(OC, "AGENTS.md"); let o = existsSync(ag) ? readFileSync(ag, "utf8") : ""
@@ -130,7 +132,51 @@ function main() {
   const falt = [["git", hay("git")], ["opencode", hay("opencode")], ["python", !!py]].filter(([, v]) => !v).map(([n]) => n)
   for (const n of falt) av(`Falta ${n}${n === "python" ? " (opcional)" : ""} en ${SO} → ${guias[n][SO] ?? guias[n].Linux}`)
   if (!falt.length) ok(`Equipo ${SO} listo (git, opencode, ${py})`)
-  console.log(`\n  \x1b[36mLISTO. Cierra y abre OpenCode y escribe normal.\x1b[0m\n  SKILL_DEY · creado por Ing. Dey (@IngDey) · github.com/IngDey\n`)
+  const otras = instalarOtrasIAs()
+  console.log(`\n  \x1b[36mLISTO. Cierra y abre ${["OpenCode", ...otras].join(", ")} y escribe normal.\x1b[0m\n  SKILL_DEY · creado por Ing. Dey (@IngDey) · github.com/IngDey\n`)
+}
+
+// ---------- Claude Code, Gemini CLI y Antigravity CLI ----------
+// Cada IA recibe su paquete nativo (hosts/<ia>): skill, agentes, guardián en vivo (hooks) y servidor MCP.
+// Se copia a una carpeta estable (~/.config/skill_dey/paquetes) para que siga funcionando aunque borres la descarga.
+// Los comandos de cada IA se muestran en pantalla: si piden confirmación (p. ej. "¿confías en esta carpeta?"), respondes tú.
+const correr = (c, a) => {
+  const win = platform() === "win32"
+  const args = win ? a.map((x) => (/\s/.test(x) ? `"${x}"` : x)) : a
+  const r = spawnSync(c, args, { stdio: "inherit", shell: win, timeout: 300_000 })
+  return r.status === 0
+}
+export function instalarOtrasIAs() {
+  const RAIZ = join(SRC, "..")
+  const HOSTS = join(RAIZ, "hosts")
+  const hechas = []
+  if (!existsSync(HOSTS)) { av("No encuentro la carpeta hosts/ (Claude Code, Gemini, Antigravity): descarga el zip completo de la release."); return hechas }
+  const DEST = join(homedir(), ".config", "skill_dey", "paquetes")
+  const estable = (rel) => { const d = join(DEST, rel); rmSync(d, { recursive: true, force: true }); md(dirname(d)); cpSync(join(RAIZ, rel), d, { recursive: true }); return d }
+
+  if (hay("claude")) {
+    console.log("\n  \x1b[36m→ Claude Code\x1b[0m")
+    estable(".claude-plugin"); estable(join("hosts", "claude-code"))
+    correr("claude", ["plugin", "marketplace", "add", DEST]) || correr("claude", ["plugin", "marketplace", "update", "skill-dey"])
+    const listo = correr("claude", ["plugin", "install", "skill-dey@skill-dey"]) || correr("claude", ["plugin", "update", "skill-dey@skill-dey"])
+    if (listo) { ok("Claude Code: plugin skill-dey (skills, agentes, guardián en vivo, MCP)"); hechas.push("Claude Code") }
+    else av("Claude Code: instálalo a mano dentro de Claude con  /plugin marketplace add IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite  y luego  /plugin install skill-dey@skill-dey")
+  }
+  if (hay("gemini")) {
+    console.log("\n  \x1b[36m→ Gemini CLI\x1b[0m")
+    const d = estable(join("hosts", "gemini-cli"))
+    if (existsSync(join(homedir(), ".gemini", "extensions", "skill-dey"))) correr("gemini", ["extensions", "uninstall", "skill-dey"])
+    if (correr("gemini", ["extensions", "install", d, "--consent"])) { ok("Gemini CLI: extensión skill-dey (GEMINI.md, skills, hooks, comandos /skill-dey:*, MCP)"); hechas.push("Gemini CLI") }
+    else av(`Gemini CLI: instálala a mano con  gemini extensions install "${d}"`)
+  }
+  if (hay("agy")) {
+    console.log("\n  \x1b[36m→ Antigravity CLI\x1b[0m")
+    const d = estable(join("hosts", "antigravity"))
+    if (correr("agy", ["plugin", "install", d])) { ok("Antigravity CLI: plugin skill-dey (reglas, skills, subagentes, hooks, MCP)"); hechas.push("Antigravity CLI") }
+    else av(`Antigravity CLI: instálalo a mano con  agy plugin install "${d}"`)
+  }
+  if (!hechas.length) console.log("  (No encontré Claude Code, Gemini CLI ni Antigravity CLI en este equipo. Si los instalas después, vuelve a correr este instalador.)")
+  return hechas
 }
 
 const real = (p) => { try { return realpathSync(p) } catch { return p } }

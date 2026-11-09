@@ -1,0 +1,4 @@
+description = "SKILL DEY: verifica todo el proyecto (cero errores)"
+prompt = """
+Usa la herramienta skill_dey_verificar sobre el proyecto. Si sale ❌, corrige con la skill skill-dey hasta que salga ✅. {{args}}
+"""

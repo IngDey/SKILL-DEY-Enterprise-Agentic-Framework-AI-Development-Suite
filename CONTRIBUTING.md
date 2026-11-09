@@ -6,9 +6,9 @@ SKILL DEY is created and maintained by **Ing. Dey** ([@IngDey](https://github.co
 
 Open an [issue](../../issues) and include: / Abre un [issue](../../issues) e incluye:
 
-- Your OS and versions of OpenCode and Node (`opencode --version`, `node --version`).
+- Your OS, your AI and its version (OpenCode, Claude Code, Gemini CLI, Antigravity CLI) and Node (`node --version`).
 - What you asked, what you expected and what happened. / Qué pediste, qué esperabas y qué pasó.
-- Any lines from `errores-guardian.log`, if it exists. / Líneas de ese archivo, si existe.
+- Any lines from `errores-guardian.log` (OpenCode) or `~/.config/skill_dey/errores-hook.log` (other AIs), if they exist. / Líneas de esos archivos, si existen.
 
 ## Propose a change / Proponer un cambio
 
@@ -18,8 +18,13 @@ Open an [issue](../../issues) and include: / Abre un [issue](../../issues) e inc
    ```bash
    node ~/.config/opencode/skill_dey/skill_dey.mjs revisar .
    ```
-4. If you add a feature, add a row to [`docs/PRUEBAS-REALIZADAS.md`](docs/PRUEBAS-REALIZADAS.md) describing how you tested it.
-5. Open the Pull Request and explain *why*, not only *what*. / Explica el *por qué*, no solo el *qué*.
+4. Edit the single source in `app/` (never `hosts/` or the bundled `.mjs`), then rebuild and test: / Edita la fuente única en `app/` (nunca `hosts/` ni los `.mjs` empaquetados), luego construye y prueba:
+   ```bash
+   node scripts/build.mjs   # needs bun · requiere bun (https://bun.sh)
+   npm test
+   ```
+5. If you add a feature, add a row to [`docs/PRUEBAS-REALIZADAS.md`](docs/PRUEBAS-REALIZADAS.md) describing how you tested it.
+6. Open the Pull Request and explain *why*, not only *what*. / Explica el *por qué*, no solo el *qué*.
 
 ## Ground rules / Reglas básicas
 

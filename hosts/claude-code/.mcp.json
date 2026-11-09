@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "skill_dey": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/bin/skill_dey-mcp.mjs"
+      ]
+    }
+  }
+}
