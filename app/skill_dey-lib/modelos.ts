@@ -1,11 +1,12 @@
 // SKILL_DEY — capacidades de modelos y lectura de diseños sin visión (Excel / OCR).
 import { existsSync, readFileSync, statSync, writeFileSync, mkdirSync } from "node:fs"
+import { sdDir } from "./rutas.ts"
 import { join, extname, isAbsolute } from "node:path"
-import { homedir } from "node:os"
+
 import { inflateRawSync } from "node:zlib"
 import { spawnSync } from "node:child_process"
 
-export const CATALOGO = join(homedir(), ".config", "opencode", "skill_dey", "MODELOS.json")
+export const CATALOGO = sdDir("MODELOS.json")
 export type Cap = { imagen: boolean; tools: boolean; ctx: number }
 
 /** Capacidades del modelo: primero lo que diga OpenCode en vivo, si no el catálogo que guardó el instalador. */
@@ -88,25 +89,76 @@ export function leerDisenoSinVision(cwd: string, ruta: string): string {
 }
 
 // ---------- límites de uso: elegir con qué modelo seguir ----------
-const DIR = join(homedir(), ".config", "opencode", "skill_dey")
-const LIMITES = join(DIR, "LIMITES.json"), RANKING = join(DIR, "RANKING.json")
+const DIR = sdDir()
+const LIMITES = join(DIR, "LIMITES.json"), RANKING = join(DIR, "RANKING.json"), SALUD = join(DIR, "SALUD.json")
 const leerJ = (f: string, d: any) => { try { return JSON.parse(readFileSync(f, "utf8")) } catch { return d } }
 // Límite de uso, cupo agotado, sin créditos, sobrecarga o contexto lleno: en todos conviene seguir con otro modelo
 export const esErrorDeLimite = (e: any) => /\b(429|402|529)\b|rate.?limit|quota|limit (exceeded|reached)|exceeded (your|the)|too many requests|usage limit|free.*(limit|tier|usage)|daily limit|insufficient.*(quota|credit|balance|funds)|out of credits|no credits|payment required|resource.?exhausted|overloaded|capacity|context.?(length|window)|maximum context|prompt is too long|too many tokens|token limit/i.test(JSON.stringify(e ?? ""))
-export function marcarLimitado(modelo: string) {
-  const l = leerJ(LIMITES, {}); l[modelo] = Date.now(); mkdirSync(DIR, { recursive: true }); writeFileSync(LIMITES, JSON.stringify(l, null, 1))
+// Error de REGIÓN/privacidad del proveedor (no es límite de uso): el modelo no está permitido en la región del workspace.
+// Ej: "This ... model requires Global regions. Select Global in your workspace's Privacy settings".
+// Error de RED / el modelo NO RESPONDE a tiempo (timeout, caída, gateway): conviene seguir con otro modelo para no quedarse colgado.
+export const esErrorDeRed = (e: any) => /\b(timeout|timed out|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EPIPE|socket hang ?up|fetch failed|502|503|504|gateway time|upstream (timeout|request failed.*(timeout|time out))|took too long|no response|stream (closed|ended) unexpectedly|request timed out|deadline exceeded|unavailable|endpoint is unavailable|service unavailable|temporarily unavailable|no (healthy )?endpoint|internal server error|500 internal|bad gateway)\b/i.test(JSON.stringify(e ?? ""))
+export const esErrorDeRegion = (e: any) => /global regions?|requires? global|workspace'?s? privacy|privacy settings|not available in your (region|country)|region[- ]?restricted|data residency|not supported in (your )?region/i.test(JSON.stringify(e ?? ""))
+/** Marca un modelo como no disponible durante `ms` (1 h por límite; 5 min por caída de red). */
+export function marcarLimitado(modelo: string, ms = 3_600_000) {
+  try { const l = leerJ(LIMITES, {}); l[modelo] = Date.now() + Math.min(ms, 86_400_000) - 3_600_000; mkdirSync(DIR, { recursive: true }); writeFileSync(LIMITES, JSON.stringify(l, null, 1)) } catch {}
 }
+/** Cupo agotado de TODO el proveedor (ej. OpenCode: "Free usage exceeded, subscribe to Go"): cambiar a otro modelo del MISMO proveedor no sirve. */
+export const esCupoDelProveedor = (e: any) => /free usage exceeded|subscribe to (opencode )?go\b|upgrade (your )?(plan|subscription)|(daily|monthly) (free )?(usage|quota|limit)|free (tier|quota) (exhausted|exceeded)/i.test(JSON.stringify(e ?? ""))
+/** Marca como no disponibles TODOS los modelos gratis de un proveedor durante `ms` (hasta que su cupo se renueve). */
+export function marcarProveedor(prov: string, ms: number): number {
+  const cat = leerJ(CATALOGO, {}).modelos ?? {}
+  const ids = Object.keys(cat).filter((id) => id.startsWith(prov + "/") && cat[id].gratis)
+  try { const l = leerJ(LIMITES, {}), t = Date.now() + Math.min(ms, 86_400_000) - 3_600_000; for (const id of ids) l[id] = t; mkdirSync(DIR, { recursive: true }); writeFileSync(LIMITES, JSON.stringify(l, null, 1)) } catch {}
+  return ids.length
+}
+/** Catálogo AL DÍA con los modelos que OpenCode tiene ahora (los gratis cambian seguido: el del instalador queda viejo). Máx. 1 vez cada 6 h. */
+let _refrescado = 0
+export async function refrescarCatalogo(client: any): Promise<number> {
+  if (Date.now() - _refrescado < 21_600_000) return 0
+  _refrescado = Date.now()
+  try {
+    const pr = await client?.config?.providers?.()
+    const provs: any[] = pr?.data?.providers ?? pr?.providers ?? []
+    if (!provs.length) return 0
+    const c = leerJ(CATALOGO, {}), cat: Record<string, any> = c.modelos ?? {}
+    let n = 0
+    for (const p of provs) {
+      const vivos = Object.keys(p.models ?? {})
+      if (!vivos.length) continue
+      for (const id of Object.keys(cat)) if (id.startsWith(p.id + "/") && !vivos.includes(id.slice(p.id.length + 1))) delete cat[id] // ya no existe en ese proveedor
+      for (const mid of vivos) {
+        const d = p.models[mid] ?? {}, cap = d.capabilities ?? {}, id = `${p.id}/${mid}`
+        cat[id] = { nombre: d.name ?? cat[id]?.nombre ?? id, imagen: !!(cap.input?.image ?? d.modalities?.input?.includes?.("image") ?? d.attachment ?? cat[id]?.imagen), tools: !!(cap.toolcall ?? d.tool_call ?? cat[id]?.tools ?? true), ctx: d.limit?.context ?? cat[id]?.ctx ?? 0,
+          gratis: (d.cost?.input ?? 1) === 0 && (d.cost?.output ?? 1) === 0, preview: /preview|exp/i.test(mid) || ["beta", "deprecated", "alpha"].includes(d.status) }
+        n++
+      }
+    }
+    mkdirSync(DIR, { recursive: true }); writeFileSync(CATALOGO, JSON.stringify({ ...c, actualizado: new Date().toISOString(), modelos: cat }, null, 1))
+    return n
+  } catch { return 0 }
+}
+/** MEMORIA DE SALUD: registra que un modelo respondió bien, para preferirlo la próxima vez (0 tokens). */
+export function marcarBueno(modelo: string) {
+  if (!modelo) return
+  const s = leerJ(SALUD, {}); const e = s[modelo] ?? { n: 0, ult: 0 }
+  s[modelo] = { n: Math.min((e.n || 0) + 1, 999), ult: Date.now() }
+  try { mkdirSync(DIR, { recursive: true }); writeFileSync(SALUD, JSON.stringify(s, null, 1)) } catch {}
+}
+/** ¿Respondió bien en las últimas 24 h? (para ordenarlo primero en el salto de modelo) */
+const buenoReciente = (id: string, salud: any = leerJ(SALUD, {})) => { const e = salud[id]; return !!e && Date.now() - (e.ult || 0) < 86_400_000 }
 /** Siguiente modelo: ranking del comparador si existe; si no, gratuitos con herramientas del mismo proveedor (buenos para código primero). Salta los limitados en la última hora. */
-export function siguienteModelo(actual: string, necesitaImagen = false): { id: string; nombre: string } | null {
+export function siguienteModelo(actual: string, necesitaImagen = false, sinProveedor = ""): { id: string; nombre: string } | null {
   const cat = leerJ(CATALOGO, {}).modelos ?? {}
   const lim = leerJ(LIMITES, {}), ahora = Date.now()
-  const libre = (id: string) => id !== actual && !(lim[id] && ahora - lim[id] < 3_600_000)
+  const libre = (id: string) => id !== actual && !(lim[id] && ahora - lim[id] < 3_600_000) && !(sinProveedor && id.startsWith(sinProveedor + "/"))
   const ok = (id: string) => { const m = cat[id]; return m && m.tools !== false && (!necesitaImagen || m.imagen) }
   const rank: string[] = leerJ(RANKING, {}).orden ?? []
   const prov = actual.split("/")[0]
   const pref = (id: string) => (/big-pickle|nemotron-3-ultra|ling|muse|mimo|qwen|deepseek|kimi|glm|minimax|gpt|claude|gemini/i.test(id) ? 1 : 0)
+  const salud = leerJ(SALUD, {}) // se lee UNA vez (antes se leía el archivo dentro del ordenamiento)
   const resto = Object.keys(cat).filter((id) => cat[id].gratis === (cat[actual]?.gratis ?? true) && !cat[id].preview)
-    .sort((a, b) => Number(b.startsWith(prov + "/")) - Number(a.startsWith(prov + "/")) || pref(b) - pref(a) || (cat[b].ctx ?? 0) - (cat[a].ctx ?? 0))
+    .sort((a, b) => (Number(buenoReciente(b, salud)) - Number(buenoReciente(a, salud))) || Number(b.startsWith(prov + "/")) - Number(a.startsWith(prov + "/")) || pref(b) - pref(a) || (cat[b].ctx ?? 0) - (cat[a].ctx ?? 0))
   const id = [...rank, ...resto].find((x) => libre(x) && ok(x))
   return id ? { id, nombre: cat[id]?.nombre ?? id } : null
 }

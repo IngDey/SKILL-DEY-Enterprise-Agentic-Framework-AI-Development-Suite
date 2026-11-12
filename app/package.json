@@ -1,7 +1,4 @@
 {
-  "name": "skill-dey",
-  "author": "Ing. Dey (IngDey) <https://github.com/IngDey>",
-  "license": "MIT",
   "dependencies": {
     "@opencode-ai/plugin": "latest"
   }

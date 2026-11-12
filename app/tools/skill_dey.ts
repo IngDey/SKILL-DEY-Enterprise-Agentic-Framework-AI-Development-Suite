@@ -2,12 +2,15 @@
 // Crea las tools skill_dey_*: verificar, sitio, impacto, leccion, recordar, deshacer, mapa, documentar, procesos, adoptar
 // Objetivo: que el modelo NO gaste tokens decidiendo/leyendo salidas largas; el script hace el trabajo exacto.
 import { tool } from "@opencode-ai/plugin"
+import { sdDir } from "../skill_dey-lib/rutas.ts"
 import { spawnSync } from "node:child_process"
-import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, appendFileSync } from "node:fs"
-import { join, extname, basename, dirname, relative } from "node:path"
-import { homedir, tmpdir } from "node:os"
+import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync, appendFileSync, rmSync } from "node:fs"
+import { join, extname, basename, dirname, relative, isAbsolute, resolve } from "node:path"
+import { tmpdir } from "node:os"
+import { listarArchivos } from "../skill_dey-lib/listar.ts"
+import { chromeAbierto, comoAbrirChrome, correrShell } from "../skill_dey-lib/navegador.ts"
 import { documentar as _documentar } from "../skill_dey-lib/documentar.ts"
-import { arranqueLimpio, servicios, escuchando, esDeDesarrollo, liberarPuerto, detenerTodo, conTiempo } from "../skill_dey-lib/procesos.ts"
+import { arranqueLimpio, servicios, escuchando, esDeDesarrollo, liberarPuerto, detenerTodo, conTiempo, detenerNuestros } from "../skill_dey-lib/procesos.ts"
 import { revisarTodo } from "../skill_dey-lib/escaneo.ts"
 import { analizar } from "../skill_dey-lib/adopcion.ts"
 import { rastrearSitio } from "../skill_dey-lib/sitio.ts"
@@ -24,20 +27,22 @@ import { guardarPlan, verificarPlan, marcarPlan } from "../skill_dey-lib/plan.ts
 import { documentosPdf } from "../skill_dey-lib/pdf.ts"
 import { foto } from "../skill_dey-lib/respaldo.ts"
 import { iniciarApp, asegurarPlaywright, rutasAProbar, ERROR_PHP } from "../skill_dey-lib/app.ts"
-import { deshacer as _deshacer, rehacer as _rehacer, historial as _historial } from "../skill_dey-lib/respaldo.ts"
+import { deshacer as _deshacer, rehacer as _rehacer, historial as _historial, deshacerArchivo as _deshacerArchivo, buscarPaso as _buscarPaso } from "../skill_dey-lib/respaldo.ts"
 import { buscarSkill } from "../skill_dey-lib/buscar_skill.ts"
 import { capacitar } from "../skill_dey-lib/video.ts"
 import { pruebasProfesionales } from "../skill_dey-lib/testpro.ts"
 import { aprenderDeCorrida } from "../skill_dey-lib/aprender.ts"
 import { revisarMovil } from "../skill_dey-lib/movil.ts"
 import { auditarDependencias, semgrep, sentryCheck } from "../skill_dey-lib/pro.ts"
+import { mapaMental } from "../skill_dey-lib/mapa_mental.ts"
+import { buscarMemoria as _buscarMem } from "../skill_dey-lib/indice.ts"
 
 // ---------- utilidades ----------
-const GLOBAL_DIR = join(homedir(), ".config", "opencode", "skill_dey")
+const GLOBAL_DIR = sdDir()
 const IGNORAR = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.next|\.nuxt|coverage|\.venv|venv|__pycache__|\.skill_dey[\\/]shots)([\\/]|$)/
 
 type Res = { code: number; out: string; timeout: boolean }
-function sh(cmd: string, cwd: string, timeoutMs = 300_000): Res {
+function sh(cmd: string, cwd: string, timeoutMs = 120_000): Res {
   const r = spawnSync(cmd, {
     cwd, shell: true, encoding: "utf8", timeout: timeoutMs, maxBuffer: 50_000_000,
     env: { ...process.env, CI: "1", FORCE_COLOR: "0", NO_COLOR: "1" },
@@ -45,11 +50,13 @@ function sh(cmd: string, cwd: string, timeoutMs = 300_000): Res {
   const timeout = (r.error as any)?.code === "ETIMEDOUT"
   return { code: r.status ?? (r.error ? 1 : 0), out: `${r.stdout ?? ""}${r.stderr ?? ""}`.trimEnd(), timeout }
 }
+/** Comandos largos (lint, tests, navegador) sin congelar OpenCode. */
+const shA = (cmd: string, cwd: string, timeoutMs = 120_000, senal?: AbortSignal): Promise<Res> => correrShell(cmd, cwd, timeoutMs, { CI: "1", FORCE_COLOR: "0", NO_COLOR: "1" }, senal)
 const cola = (s: string, n = 15) => s.split(/\r?\n/).filter((l) => l.trim() && !/^\s*at \S|^Node\.js v/.test(l)).slice(-n).map((l) => "   " + l.slice(0, 220)).join("\n")
 const existe = (cwd: string, ...f: string[]) => f.some((x) => existsSync(join(cwd, x)))
 const leerJson = (p: string): any => { try { return JSON.parse(readFileSync(p, "utf8")) } catch { return null } }
 const leer = (p: string) => { try { return readFileSync(p, "utf8") } catch { return "" } }
-const q = (f: string) => `"${f}"`
+const q = (f: string) => (WIN ? `"${f.replace(/"/g, '\\"')}"` : `'${f.replace(/'/g, "'\\''")}'`)
 const hayComando = (c: string, cwd: string) => sh(process.platform === "win32" ? `where ${c}` : `command -v ${c}`, cwd, 10_000).code === 0
 function asegurarDir(p: string) { if (!existsSync(p)) mkdirSync(p, { recursive: true }) }
 const WIN = process.platform === "win32"
@@ -61,13 +68,12 @@ function python(cwd: string): string | null { // Windows suele tener "py"/"pytho
 }
 
 function archivosCambiados(cwd: string): string[] {
-  const r = sh("git -c core.quotepath=off status --porcelain", cwd, 20_000)
-  if (r.code !== 0) return []
-  return r.out.split(/\r?\n/).filter(Boolean).map((l) => {
-    let p = l.slice(3).trim()
-    if (p.includes(" -> ")) p = p.split(" -> ")[1]
-    return p.replace(/^"|"$/g, "")
-  }).filter((p) => !IGNORAR.test(p) && !p.startsWith(".skill_dey/") && existsSync(join(cwd, p)) && statSync(join(cwd, p)).isFile())
+  // -uall: archivos DENTRO de carpetas nuevas · -z: rutas exactas (tildes, espacios, renombres)
+  const r = spawnSync("git", ["-c", "core.quotepath=off", "status", "--porcelain=v1", "-z", "-uall"], { cwd, encoding: "utf8", timeout: 20_000, maxBuffer: 100_000_000 })
+  if (r.status !== 0) return []
+  const partes = (r.stdout ?? "").split("\0"), out: string[] = []
+  for (let i = 0; i < partes.length; i++) { const e = partes[i]; if (e.length < 4) continue; out.push(e.slice(3)); if (/^[RC]/.test(e)) i++ } // renombre: la ruta vieja viene después
+  return out.filter((p) => !IGNORAR.test(p) && !p.startsWith(".skill_dey/") && existsSync(join(cwd, p)) && statSync(join(cwd, p)).isFile())
 }
 
 // ---------- clasificación de áreas (espejo de la matriz de SKILL.md §3) ----------
@@ -127,9 +133,13 @@ export const verificar = tool({
   async execute(args, ctx) {
     const cwd = ctx.worktree || ctx.directory
     const t0 = Date.now()
-    const files = (args.archivos?.length ? args.archivos : archivosCambiados(cwd)).filter((f) => existsSync(join(cwd, f)))
+    const pedidos = (args.archivos ?? []).map((f) => (isAbsolute(f) ? relative(cwd, f) : f).replace(/\\/g, "/"))
+    const files = (pedidos.length ? pedidos : archivosCambiados(cwd)).filter((f) => !f.startsWith("..") && existsSync(join(cwd, f)))
+    if (pedidos.length && !files.length) return `SKILL_DEY verificar: ❌ ninguno de los archivos indicados existe dentro del proyecto (${pedidos.slice(0, 3).join(", ")}). Revisa la ruta.`
+    const sinPruebasReales = /No test files found|No tests found|No tests executed|collected 0 items|no tests ran|0 passing|Tests:\s+0 total/i
     const areas = new Set<Area>(files.flatMap(areasDe))
     const s = stack(cwd)
+    if (/no test specified/i.test(String(s.scripts?.test ?? ""))) delete s.scripts.test // el "test" que crea npm init no es una suite
     const n = args.nivel ?? "N1", rank = { N0: 0, N1: 1, N2: 2, N3: 3 }[n]
     const cierre = !!args.cierre || n === "N3"
     const L: string[] = []
@@ -137,9 +147,11 @@ export const verificar = tool({
     let pruebas = 0 // cuántos bloques de pruebas reales corrieron (define la confianza)
     let capturas = false
     const pendientes: string[] = []
-    const run = (nombre: string, cmd: string, timeout?: number) => {
-      const r = sh(cmd, cwd, timeout)
-      if (/test|pytest|phpunit|suite/i.test(nombre)) pruebas++
+    const run = async (nombre: string, cmd: string, timeout?: number) => {
+      const r = await shA(cmd, cwd, timeout, (ctx as any)?.abort)
+      const esTest = /test|pytest|phpunit|suite/i.test(nombre)
+      if (esTest && (r.code === 5 && /pytest/.test(cmd) || (r.code === 0 && sinPruebasReales.test(r.out)))) { L.push(`⏭ ${nombre}: no hay pruebas para lo cambiado`); return } // ni rojo falso ni confianza falsa
+      if (esTest) pruebas++
       if (r.code === 0) L.push(`✅ ${nombre}`)
       else { fallas++; L.push(`❌ ${nombre}${r.timeout ? " (tiempo agotado)" : ` (exit ${r.code})`}\n${cola(r.out)}`) }
     }
@@ -150,17 +162,19 @@ export const verificar = tool({
     if (soloDocs && !cierre && !args.todo) return `SKILL_DEY verificar · ${n} · solo documentación (${files.length}) → sin pruebas necesarias ✅`
 
     // 1) Sintaxis por archivo (todos los niveles, rápido)
-    const errSint: string[] = []
+    const errSint: string[] = [], sinInterprete = new Set<string>()
     for (const f of files) {
       const e = extname(f).toLowerCase(), fp = q(f)
       let r: Res | null = null
       if (e === ".php") r = sh(`php -l ${fp}`, cwd, 30_000)
-      else if (e === ".py" && python(cwd)) r = sh(`${python(cwd)} -m py_compile ${fp}`, cwd, 30_000)
+      else if (e === ".py") { if (python(cwd)) r = sh(`${python(cwd)} -m py_compile ${fp}`, cwd, 30_000); else sinInterprete.add("python") }
       else if ([".js", ".mjs", ".cjs"].includes(e)) { const x = errorJs(cwd, f); if (x) errSint.push(`${f}:\n${x}`) }
       else if (e === ".json") { try { JSON.parse(readFileSync(join(cwd, f), "utf8")); } catch (x: any) { errSint.push(`${f}: ${x.message}`) } }
-      if (r && r.code !== 0 && !/not recognized|not found|no se reconoce/i.test(r.out)) errSint.push(`${f}:\n${cola(r.out, 6)}`)
+      if (r && r.code !== 0 && /not recognized|not found|no se reconoce|command not found/i.test(r.out)) sinInterprete.add(e.slice(1))
+      else if (r && r.code !== 0) errSint.push(`${f}:\n${cola(r.out, 6)}`)
     }
     if (errSint.length) { fallas++; L.push(`❌ sintaxis\n${errSint.join("\n")}`) } else L.push(`✅ sintaxis (${files.length} archivos)`)
+    if (sinInterprete.size) L.push(`⏭ sintaxis ${[...sinInterprete].join(", ")}: el intérprete no está instalado, esos archivos no se revisaron`)
 
     // 2) Secretos en código (todos los niveles)
     const conSecreto = files.filter((f) => !/\.env(\.|$)|\.example|\.lock$/.test(f)).filter((f) =>
@@ -175,39 +189,39 @@ export const verificar = tool({
     // 3) Lint de archivos tocados (N0 solo sintaxis)
     const codigo = files.filter((f) => /\.(m?[jt]sx?|cjs|vue|svelte)$/.test(f))
     if (rank >= 1) {
-      if (s.eslint && codigo.length) run("lint", `npx --no-install eslint --no-warn-ignored ${codigo.map(q).join(" ")}`, 180_000)
+      if (s.eslint && codigo.length) await run("lint", `npx --no-install eslint ${existe(cwd, "eslint.config.js", "eslint.config.mjs", "eslint.config.cjs", "eslint.config.ts") ? "--no-warn-ignored " : ""}${codigo.map(q).join(" ")}`, 180_000)
       const py = files.filter((f) => f.endsWith(".py"))
-      if (py.length && hayComando("ruff", cwd)) run("lint python", `ruff check ${py.map(q).join(" ")}`, 120_000)
-      if (s.go) run("go vet", "go vet ./...", 180_000)
+      if (py.length && hayComando("ruff", cwd)) await run("lint python", `ruff check ${py.map(q).join(" ")}`, 120_000)
+      if (s.go) await run("go vet", "go vet ./...", 180_000)
     } else omitir("lint/tests", "N0 (solo sintaxis)")
 
     // 4) Typecheck (N2+ o si hay TS en N1 con contratos)
-    if (rank >= 2 && s.ts && files.some((f) => /\.tsx?$|\.vue$/.test(f))) run("tipos", "npx --no-install tsc --noEmit -p .", 300_000)
+    if (rank >= 2 && s.ts && files.some((f) => /\.tsx?$|\.vue$/.test(f))) await run("tipos", "npx --no-install tsc --noEmit -p .", 300_000)
 
     // 5) Tests relacionados / suite
     const fuente = files.filter((f) => !/\.(md|css|scss|json|txt|sql|ya?ml)$/i.test(f))
     const suite = cierre || areas.has("api") || areas.has("db") || areas.has("auth") || areas.has("deps")
     if (rank >= 1 && (fuente.length || cierre)) {
       if (s.node && (s.vitest || s.jest || s.scripts.test)) {
-        if (suite && rank >= 2) run("suite completa", s.scripts.test ? "npm test --silent" : s.vitest ? "npx --no-install vitest run" : "npx --no-install jest", 600_000)
-        else if (s.vitest) run("tests relacionados", `npx --no-install vitest related --run --passWithNoTests ${fuente.map(q).join(" ")}`, 300_000)
-        else if (s.jest) run("tests relacionados", `npx --no-install jest --findRelatedTests ${fuente.map(q).join(" ")} --passWithNoTests`, 300_000)
-        else if (rank >= 2) run("tests", "npm test --silent", 600_000)
+        if (suite && rank >= 2) await run("suite completa", s.scripts.test ? "npm test --silent" : s.vitest ? "npx --no-install vitest run" : "npx --no-install jest", 600_000)
+        else if (s.vitest) await run("tests relacionados", `npx --no-install vitest related --run --passWithNoTests ${fuente.map(q).join(" ")}`, 300_000)
+        else if (s.jest) await run("tests relacionados", `npx --no-install jest --findRelatedTests ${fuente.map(q).join(" ")} --passWithNoTests`, 300_000)
+        else if (rank >= 2) await run("tests", "npm test --silent", 600_000)
       }
       if (s.python && python(cwd) && sh(`${python(cwd)} -m pytest --version`, cwd, 20_000).code === 0) {
         const rel = fuente.filter((f) => f.endsWith(".py")).map((f) => basename(f, ".py")).filter((b) => !b.startsWith("test_"))
         const pt = `${python(cwd)} -m pytest -q -x`
-        run(suite && rank >= 2 ? "pytest suite" : "pytest relacionados", suite && rank >= 2 ? pt : rel.length ? `${pt} -k "${rel.join(" or ")}"` : `${pt} --lf`, 600_000)
+        await run(suite && rank >= 2 ? "pytest suite" : "pytest relacionados", suite && rank >= 2 ? pt : rel.length ? `${pt} -k "${rel.join(" or ")}"` : `${pt} --lf`, 600_000)
       }
       if (s.phpunit) {
         const cls = fuente.filter((f) => f.endsWith(".php")).map((f) => basename(f, ".php"))
         const pu = "php vendor/bin/phpunit" // funciona igual en Windows, macOS y Linux
-        run("phpunit", suite && rank >= 2 ? pu : cls.length ? `${pu} --filter "${cls.join("|")}"` : pu, 600_000)
+        await run("phpunit", suite && rank >= 2 ? pu : cls.length ? `${pu} --filter "${cls.join("|")}"` : pu, 600_000)
       }
-      if (s.go) run("go test", suite && rank >= 2 ? "go test ./..." : `go test ${[...new Set(fuente.filter((f) => f.endsWith(".go")).map((f) => "./" + dirname(f).replace(/\\/g, "/")))].join(" ") || "./..."}`, 600_000)
+      if (s.go) await run("go test", suite && rank >= 2 ? "go test ./..." : `go test ${[...new Set(fuente.filter((f) => f.endsWith(".go")).map((f) => "./" + dirname(f).replace(/\\/g, "/")))].join(" ") || "./..."}`, 600_000)
       const testsNode = s.node && !s.vitest && !s.jest && !s.scripts.test ? archivosCambiados(cwd).concat(files).filter((f) => /\.test\.(m?js|cjs)$/.test(f)) : []
       if (testsNode.length || (s.node && !s.vitest && !s.jest && !s.scripts.test && existe(cwd, "test", "tests")))
-        run("tests (node --test)", `node --test ${testsNode.length ? [...new Set(testsNode)].map(q).join(" ") : ""}`.trim(), 300_000)
+        await run("tests (node --test)", `node --test ${testsNode.length ? [...new Set(testsNode)].map(q).join(" ") : ""}`.trim(), 300_000)
       else if (rank >= 2 && !s.vitest && !s.jest && !s.scripts.test && !s.python && !s.phpunit && !s.go) // aviso solo en N2+ (no repetirlo en cada cambio pequeño)
         pendientes.push(s.php ? "sin PHPUnit: las páginas se prueban con prueba de humo; para lógica crítica agrega PHPUnit (composer require --dev phpunit/phpunit) con una prueba del módulo tocado"
           : s.python ? "sin pruebas: crea test_<modulo>.py con pytest (pip install pytest) para el módulo tocado"
@@ -216,26 +230,30 @@ export const verificar = tool({
 
     // 6) Build de producción
     if ((rank >= 2 && (areas.has("api") || areas.has("config") || areas.has("deps") || areas.has("auth") || areas.has("infra"))) || cierre) {
-      if (s.scripts.build) run("build producción", "npm run build --silent", 600_000); else omitir("build", "sin script build")
+      if (s.scripts.build) await run("build producción", "npm run build --silent", 600_000); else omitir("build", "sin script build")
     }
 
     // 7) Auditoría de dependencias
     if (rank >= 2 && (areas.has("deps") || areas.has("auth") || areas.has("config") || cierre)) {
-      if (s.node) run("audit npm (alto/crítico)", "npm audit --omit=dev --audit-level=high", 180_000)
-      if (s.php && hayComando("composer", cwd)) run("audit composer", "composer audit --no-interaction", 180_000)
-      if (s.python && python(cwd) && hayComando("pip-audit", cwd)) run("pip-audit", "pip-audit -q", 300_000)
+      if (s.node) {
+        if (existe(cwd, "package-lock.json", "npm-shrinkwrap.json")) await run("audit npm (alto/crítico)", "npm audit --omit=dev --audit-level=high", 180_000)
+        else if (existe(cwd, "pnpm-lock.yaml")) await run("audit pnpm (alto/crítico)", "pnpm audit --prod --audit-level high", 180_000)
+        else omitir("audit", existe(cwd, "yarn.lock") ? "proyecto yarn: corre `yarn npm audit` (yarn 2+) o `yarn audit`" : "sin archivo de bloqueo (package-lock)")
+      }
+      if (s.php && hayComando("composer", cwd)) await run("audit composer", "composer audit --no-interaction", 180_000)
+      if (s.python && python(cwd) && hayComando("pip-audit", cwd)) await run("pip-audit", "pip-audit -q", 300_000)
     }
 
     // 7b) Análisis estático PHP / Python (errores que la sintaxis no ve)
     const phpCambiados = files.filter((f) => f.endsWith(".php"))
     if (rank >= 1 && phpCambiados.length) {
       const stan = existe(cwd, "vendor/bin/phpstan") ? "php vendor/bin/phpstan" : hayComando("phpstan", cwd) ? "phpstan" : ""
-      if (stan) run("análisis PHP (phpstan)", `${stan} analyse --no-progress --error-format=raw --level=${rank >= 2 ? 5 : 3} ${phpCambiados.map(q).join(" ")}`, 300_000)
+      if (stan) await run("análisis PHP (phpstan)", `${stan} analyse --no-progress --error-format=raw --level=${rank >= 2 ? 5 : 3} ${phpCambiados.map(q).join(" ")}`, 300_000)
     }
     const pyCambiados = files.filter((f) => f.endsWith(".py"))
     if (rank >= 1 && pyCambiados.length && python(cwd)) {
-      if (!hayComando("ruff", cwd) && sh(`${python(cwd)} -m pyflakes --version`, cwd, 10_000).code === 0) run("análisis Python (pyflakes)", `${python(cwd)} -m pyflakes ${pyCambiados.map(q).join(" ")}`, 120_000)
-      if (rank >= 2 && existe(cwd, "mypy.ini", "setup.cfg", "pyproject.toml") && sh(`${python(cwd)} -m mypy --version`, cwd, 10_000).code === 0) run("tipos Python (mypy)", `${python(cwd)} -m mypy ${pyCambiados.map(q).join(" ")} --ignore-missing-imports`, 300_000)
+      if (!hayComando("ruff", cwd) && sh(`${python(cwd)} -m pyflakes --version`, cwd, 10_000).code === 0) await run("análisis Python (pyflakes)", `${python(cwd)} -m pyflakes ${pyCambiados.map(q).join(" ")}`, 120_000)
+      if (rank >= 2 && existe(cwd, "mypy.ini", "setup.cfg", "pyproject.toml") && sh(`${python(cwd)} -m mypy --version`, cwd, 10_000).code === 0) await run("tipos Python (mypy)", `${python(cwd)} -m mypy ${pyCambiados.map(q).join(" ")} --ignore-missing-imports`, 300_000)
     }
 
     // 8) App en marcha: consola, errores del servidor y capturas (la levanta sola si hace falta)
@@ -246,6 +264,7 @@ export const verificar = tool({
       let arr: Awaited<ReturnType<typeof arranqueLimpio>> | null = null
       if (!args.url && servicios(cwd).length) {
         arr = await conTiempo(arranqueLimpio(cwd), 95_000, null).catch(() => null)
+        if (!arr) { detenerNuestros(cwd); L.push("⏱ el arranque tardó demasiado: detuve lo que alcanzó a subir") }
         for (const n of arr?.notas ?? []) L.push("🔧 " + n)
         for (const a of arr?.lista ?? []) {
           if (a.ok && !a.errores.length) L.push(`✅ ${a.s.tipo} "${a.s.nombre}" subió sin errores (${a.s.cmd.split(" -")[0]} · ${a.url})`)
@@ -253,7 +272,7 @@ export const verificar = tool({
         }
       }
       const frente = arr?.lista.find((a) => a.ok && a.s.tipo === "frontend") ?? arr?.lista.find((a) => a.ok)
-      const base = args.url ?? frente?.url ?? (arr ? undefined : (app = await iniciarApp(cwd).catch(() => null))?.url)
+      const base = args.url ?? frente?.url ?? (arr || servicios(cwd).length ? undefined : (app = await iniciarApp(cwd).catch(() => null))?.url)
       try {
         if (!base) pendientes.push("no pude levantar la app sola: arráncala y llama de nuevo con url=<vista>")
         else {
@@ -296,7 +315,8 @@ for (const [i, u] of ${JSON.stringify(urls)}.entries()) for (const w of ${JSON.s
   let a11y = ''; if (Axe && w === 1440) { try { const r = await new Axe({ page: p }).analyze(); const v = r.violations.filter(x => ['serious','critical'].includes(x.impact)); a11y = ' · axe serias:' + v.length + (v.length ? ' (' + v.map(x => x.id).slice(0,5).join(',') + ')' : '') } catch {} }
   out.push(u.replace(/^https?:\\/\\/[^/]+/, '') + ' ' + w + 'px → .skill_dey/shots/p' + i + '-' + w + '.png' + (hscroll ? ' · ⚠ scroll horizontal' : '') + (errs.length ? ' · ⚠ ' + errs.slice(0,3).join(' | ') : ' · consola limpia') + a11y); await p.close(); }
 await b.close(); console.log(out.join('\\n'));`)
-            const r = sh(`node ${q(script)}`, cwd, 300_000)
+            const r = await shA(`node ${q(script)}`, cwd, 300_000, (ctx as any)?.abort)
+            try { rmSync(script, { force: true }) } catch {}
             if (r.code === 0) { capturas = true; L.push(`📸 consola y capturas:\n${cola(r.out, 12)}`); if (/⚠|serias:[1-9]/.test(r.out)) { fallas++; L.push("❌ visual/consola: corrige lo marcado con ⚠") } ; if (cierre && rank >= 2) pendientes.push("mira UNA captura principal (read, o skill_dey_imagen si tu modelo no ve imágenes) y califica G14") }
             else if (/Executable doesn't exist|playwright install/i.test(r.out)) pendientes.push("falta el navegador: `npx playwright install chromium` en " + dirname(pj))
             else { fallas++; L.push(`❌ capturas\n${cola(r.out, 6)}`) }
@@ -317,21 +337,25 @@ await b.close(); console.log(out.join('\\n'));`)
     if (cierre && !args.rapido) {
       const pr = await probarApp(cwd, args.url).catch((e: any) => ({ ok: true, lineas: ["⏭ probador: " + e.message], fallas: 0 }))
       L.push(...pr.lineas); fallas += pr.fallas
-      try { const fmt = formatear(cwd); if (!fmt.startsWith("⏭")) L.push(fmt) } catch {} // formato uniforme con el formateador del proyecto
+      try { const fmt = formatear(cwd, true, files); if (!fmt.startsWith("⏭")) L.push(fmt) } catch {} // formato uniforme con el formateador del proyecto
       try { const v = validacionServidor(cwd); if (v.startsWith("⚠")) { L.push(v.split("\n")[0]); pendientes.push(v) } } catch {}
       try { const nb = consultasEnBucle(cwd); if (nb.length) pendientes.push("rendimiento: " + nb.length + " consulta(s) dentro de bucles (posible N+1) → " + nb.slice(0,3).join(" · ")) } catch {}
       try { const vp = verificarPlan(cwd); L.push(...vp.lineas); fallas += vp.fallas } catch {} // coherencia: ¿se cubrió todo lo pedido?
     }
 
     // 8a) Comentarios: todo archivo de código NUEVO lleva encabezado (propósito) y las funciones su docblock
-    const nuevos = sh("git ls-files --others --exclude-standard", cwd, 20_000).out.split(/\r?\n/).filter((f) => files.includes(f) && /\.(m?[jt]sx?|cjs|vue|svelte|php|py|go|java|cs|rb)$/.test(f))
+    const nuevos = sh("git -c core.quotepath=off ls-files --others --exclude-standard", cwd, 20_000).out.split(/\r?\n/).filter((f) => files.includes(f) && /\.(m?[jt]sx?|cjs|vue|svelte|php|py|go|java|cs|rb)$/.test(f))
     const sinEncabezado = nuevos.filter((f) => !/^\s*(<\?php\s*)?(\/\/|\/\*|#|"""|'\'\'|<!--)/.test(leer(join(cwd, f)).replace(/^#!.*\n/, "").slice(0, 300)))
     if (sinEncabezado.length) pendientes.push(`archivos nuevos sin comentario de encabezado (propósito del archivo): ${sinEncabezado.slice(0, 5).join(", ")}`)
 
     // 8b) TDD (Superpowers): en N2/N3 todo cambio de código trae su prueba nueva o actualizada
     const esPrueba = (f: string) => /(^|\/)(tests?|__tests__|spec)\/|\.(test|spec)\.[a-z]+$|_test\.(py|go)$|test_[^/]+\.py$|Test\.php$/i.test(f.replace(/\\/g, "/"))
     const codigoCambiado = files.filter((f) => /\.(m?[jt]sx?|cjs|vue|svelte|php|py|go|java|cs|rb)$/.test(f) && !esPrueba(f))
-    if (rank >= 2 && codigoCambiado.length && !files.some(esPrueba)) { fallas++; L.push("❌ TDD: cambio N2/N3 sin prueba nueva o actualizada → escribe primero la prueba que demuestra el comportamiento y vuelve a verificar") }
+    const hayRunner = s.vitest || s.jest || !!s.scripts.test || s.phpunit || s.go || existe(cwd, "pytest.ini", "conftest.py", "tox.ini")
+    if (rank >= 2 && codigoCambiado.length && !files.some(esPrueba)) {
+      if (hayRunner) { fallas++; L.push("❌ TDD: cambio N2/N3 sin prueba nueva o actualizada → escribe primero la prueba que demuestra el comportamiento y vuelve a verificar") }
+      else pendientes.push("TDD: el proyecto no tiene corredor de pruebas; agrega uno y una prueba del módulo tocado")
+    }
 
     // 8c) Cambio quirúrgico (Karpathy): el tamaño del diff debe corresponder al nivel
     const ns = sh("git diff --numstat HEAD --", cwd, 20_000)
@@ -385,13 +409,13 @@ export const impacto = tool({
     const cwd = ctx.worktree || ctx.directory
     const t = args.termino, max = args.max ?? 25
     let hits: { f: string; n: number; l: string }[] = []
-    const gr = spawnSync("git", ["-c", "core.quotepath=off", "grep", "-n", "-I", "-F", "-e", t, "--", ".", ":!node_modules", ":!vendor", ":!dist", ":!build", ":!*.min.*", ":!*lock*", ":!.skill_dey"], { cwd, encoding: "utf8", maxBuffer: 50_000_000, timeout: 60_000 })
+    const gr = spawnSync("git", ["-c", "core.quotepath=off", "grep", "--untracked", "-n", "-I", "-F", "-e", t, "--", ".", ":!node_modules", ":!vendor", ":!dist", ":!build", ":!*.min.*", ":!*.lock", ":!package-lock.json", ":!pnpm-lock.yaml", ":!yarn.lock", ":!composer.lock", ":!.skill_dey"], { cwd, encoding: "utf8", maxBuffer: 50_000_000, timeout: 60_000 })
     const g = { code: gr.status ?? 2, out: `${gr.stdout ?? ""}` }
     if (g.code === 0 || g.code === 1) {
       hits = g.out.split(/\r?\n/).filter(Boolean).map((x) => { const m = x.match(/^(.+?):(\d+):(.*)$/); return m ? { f: m[1], n: +m[2], l: m[3].trim() } : null }).filter(Boolean) as any
     } else {
-      const walk = (d: string, acc: string[] = []) => { for (const e of readdirSync(d)) { const p = join(d, e); if (IGNORAR.test(p)) continue; const st = statSync(p); if (st.isDirectory()) walk(p, acc); else if (st.size < 1_000_000) acc.push(p) } return acc }
-      for (const p of walk(cwd)) leer(p).split(/\r?\n/).forEach((l, i) => { if (l.includes(t)) hits.push({ f: relative(cwd, p), n: i + 1, l: l.trim() }) })
+      const lista = listarArchivos(cwd, 8000).map((f) => join(cwd, f)).filter((p) => { try { return statSync(p).size < 1_000_000 } catch { return false } })
+      for (const p of lista) leer(p).split(/\r?\n/).forEach((l, i) => { if (l.includes(t)) hits.push({ f: relative(cwd, p), n: i + 1, l: l.trim() }) })
     }
     if (!hits.length) return `SKILL_DEY impacto "${t}": 0 usos. Si vas a CREARLO → nivel según lo que construyas. Si esperabas encontrarlo, revisa ortografía/mayúsculas (no inventes nombres).`
     const esc = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -492,10 +516,11 @@ export const recordar = tool({
     const negocio = neg.length ? ["Negocio del proyecto (.skill_dey/NEGOCIO.md):", ...neg.slice(0, 18).map((l) => "   " + l.slice(0, 160))] : ["⚠ Sin NEGOCIO.md: en tareas N2/N3 créalo (deduce del código; pregunta solo lo que falte, máx. 5 preguntas, una vez)."]
     const prin = (() => { try { return _principios(cwd) } catch { return "" } })()
     const sol = (() => { try { return _buscarSol(cwd, args.tema) } catch { return "" } })()
+    const rag = (() => { try { return _buscarMem(cwd, args.tema, 6) } catch { return [] } })() // RAG ligero BM25: solo lo relevante (escala sin saturar)
     return [
       `SKILL_DEY recordar "${args.tema}": ${top.length} lecciones relevantes`,
       prin ? "PRINCIPIOS de la app (respétalos):\n" + prin.split("\n").filter((l: string) => l.startsWith("-")).join("\n") : "",
-      ...negocio, sol, ...top, prefs.length ? "Preferencias del usuario:" : "", ...prefs.map((p) => "   " + p), marca,
+      ...negocio, sol, ...top, rag.length ? "Relevante en tu memoria (BM25):" : "", ...rag.map((x) => "   " + x), prefs.length ? "Preferencias del usuario:" : "", ...prefs.map((p) => "   " + p), marca,
     ].filter(Boolean).join("\n") || "Sin lecciones aún."
   },
 })
@@ -507,9 +532,13 @@ export const deshacer = tool({
   args: {
     accion: tool.schema.enum(["deshacer", "rehacer", "historial"]).optional().describe("defecto deshacer"),
     pasos: tool.schema.number().optional().describe("defecto 1"),
+    archivo: tool.schema.string().optional().describe("solo ese archivo"),
+    antesDe: tool.schema.string().optional().describe("volver a antes de ese pedido"),
   },
   async execute(args, ctx) {
     const cwd = ctx.worktree || ctx.directory
+    if (args.archivo && (args.accion ?? "deshacer") === "deshacer") return _deshacerArchivo(cwd, args.archivo)
+    if (args.antesDe && (args.accion ?? "deshacer") === "deshacer") { const b = _buscarPaso(cwd, args.antesDe); if (!b.n) return `No encontré un punto guardado de "${args.antesDe}". Escribe "historial" para ver la lista y luego "vuelve al punto N".`; return _deshacer(cwd, b.n) + "\n→ Ahora ejecuta skill_dey_verificar para confirmar que la app quedó funcionando." }
     if (args.accion === "historial") return _historial(cwd)
     if (args.accion === "rehacer") return _rehacer(cwd)
     return _deshacer(cwd, args.pasos ?? 1) + "\n→ Ahora ejecuta skill_dey_verificar para confirmar que la app quedó funcionando."
@@ -528,9 +557,7 @@ export const mapa = tool({
     const cwd = ctx.worktree || ctx.directory
     const destino = join(cwd, ".skill_dey", "MAPA.md")
     let files: string[] = []
-    const g = spawnSync("git", ["ls-files", "-co", "--exclude-standard"], { cwd, encoding: "utf8", maxBuffer: 100_000_000 })
-    if (g.status === 0) files = g.stdout.split(/\r?\n/).filter(Boolean)
-    else { const walk = (d: string): void => { for (const e of readdirSync(d)) { const p = join(d, e); if (IGNORAR.test(p)) continue; const st = statSync(p); st.isDirectory() ? walk(p) : files.push(relative(cwd, p)) } }; walk(cwd) }
+    files = listarArchivos(cwd, 20_000) // git (rutas exactas con tildes) o disco, siempre con tope
     files = files.filter((f) => !IGNORAR.test(f) && !f.startsWith(".skill_dey/") && !/\.(png|jpe?g|gif|webp|ico|svg|woff2?|ttf|eot|pdf|zip|lock|map|min\.js|min\.css)$/i.test(f) && !/(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|composer\.lock)$/.test(f))
     if (args.ruta) files = files.filter((f) => f.replace(/\\/g, "/").startsWith(args.ruta!.replace(/\\/g, "/")))
     const firma = files.length + ":" + Math.max(0, ...files.map((f) => { try { return statSync(join(cwd, f)).mtimeMs } catch { return 0 } }))
@@ -571,15 +598,24 @@ export const procesos = tool({
   args: {
     accion: tool.schema.enum(["listar", "liberar", "levantar", "detener"]).optional().describe("defecto: listar"),
     puerto: tool.schema.number().optional().describe("puerto"),
+    cmd: tool.schema.string().optional().describe("levantar: comando propio (ej. node dist/index.js)"),
+    carpeta: tool.schema.string().optional().describe("levantar: subcarpeta del cmd"),
   },
   async execute(a, ctx) {
     const cwd = ctx.worktree || ctx.directory
-    const acc = a.accion ?? "listar"
+    const acc = a.accion ?? (a.cmd ? "levantar" : "listar")
     if (acc === "liberar") return a.puerto ? liberarPuerto(a.puerto) : servicios(cwd).map((s) => liberarPuerto(s.puerto)).join("\n")
     if (acc === "detener") return detenerTodo(cwd)
     if (acc === "levantar") {
-      const r = await conTiempo(arranqueLimpio(cwd), 95_000, { lista: [], notas: ["⏱ el arranque tardó demasiado y se detuvo; revisa el comando del servidor o súbelo a mano"] })
-      return [...r.notas.map((n) => "🔧 " + n), ...r.lista.map((x) => `${x.ok && !x.errores.length ? "✅" : "❌"} ${x.s.tipo} "${x.s.nombre}" → ${x.url}${x.errores.length ? "\n   " + x.errores.join("\n   ") : ""}`), "Quedan corriendo; para bajarlos: skill_dey_procesos(accion:\"detener\")."].join("\n")
+      let solo: Parameters<typeof arranqueLimpio>[2]
+      if (a.cmd) { // servidor propio (ej. "node dist/src/index.js"): lo sube skill_dey sin colgar la terminal, lo anota y lo puede bajar
+        const dir = resolve(cwd, a.carpeta ?? ".")
+        const rel = relative(cwd, dir)
+        if (rel.startsWith("..") || isAbsolute(rel) || !existsSync(dir)) return `❌ carpeta "${a.carpeta}" no existe dentro del proyecto`
+        solo = [{ nombre: a.carpeta ? basename(dir) : "servidor", dir, tipo: /front|client|web/i.test(dir) ? "frontend" : "backend", cmd: a.cmd, puerto: a.puerto ?? 3000 }]
+      }
+      const r = await conTiempo(arranqueLimpio(cwd, undefined, solo), 95_000, { lista: [], notas: ["⏱ el arranque tardó demasiado y se detuvo; revisa el comando del servidor o súbelo a mano"] })
+      return [...r.notas.map((n) => "🔧 " + n), ...r.lista.map((x) => `${x.ok && !x.errores.length ? "✅" : "❌"} ${x.s.tipo} "${x.s.nombre}" → ${x.url}${x.errores.length ? "\n   " + x.errores.join("\n   ") : ""}${solo && x.salida ? "\n--- salida ---\n" + x.salida : ""}`), "Quedan corriendo; para bajarlos: skill_dey_procesos(accion:\"detener\")."].join("\n")
     }
     const ps = escuchando().filter(esDeDesarrollo)
     const sv = servicios(cwd)
@@ -635,8 +671,8 @@ export const adoptar = tool({
 
 // ======================================================================
 export const sitio = tool({
-  description: "Recorre el sitio y lista errores.",
-  args: { url: tool.schema.string().optional().describe("si la app ya corre"), max: tool.schema.number().optional().describe("defecto 40") },
+  description: "Abre la app en Chrome, recorre páginas y lee consola, errores JS, red y HTTP (+capturas).",
+  args: { url: tool.schema.string().optional().describe("si la app ya corre"), max: tool.schema.number().optional().describe("defecto 40"), visible: tool.schema.boolean().optional().describe("ver Chrome navegando"), conectar: tool.schema.boolean().optional().describe("tu Chrome abierto (9222)") },
   async execute(a, ctx) {
     const cwd = ctx.worktree || ctx.directory
     const t0 = Date.now(), L: string[] = []
@@ -647,9 +683,13 @@ export const sitio = tool({
         for (const x of arr?.lista ?? []) L.push(x.ok && !x.errores.length ? `✅ ${x.s.tipo} "${x.s.nombre}" arranca sin errores` : `❌ ${x.s.tipo} "${x.s.nombre}" ${x.ok ? "arranca CON errores" : "NO arranca"}: ${x.errores.slice(0, 4).join(" | ")}`)
       }
       const web = arr?.lista.find((x) => x.ok && x.s.tipo === "frontend") ?? arr?.lista.find((x) => x.ok)
-      const base = a.url ?? web?.url ?? (arr?.lista.length ? undefined : (app = await iniciarApp(cwd).catch(() => null))?.url)
+      const base = a.url ?? web?.url ?? (arr?.lista.length || servicios(cwd).length ? undefined : (app = await iniciarApp(cwd).catch(() => null))?.url)
       if (!base) return [...L, "❌ no pude levantar la app: usa skill_dey_procesos(levantar) o pásame url=<base>"].join("\n")
-      const r = await rastrearSitio(cwd, base, asegurarPlaywright(cwd), a.max ?? 40)
+      const cdp = a.conectar || a.visible ? await chromeAbierto() : null // visible + tu Chrome de depuración ya abierto (mismo perfil) → se usa ese, sin choque
+      if (a.conectar && !cdp) return ["❌ no encontré tu Chrome con depuración abierta. Ábrelo así (perfil aparte; inicias sesión una vez y queda guardada):", "```" + (process.platform === "win32" ? "powershell" : "bash"), comoAbrirChrome(), "```", "y repite. O usa visible:true para que skill_dey abra su propio Chrome."].join("\n")
+      const pw = asegurarPlaywright(cwd)
+      const r = await rastrearSitio(cwd, base, pw, a.max ?? 40, { visible: !!a.visible, cdp, senal: ctx.abort })
+      if (r.conNavegador) L.unshift(`🌐 navegador: ${cdp ? "tu Chrome abierto" : (process.env.SKILL_DEY_CHROMIUM ? basename(process.env.SKILL_DEY_CHROMIUM).replace(/\.exe$/i, "") : "Chromium de pruebas")}${a.visible ? " (visible)" : ""}`)
       const srv = app ? app.errores().slice(0, 6).map((e) => "   servidor: " + e) : []
       const ok = r.ok && !srv.length && !L.some((l) => l.startsWith("❌"))
       return [`SKILL_DEY sitio · ${r.paginas} páginas · ${Math.round((Date.now() - t0) / 1000)}s`, ...L, ...r.lineas, ...srv,
@@ -678,7 +718,7 @@ export const qa = tool({
   async execute(a, ctx) {
     const cwd = ctx.worktree || ctx.directory
     switch (a.accion) {
-      case "seguridad": return [...resumenSeguridad(cwd).lineas, ...auditarDependencias(cwd), semgrep(cwd)].filter(Boolean).join("\n")
+      case "seguridad": return [...resumenSeguridad(cwd).lineas, ...await auditarDependencias(cwd), await semgrep(cwd)].filter(Boolean).join("\n")
       case "probar": return (await probarApp(cwd, a.url)).lineas.join("\n")
       case "pruebas": { const r = await pruebasProfesionales(cwd, a.url); try { aprenderDeCorrida(cwd, "pruebas", r.lineas) } catch {} ; return r.lineas.join("\n") }
       case "capacitar": { const r = await capacitar(cwd, a.url); return r.lineas.join("\n") }
@@ -707,13 +747,13 @@ export const plan = tool({
   description: "Plan por requisitos; el cierre verifica que estén hechos.",
   args: {
     requisitos: tool.schema.array(tool.schema.string()).optional().describe("una línea por parte a cubrir"),
-    hecho: tool.schema.string().optional().describe("marca como cubierto el requisito que contenga este texto"),
+    hecho: tool.schema.string().optional().describe("requisito ya cubierto (texto)"),
     tarea: tool.schema.string().optional().describe("nombre de la tarea"),
   },
   async execute(a, ctx) {
     const cwd = ctx.worktree || ctx.directory
     if (a.hecho) return marcarPlan(cwd, a.hecho)
-    if (a.requisitos?.length) return guardarPlan(cwd, a.requisitos, a.tarea)
+    if (a.requisitos?.length) { const g = guardarPlan(cwd, a.requisitos, a.tarea); let m = ""; try { m = mapaMental(cwd, a.tarea).lineas[0] } catch {} ; return g + (m ? "\n" + m : "") }
     const e = verificarPlan(cwd); return e.lineas.join("\n") || "sin plan activo"
   },
 })

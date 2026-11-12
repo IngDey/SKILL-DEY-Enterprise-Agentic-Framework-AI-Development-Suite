@@ -1,12 +1,13 @@
 // SKILL_DEY — buscar/sugerir skill cuando no hay rutina para lo pedido. Por código (0 tokens del modelo).
 // Si hay skill instalada que cubre el tema → úsala. Si no → registra el hueco y pide proponer/instalar una (nunca instala sola).
 import { existsSync, readFileSync, readdirSync, appendFileSync, mkdirSync } from "node:fs"
+import { ocDir } from "./rutas.ts"
 import { join } from "node:path"
-import { homedir } from "node:os"
+
 
 /** Skills instaladas (proyecto + global), con su descripción del frontmatter. */
 function skillsInstaladas(cwd: string): { nombre: string; desc: string }[] {
-  const dirs = [join(cwd, ".opencode", "skills"), join(homedir(), ".config", "opencode", "skills")]
+  const dirs = [join(cwd, ".opencode", "skills"), ocDir("skills")]
   const out: { nombre: string; desc: string }[] = []
   for (const d of dirs) {
     if (!existsSync(d)) continue

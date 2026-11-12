@@ -11,7 +11,7 @@ const leer = (p: string) => { try { return readFileSync(p, "utf8") } catch { ret
 /** Conexión a la BD según el .env del proyecto (Laravel, Node, PHP, DATABASE_URL…). null si no hay. */
 export function conexion(cwd: string): Conexion | null {
   const env = leer(join(cwd, ".env")); if (!env) return null
-  const v = (...ks: string[]) => { for (const k of ks) { const m = env.match(new RegExp(`^\\s*${k}\\s*=\\s*["']?([^"'\\r\\n#]*)`, "m")); if (m && m[1].trim()) return m[1].trim() } return "" }
+  const v = (...ks: string[]) => { for (const k of ks) { const m = env.match(new RegExp(`^\\s*${k}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\r\\n#]*))`, "m")); const x = (m?.[1] ?? m?.[2] ?? m?.[3] ?? "").trim(); if (x) return x } return "" }
   let tipo = v("DB_CONNECTION", "DB_DRIVER", "DB_TYPE", "DB_ENGINE").toLowerCase()
   let host = v("DB_HOST", "DB_SERVER", "MYSQL_HOST", "PGHOST") || "127.0.0.1", port = v("DB_PORT", "MYSQL_PORT", "PGPORT")
   let db = v("DB_DATABASE", "DB_NAME", "MYSQL_DATABASE", "PGDATABASE"), user = v("DB_USERNAME", "DB_USER", "MYSQL_USER", "PGUSER"), pass = v("DB_PASSWORD", "DB_PASS", "MYSQL_PASSWORD", "PGPASSWORD")
@@ -25,10 +25,10 @@ export function conexion(cwd: string): Conexion | null {
 function correr(c: Conexion, cmd: "dump" | "consulta", sql = "", otraBd?: string): { ok: boolean; out: string } {
   const db = otraBd ?? c.db
   const r = c.motor === "sqlite"
-    ? spawnSync("sqlite3", cmd === "dump" ? [db, ".schema"] : ["-noheader", db, sql], { encoding: "utf8", timeout: 25_000 })
+    ? spawnSync("sqlite3", cmd === "dump" ? ["-readonly", db, ".schema"] : ["-readonly", "-noheader", db, sql], { encoding: "utf8", timeout: 25_000 })
     : c.motor === "pg"
-      ? spawnSync(cmd === "dump" ? "pg_dump" : "psql", cmd === "dump" ? ["--schema-only", "--no-owner", "--no-privileges", "-h", c.host, ...(c.port ? ["-p", c.port] : []), ...(c.user ? ["-U", c.user] : []), db] : ["-tA", "-h", c.host, ...(c.port ? ["-p", c.port] : []), ...(c.user ? ["-U", c.user] : []), "-d", db, "-c", sql], { encoding: "utf8", timeout: 25_000, env: { ...process.env, PGPASSWORD: c.pass } })
-      : spawnSync(cmd === "dump" ? "mysqldump" : "mysql", cmd === "dump" ? ["--no-data", "--skip-comments", "--skip-add-drop-table", "--skip-lock-tables", "-h", c.host, ...(c.port ? ["-P", c.port] : []), ...(c.user ? ["-u", c.user] : []), db] : ["-N", "-B", "-h", c.host, ...(c.port ? ["-P", c.port] : []), ...(c.user ? ["-u", c.user] : []), db, "-e", sql], { encoding: "utf8", timeout: 25_000, env: { ...process.env, MYSQL_PWD: c.pass } })
+      ? spawnSync(cmd === "dump" ? "pg_dump" : "psql", cmd === "dump" ? ["--schema-only", "--no-owner", "--no-privileges", "-h", c.host, ...(c.port ? ["-p", c.port] : []), ...(c.user ? ["-U", c.user] : []), db] : ["-tA", "-h", c.host, ...(c.port ? ["-p", c.port] : []), ...(c.user ? ["-U", c.user] : []), "-d", db, "-c", sql], { encoding: "utf8", timeout: 25_000, env: { ...process.env, PGPASSWORD: c.pass, PGOPTIONS: "-c default_transaction_read_only=on" } })
+      : spawnSync(cmd === "dump" ? "mysqldump" : "mysql", cmd === "dump" ? ["--no-data", "--skip-comments", "--skip-add-drop-table", "--skip-lock-tables", "-h", c.host, ...(c.port ? ["-P", c.port] : []), ...(c.user ? ["-u", c.user] : []), db] : ["-N", "-B", "-h", c.host, ...(c.port ? ["-P", c.port] : []), ...(c.user ? ["-u", c.user] : []), db, "-e", `START TRANSACTION READ ONLY; ${sql}; ROLLBACK;`], { encoding: "utf8", timeout: 25_000, env: { ...process.env, MYSQL_PWD: c.pass } })
   return { ok: r.status === 0, out: `${r.stdout ?? ""}`.trim() || `${r.stderr ?? r.error?.message ?? ""}`.trim() }
 }
 
@@ -39,7 +39,7 @@ export function volcarEsquema(cwd: string): { sql: string; motor: string } {
 }
 
 /** Solo SELECT, una sentencia, sin escritura ni archivos: así una regla nunca puede modificar datos. */
-export const consultaSegura = (sql: string) => /^\s*select\b/i.test(sql) && !/;\s*\S/.test(sql) && !/\b(insert|update|delete|drop|alter|create|truncate|grant|revoke|into\s+outfile|load_file|pg_sleep|sleep\s*\(|copy\s)\b/i.test(sql)
+export const consultaSegura = (sql: string) => /^\s*select\b/i.test(sql) && !/;\s*\S/.test(sql) && !/\b(insert|update|delete|drop|alter|create|truncate|grant|revoke|replace|merge|call|exec|execute|attach|detach|pragma|vacuum|into\s+(outfile|dumpfile)|load_file|load_extension|writefile|readfile|edit\s*\(|lo_(export|import)|pg_(sleep|terminate_backend|cancel_backend|reload_conf|read_file|read_binary_file|ls_dir|write)|dblink|setval|nextval|set_config|sleep\s*\(|benchmark\s*\(|get_lock|copy\s)\b/i.test(sql)
 
 /** Ejecuta una consulta de solo lectura que devuelve un número (ej. cuántos registros violan una regla). */
 export function contar(cwd: string, sql: string): { ok: boolean; n?: number; error?: string } {
@@ -60,17 +60,17 @@ export function copiaPrueba(cwd: string): string {
   if (c.motor === "sqlite") {
     if (!existsSync(c.db)) return `No existe el archivo de BD ${c.db}.`
     const copia = join(cwd, ".skill_dey", "bd-prueba.sqlite"); copyFileSync(c.db, copia)
-    return `✅ Copia de prueba lista (con datos, SQLite): ${copia}\nMigra contra la copia anteponiendo: DB_DATABASE="${copia}" SKILL_DEY_BD_PRUEBA=1 <comando de migración>\nSi sale bien (up → down → up), haz el respaldo y migra la real.`
+    return `✅ Copia de prueba lista (con datos, SQLite): ${copia}\nMigra contra la copia: bash → DB_DATABASE="${copia}" <comando> · PowerShell → $env:DB_DATABASE="${copia}"; <comando>\nSi sale bien (up → down → up), haz el respaldo y migra la real.`
   }
-  const prueba = `${c.db}_skilldey_prueba`, d = correr(c, "dump")
+  const prueba = `${c.db}_skilldey_prueba_${new Date().toISOString().slice(0, 16).replace(/\D/g, "")}`, d = correr(c, "dump")
   if (!d.ok) return `No pude leer la estructura de la BD (${d.out.split("\n")[0].slice(0, 100)}).`
   const crear = c.motor === "pg"
-    ? spawnSync("psql", ["-h", c.host, ...(c.port ? ["-p", c.port] : []), ...(c.user ? ["-U", c.user] : []), "-d", "postgres", "-c", `DROP DATABASE IF EXISTS "${prueba}"; CREATE DATABASE "${prueba}";`], { encoding: "utf8", timeout: 25_000, env: { ...process.env, PGPASSWORD: c.pass } })
-    : spawnSync("mysql", ["-h", c.host, ...(c.port ? ["-P", c.port] : []), ...(c.user ? ["-u", c.user] : []), "-e", `DROP DATABASE IF EXISTS \`${prueba}\`; CREATE DATABASE \`${prueba}\`;`], { encoding: "utf8", timeout: 25_000, env: { ...process.env, MYSQL_PWD: c.pass } })
+    ? spawnSync("psql", ["-h", c.host, ...(c.port ? ["-p", c.port] : []), ...(c.user ? ["-U", c.user] : []), "-d", "postgres", "-c", `CREATE DATABASE "${prueba}"`], { encoding: "utf8", timeout: 25_000, env: { ...process.env, PGPASSWORD: c.pass } })
+    : spawnSync("mysql", ["-h", c.host, ...(c.port ? ["-P", c.port] : []), ...(c.user ? ["-u", c.user] : []), "-e", `CREATE DATABASE \`${prueba}\``], { encoding: "utf8", timeout: 25_000, env: { ...process.env, MYSQL_PWD: c.pass } })
   if (crear.status !== 0) return `No pude crear la BD de prueba (¿el usuario tiene permiso CREATE?): ${(crear.stderr ?? "").split("\n")[0].slice(0, 100)}`
   const cargar = c.motor === "pg"
     ? spawnSync("psql", ["-h", c.host, ...(c.port ? ["-p", c.port] : []), ...(c.user ? ["-U", c.user] : []), "-d", prueba], { input: d.out, encoding: "utf8", timeout: 60_000, env: { ...process.env, PGPASSWORD: c.pass } })
     : spawnSync("mysql", ["-h", c.host, ...(c.port ? ["-P", c.port] : []), ...(c.user ? ["-u", c.user] : []), prueba], { input: d.out, encoding: "utf8", timeout: 60_000, env: { ...process.env, MYSQL_PWD: c.pass } })
   if (cargar.status !== 0) return `No pude cargar la estructura en la copia: ${(cargar.stderr ?? "").split("\n")[0].slice(0, 100)}`
-  return `✅ Copia de prueba lista (misma estructura, sin datos): ${prueba}\nMigra contra la copia anteponiendo: DB_DATABASE=${prueba} SKILL_DEY_BD_PRUEBA=1 <comando de migración>\nSi sale bien (up → down → up), haz el respaldo y migra la real.`
+  return `✅ Copia de prueba lista (misma estructura, sin datos): ${prueba}\nMigra contra la copia: bash → DB_DATABASE=${prueba} <comando> · PowerShell → $env:DB_DATABASE="${prueba}"; <comando>\n(Las copias viejas NO se borran solas: bórralas tú cuando ya no sirvan.)\nSi sale bien (up → down → up), haz el respaldo y migra la real.`
 }

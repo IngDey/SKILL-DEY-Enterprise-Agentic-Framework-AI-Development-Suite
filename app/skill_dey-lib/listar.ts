@@ -7,13 +7,14 @@ import { join, relative } from "node:path"
 const IGN = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage|\.venv|venv|__pycache__|\.next|\.nuxt|storage[\\/]framework|bootstrap[\\/]cache)([\\/]|$)|\.min\.(js|css)$|\.bundle\.js$/i
 
 export function esRepoGit(cwd: string): boolean {
-  return spawnSync("git", ["rev-parse", "--is-inside-work-tree"], { cwd, encoding: "utf8" }).stdout?.trim() === "true"
+  return spawnSync("git", ["rev-parse", "--is-inside-work-tree"], { cwd, encoding: "utf8", timeout: 20_000 }).stdout?.trim() === "true"
 }
 
 /** Archivos versionables del proyecto. Usa git; si no hay repo, recorre el disco (hasta `maxFiles`). */
 export function listarArchivos(cwd: string, maxFiles = 20_000): string[] {
-  const g = spawnSync("git", ["ls-files", "-co", "--exclude-standard"], { cwd, encoding: "utf8", maxBuffer: 1e8 })
-  if (g.status === 0 && g.stdout.trim()) return g.stdout.split(/\r?\n/).filter((f) => f && !IGN.test(f))
+  // quotepath=off + -z: rutas exactas con tildes/ñ/espacios (antes salían como "p\303\241gina.php" y se saltaban: verde falso)
+  const g = spawnSync("git", ["-c", "core.quotepath=off", "ls-files", "-co", "--exclude-standard", "-z"], { cwd, encoding: "utf8", maxBuffer: 1e8, timeout: 20_000 })
+  if (g.status === 0 && g.stdout.trim()) return g.stdout.split("\0").filter((f) => f && !IGN.test(f)).slice(0, maxFiles)
   // Sin git (o repo vacío): recorrer el disco
   const out: string[] = []
   const walk = (d: string, prof: number) => {

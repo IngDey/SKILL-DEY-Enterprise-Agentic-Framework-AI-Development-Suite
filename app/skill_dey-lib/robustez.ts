@@ -1,10 +1,12 @@
 // SKILL_DEY — ROBUSTEZ (gratis, 0 tokens del modelo): doctor (integridad de la instalación), git hook (red de
 // seguridad en cualquier editor) y reporte (datos reales de uso para decidir qué recortar). No agrega features.
-import { existsSync, readFileSync, statSync, writeFileSync, chmodSync, mkdirSync } from "node:fs"
-import { join } from "node:path"
-import { homedir } from "node:os"
+import { spawnSync } from "node:child_process"
+import { existsSync, readFileSync, statSync, writeFileSync, chmodSync, mkdirSync , copyFileSync} from "node:fs"
+import { ocDir, sdDir } from "./rutas.ts"
+import { join , isAbsolute} from "node:path"
 
-const OC = () => process.env.OPENCODE_CONFIG_DIR || join(homedir(), ".config", "opencode")
+
+const OC = () => ocDir()
 
 /** Revisa que la instalación esté completa y coherente; dice QUÉ falta y DÓNDE. */
 export function doctor(): string[] {
@@ -16,7 +18,7 @@ export function doctor(): string[] {
     "skill_dey-lib/comandos.ts", "skill_dey-lib/testpro.ts", "skill_dey-lib/calidad.ts", "skill_dey-lib/pro.ts", "skill_dey-lib/multiia.ts",
     "skill_dey/skill_dey.mjs", "skill_dey/skill_dey-mcp.mjs"]
   for (const f of need) chk(existsSync(join(oc, f)), f, "falta " + f)
-  try { const g = readFileSync(join(oc, "plugins", "skill_dey-guardian.ts"), "utf8"); const m = g.match(/VERSION\s*=\s*"([\d.]+)"/); chk(!!m && m[1] === ver, `plugin y VERSION coinciden (${m?.[1] ?? "?"})`, `instalación mezclada (plugin ${m?.[1] ?? "?"} vs ${ver}): reinstala`) } catch { chk(false, "", "no pude leer el plugin") }
+  try { const g = readFileSync(join(oc, "plugins", "skill_dey-guardian.ts"), "utf8"); const m = g.match(/VERSION_CODIGO\s*=\s*"([\d.]+)"/); chk(!!m && m[1] === ver, `plugin y VERSION coinciden (${m?.[1] ?? "?"})`, `instalación mezclada (plugin ${m?.[1] ?? "?"} vs ${ver}): reinstala`) } catch { chk(false, "", "no pude leer el plugin") }
   for (const b of ["skill_dey/skill_dey.mjs", "skill_dey/skill_dey-mcp.mjs"]) { try { chk(statSync(join(oc, b)).size > 10_000, b + " (bundle OK)", b + " vacío/corrupto") } catch { } }
   L.push(mal ? `❌ doctor: ${mal} problema(s) → reinstala skill_dey o corre el instalador` : "✅ doctor: instalación sana. Test funcional completo: /skill_dey prueba (o eval)")
   return L
@@ -24,13 +26,17 @@ export function doctor(): string[] {
 
 /** Instala un git pre-commit hook que corre `skill_dey revisar` y bloquea el commit si hay errores. Red de seguridad en CUALQUIER editor. */
 export function instalarHook(cwd: string): string {
-  const g = join(cwd, ".git")
-  if (!existsSync(g)) return "⏭ git hook: esta carpeta no es un repositorio git (haz `git init` primero)"
-  const hooks = join(g, "hooks"); mkdirSync(hooks, { recursive: true })
-  const mjs = join(homedir(), ".config", "opencode", "skill_dey", "skill_dey.mjs")
+  const gp = spawnSync("git", ["rev-parse", "--git-path", "hooks"], { cwd, encoding: "utf8", timeout: 10_000 }) // respeta core.hooksPath, worktrees y submódulos
+  const gitDir = join(cwd, ".git"), esDir = (() => { try { return statSync(gitDir).isDirectory() } catch { return false } })()
+  if (gp.status !== 0 && !esDir) return "⏭ git hook: esta carpeta no es un repositorio git (haz `git init` primero)"
+  const hooks = gp.status === 0 ? (isAbsolute(gp.stdout.trim()) ? gp.stdout.trim() : join(cwd, gp.stdout.trim())) : join(gitDir, "hooks")
+  try { mkdirSync(hooks, { recursive: true }) } catch (e: any) { return "no pude preparar la carpeta de hooks: " + e.message }
+  const mjs = sdDir("skill_dey.mjs")
   const hook = `#!/bin/sh\n# SKILL_DEY pre-commit — no deja commitear con errores (salta con: git commit --no-verify)\nnode "${mjs}" revisar . || { echo "SKILL_DEY: hay errores, corrígelos (o usa --no-verify)"; exit 1; }\n`
   const f = join(hooks, "pre-commit")
-  try { writeFileSync(f, hook); chmodSync(f, 0o755); return "✅ git hook instalado: antes de cada commit corre `revisar` y bloquea si hay errores (salta con --no-verify). Funciona en cualquier editor." }
+  try { const actual = readFileSync(f, "utf8"); if (!/SKILL_DEY pre-commit/.test(actual)) copyFileSync(f, f + ".antes-skill_dey") } catch {} // nunca se pierde tu hook
+  const previo = existsSync(f + ".antes-skill_dey") ? `\n# tu hook anterior sigue corriendo:\n"${f}.antes-skill_dey" || exit 1\n` : "" // también al reinstalar
+  try { writeFileSync(f, hook + previo); chmodSync(f, 0o755); return "✅ git hook instalado: antes de cada commit corre `revisar` y bloquea si hay errores (salta con --no-verify). Funciona en cualquier editor." }
   catch (e: any) { return "no pude instalar el hook: " + e.message }
 }
 

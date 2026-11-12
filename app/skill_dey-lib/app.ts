@@ -1,12 +1,14 @@
 // SKILL_DEY — levanta la app sola para revisar consola/capturas, y Playwright sin tocar el proyecto.
+import { usarChrome, correrShell } from "./navegador.ts"
+import { sdDir } from "./rutas.ts"
 import { spawn, spawnSync, type ChildProcess } from "node:child_process"
 import { existsSync, readFileSync, mkdirSync, writeFileSync, readdirSync } from "node:fs"
-import { join, relative, dirname } from "node:path"
-import { homedir, tmpdir } from "node:os"
+import { join, relative } from "node:path"
+import { tmpdir } from "node:os"
 import { createServer } from "node:net"
 
 const WIN = process.platform === "win32"
-export const PW_DIR = join(homedir(), ".config", "opencode", "skill_dey", "playwright")
+export const PW_DIR = sdDir("playwright")
 
 const puertoLibre = () => new Promise<number>((ok) => { const s = createServer(); s.listen(0, "127.0.0.1", () => { const p = (s.address() as any).port; s.close(() => ok(p)) }) })
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -59,9 +61,9 @@ export async function iniciarApp(cwd: string): Promise<{ url: string; detener: (
   let url = `http://127.0.0.1:${puerto}`
   while (Date.now() < fin) {
     const m = log.join("").match(/https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1?\]):(\d+)/)
-    if (m) url = `http://127.0.0.1:${m[2]}`
+    const pto = m?.[2] ?? String(puerto)
     const errores = () => log.join("").split(/\r?\n/).filter((l) => /(PHP )?(Fatal error|Parse error|Warning|Notice|Deprecated)|Traceback|Error:|Exception|UnhandledPromise|ERR!/i.test(l) && !/DeprecationWarning: The `punycode`/.test(l)).map((l) => l.trim().slice(0, 200))
-    if (await responde(url, 1500)) return { url, detener: () => matar(p), como, errores }
+    for (const h of ["127.0.0.1", "[::1]", "localhost"]) { const u = `http://${h}:${pto}`; if (await responde(u, 1500)) { url = u; return { url, detener: () => matar(p), como, errores } } } // Vite puede escuchar solo en ::1
     if (p.exitCode !== null) break
   }
   matar(p)
@@ -69,18 +71,25 @@ export async function iniciarApp(cwd: string): Promise<{ url: string; detener: (
 }
 
 /** Playwright en una carpeta propia de skill_dey (no modifica tu proyecto). Se instala una sola vez. */
+let preparando: Promise<boolean> | null = null
+/** Playwright en una carpeta propia de skill_dey (no toca tu proyecto). Si falta, se prepara EN SEGUNDO PLANO
+ *  (nunca bloquea OpenCode) y mientras tanto devuelve null → las pruebas siguen sin navegador. El instalador ya lo deja listo. */
 export function asegurarPlaywright(cwdProyecto: string): string | null {
-  const local = join(cwdProyecto, "node_modules", "playwright")
-  if (existsSync(local)) return join(cwdProyecto, "package.json")
+  const chrome = usarChrome() // Chrome/Edge/Brave del equipo: las pruebas lo usan y no se bajan 150 MB de Chromium
+  if (existsSync(join(cwdProyecto, "node_modules", "playwright"))) return join(cwdProyecto, "package.json")
   const pj = join(PW_DIR, "package.json")
-  if (!existsSync(join(PW_DIR, "node_modules", "playwright"))) {
-    mkdirSync(PW_DIR, { recursive: true })
-    if (!existsSync(pj)) writeFileSync(pj, JSON.stringify({ name: "skill-dey-playwright", private: true }))
-    const i = spawnSync("npm", ["i", "playwright", "@axe-core/playwright", "--no-audit", "--no-fund", "--silent"], { cwd: PW_DIR, shell: WIN, timeout: 300_000 })
-    if (i.status !== 0) return null
-    spawnSync("npx", ["playwright", "install", "chromium"], { cwd: PW_DIR, shell: WIN, timeout: 600_000 })
-  }
-  return pj
+  if (existsSync(join(PW_DIR, "node_modules", "playwright"))) return pj
+  if (!preparando) preparando = (async () => {
+    try {
+      mkdirSync(PW_DIR, { recursive: true })
+      if (!existsSync(pj)) writeFileSync(pj, JSON.stringify({ name: "skill-dey-playwright", private: true }))
+      const i = await correrShell("npm i playwright @axe-core/playwright --no-audit --no-fund --silent", PW_DIR, 300_000, { PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1" })
+      if (i.code !== 0) { preparando = null; return false }
+      if (!chrome) await correrShell("npx playwright install chromium", PW_DIR, 600_000)
+      return true
+    } catch { preparando = null; return false }
+  })()
+  return null
 }
 
 /** Páginas a revisar según los archivos cambiados (PHP: la página misma; SPA/otros: la raíz). */
@@ -91,4 +100,5 @@ export function rutasAProbar(cwd: string, archivos: string[]): string[] {
   const html = archivos.filter((f) => f.endsWith(".html")).map((f) => "/" + relative(root, join(cwd, f)).replace(/\\/g, "/")).filter((r) => !r.startsWith("/.."))
   return [...new Set(["/", ...php, ...html])].slice(0, 6)
 }
-export const ERROR_PHP = /(Fatal error|Parse error|Warning:|Notice:|Deprecated:|Uncaught |Stack trace:|SQLSTATE\[)/
+// Error PHP real (con "in archivo on line N", etiquetas <b> de PHP, excepción no capturada o SQLSTATE): no confunde texto normal de la página
+export const ERROR_PHP = /(<b>)?(Fatal error|Parse error|Warning|Notice|Deprecated)(<\/b>)?:\s[^\n]{0,300}?\son line\s(<b>)?\d+|PHP (Fatal error|Parse error|Warning|Notice):|Uncaught \w*(Exception|Error)\b|SQLSTATE\[/

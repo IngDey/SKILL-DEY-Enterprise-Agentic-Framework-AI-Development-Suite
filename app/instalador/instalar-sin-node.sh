@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Instalador SKILL_DEY para OpenCode (Linux/macOS)
 set -e
-SRC="$(cd "$(dirname "$0")/.." && pwd)"; OC="$HOME/.config/opencode"
+SRC="$(cd "$(dirname "$0")/.." && pwd)"; OC="${OPENCODE_CONFIG_DIR:-$HOME/.config/opencode}"
 mkdir -p "$OC"/{skills,agents,commands,tools,plugins,skill_dey}
 for v in skills/forja skill/forja skills/skill-dey-old agents/forja.md agents/forja-explorador.md agent/forja.md agent/forja-explorador.md commands/forja.md commands/forja-reanudar.md commands/forja-auditar.md tools/forja.ts tool/forja.ts plugins/forja-guardian.ts plugin/forja-guardian.ts forja-lib; do rm -rf "$OC/$v"; done
 cp "$SRC/cli/skill_dey.mjs" "$OC/skill_dey/skill_dey.mjs"
@@ -14,7 +14,6 @@ cp "$SRC/agents/skill_dey.md" "$OC/agents/"; cp "$SRC/agents/skill_dey-vision.md
 PROV=$(python3 -c "import json,os;f='$OC/opencode.json';f=f if os.path.exists(f) else f+'c';print(json.load(open(f)).get('model','').split('/')[0])" 2>/dev/null || true)
 RAPIDO=$(opencode models 2>/dev/null | grep -E '^[^ ]+/[^ ]+$' | grep -iE 'claude-haiku|haiku-4|gpt-[0-9.]+-mini|gpt-5-mini|o4-mini|gemini-[0-9.]+-flash|grok-code-fast|deepseek-chat' | grep -viE -- '-fin\b|preview|exp|embed|audio|image|tts|flash-lite' | { if [ -n "$PROV" ]; then grep "^$PROV/"; else cat >/dev/null; fi; } | head -1 || true)
 if [ -n "$RAPIDO" ]; then awk -v m="$RAPIDO" '{print} /^mode: subagent$/{print "model: " m}' "$SRC/agents/skill_dey-explorador.md" > "$OC/agents/skill_dey-explorador.md"; else cp "$SRC/agents/skill_dey-explorador.md" "$OC/agents/"; fi
-echo "40.0.0" > "$OC/skill_dey/VERSION"
 for f in LECCIONES-GLOBALES.md PREFERENCIAS.md; do [ -f "$OC/skill_dey/$f" ] || cp "$SRC/global/$f" "$OC/skill_dey/"; done
 [ -f "$OC/package.json" ] || cp "$SRC/package.json" "$OC/"
 python3 - "$OC" "$SRC" <<'PY'
@@ -34,5 +33,6 @@ try: c=json.load(open(f)) if os.path.exists(f) else {"$schema":"https://opencode
 except Exception: print('opencode.json con comentarios: agrega "default_agent": "skill_dey"'); sys.exit()
 c['default_agent']='skill_dey'; c.setdefault('compaction',{}); c['compaction'].setdefault('auto',True); c['compaction'].setdefault('prune',True); json.dump(c,open(f,'w'),indent=2)
 PY
+# la versión se escribe AL FINAL: si algo falló antes (set -e), el instalador no dice 'confirmado' en falso
+{ [ -f "$SRC/skill_dey/VERSION" ] && cp "$SRC/skill_dey/VERSION" "$OC/skill_dey/VERSION" || echo "41.0.0" > "$OC/skill_dey/VERSION"; }
 echo "LISTO. Explorador: ${RAPIDO:-modelo principal}. Abre OpenCode y escribe normal."
-echo "SKILL_DEY - creado por Ing. Dey (@IngDey) - github.com/IngDey"

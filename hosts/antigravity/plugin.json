@@ -2,7 +2,7 @@
   "$schema": "https://antigravity.google/schemas/v1/plugin.json",
   "name": "skill-dey",
   "displayName": "SKILL DEY",
-  "version": "40.0.0",
+  "version": "41.0.0",
   "description": "Agentes que programan sin romper tu app: guardián en vivo, deshacer cualquier cambio, cero errores, seguridad y documentación. Por Ing. Dey.",
   "logo": "assets/logo.png",
   "suggestedPrompts": [

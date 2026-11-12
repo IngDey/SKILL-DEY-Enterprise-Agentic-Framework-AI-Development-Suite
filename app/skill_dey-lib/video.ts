@@ -1,12 +1,13 @@
 // SKILL_DEY — VIDEO de capacitación SUBTITULADO (gratis, cross-platform: Mac/Windows/Linux). 0 tokens del modelo.
 // Graba la app en uso con Playwright (solo navega y resalta, NO envía ni borra nada), deriva el guion del código,
 // y arma: tutorial.html (se abre en cualquier navegador, con subtítulos) + guion.srt + capacitacion.mp4 (si hay ffmpeg).
+import { correrNodo, ACCION_PELIGROSA } from "./navegador.ts"
 import { spawnSync } from "node:child_process"
-import { writeFileSync, readFileSync, mkdirSync, existsSync, unlinkSync } from "node:fs"
-import { join, basename } from "node:path"
+import { writeFileSync, readFileSync, mkdirSync, existsSync, unlinkSync , rmSync } from "node:fs"
+import { join, basename, relative } from "node:path"
 import { tmpdir } from "node:os"
 import { iniciarApp, asegurarPlaywright, docrootPhp, rutasAProbar } from "./app.ts"
-import { arranqueLimpio, servicios, conTiempo } from "./procesos.ts"
+import { arranqueLimpio, servicios, conTiempo, detenerNuestros } from "./procesos.ts"
 import { listarArchivos } from "./listar.ts"
 
 const leer = (p: string) => { try { return readFileSync(p, "utf8") } catch { return "" } }
@@ -23,9 +24,8 @@ function guion(cwd: string): Paso[] {
   const vistas = new Set<string>()
   for (const f of archivos) {
     const src = leer(join(cwd, f))
-    const ruta0 = "/" + f.replace(root + "/", "").replace(/\\/g, "/")
-    const r = ruta0.startsWith("/..") ? "/" + basename(f) : ruta0
-    if (vistas.has(r)) continue
+    const r = "/" + relative(root, join(cwd, f)).replace(/\\/g, "/")
+    if (r.startsWith("/..") || ACCION_PELIGROSA.test(r) || vistas.has(r)) continue
     const h1 = src.match(/<h1[^>]*>([^<]{2,60})</i)?.[1]?.trim() || src.match(/<title[^>]*>([^<]{2,60})</i)?.[1]?.trim()
     const campos = [...src.matchAll(/<(?:input|select|textarea)\b[^>]*name\s*=\s*["']([^"']+)/gi)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i).slice(0, 6)
     const tieneForm = /<form/i.test(src)
@@ -78,8 +78,8 @@ export async function capacitar(cwd: string, url?: string): Promise<{ ok: boolea
   let arr: any = null, app: any = null
   try {
     let base = url
-    if (!base && servicios(cwd).length) { arr = await conTiempo(arranqueLimpio(cwd), 95_000, null).catch(() => null); base = (arr?.lista.find((a: any) => a.ok && a.s.tipo === "frontend") ?? arr?.lista.find((a: any) => a.ok))?.url }
-    if (!base) base = (app = await iniciarApp(cwd).catch(() => null))?.url
+    if (!base && servicios(cwd).length) { arr = await conTiempo(arranqueLimpio(cwd), 95_000, null).catch(() => null); if (!arr) detenerNuestros(cwd); base = (arr?.lista.find((a: any) => a.ok && a.s.tipo === "frontend") ?? arr?.lista.find((a: any) => a.ok))?.url }
+    if (!base && !servicios(cwd).length) base = (app = await iniciarApp(cwd).catch(() => null))?.url // si hay servicios y no subieron, no se arranca un segundo servidor
     if (!base) return { ok: true, lineas: ["⏭ capacitar: no pude levantar la app; pásame la url o levántala"] }
     const pasos = guion(cwd)
     const out = join(cwd, "docs", "capacitacion"); mkdirSync(out, { recursive: true })
@@ -100,7 +100,8 @@ for(let i=0;i<pasos.length;i++){ const paso=pasos[i];
   hechos.push({...paso,img:nombre});
 }
 await b.close(); console.log('PASOS:'+JSON.stringify(hechos));`)
-    const r = spawnSync(`node "${script}"`, { cwd, shell: true, encoding: "utf8", timeout: 600_000, maxBuffer: 5e7 })
+    const r = await correrNodo(script, cwd, 600_000)
+  try { rmSync(script, { force: true }) } catch {}
     const line = (r.stdout ?? "").split("\n").find((l) => l.startsWith("PASOS:"))
     let hechos: Paso[] = []
     try { hechos = JSON.parse(line!.slice(6)) } catch { return { ok: true, lineas: [`⏭ capacitar: no pude grabar (${(r.stderr ?? "").split("\n")[0].slice(0, 90)})`] } }

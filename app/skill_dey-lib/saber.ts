@@ -27,13 +27,13 @@ export function asegurarPrincipios(cwd: string): string {
   mkdirSync(join(cwd, ".skill_dey"), { recursive: true }); writeFileSync(p, txt); return txt
 }
 
-type Solucion = { etiqueta: string; problema: string; solucion: string; fecha: string }
 const catFile = (cwd: string) => join(cwd, ".skill_dey", "SOLUCIONES.md")
 /** Guarda "cómo se resolvió X" para reutilizarlo. Reutilizable en la misma app. */
 export function guardarSolucion(cwd: string, etiqueta: string, problema: string, solucion: string): string {
   mkdirSync(join(cwd, ".skill_dey"), { recursive: true })
   const f = catFile(cwd); if (!existsSync(f)) writeFileSync(f, "# SOLUCIONES reutilizables (problema → cómo se resolvió)\n")
   if (leer(f).includes(solucion.trim())) return "ya estaba en el catálogo"
+  try { const t = readFileSync(f, "utf8"); if (t.length > 300_000) { const corte = t.indexOf("\n## ", t.length - 200_000); writeFileSync(f, t.slice(0, t.indexOf("\n") + 1) + t.slice(corte > 0 ? corte : t.length - 200_000)) } } catch {} // tope: no crece para siempre
   appendFileSync(f, `\n## ${etiqueta} (${new Date().toISOString().slice(0, 10)})\n- Problema: ${problema}\n- Solución: ${solucion}\n`)
   return "💡 solución guardada en el catálogo (.skill_dey/SOLUCIONES.md)"
 }
@@ -47,7 +47,7 @@ export function buscarSoluciones(cwd: string, tema: string): string {
 
 /** NOTAS DE VERSIÓN en lenguaje de usuario, a partir de los commits desde la última etiqueta/fecha. */
 export function notasVersion(cwd: string): string {
-  const log = spawnSync("git", ["log", "--date=short", "--pretty=format:%s", "-40"], { cwd, encoding: "utf8" }).stdout?.trim() ?? ""
+  const log = spawnSync("git", ["log", "--date=short", "--pretty=format:%s", "-40"], { cwd, encoding: "utf8", timeout: 20_000 }).stdout?.trim() ?? ""
   if (!log) return "Sin historial de git para generar notas."
   const cambios = log.split("\n").filter((l) => l && !/^(wip|merge|checkpoint|skill_dey:|fixup)/i.test(l))
   const cat = (re: RegExp) => cambios.filter((c) => re.test(c)).map((c) => "- " + c.replace(/^(\w+)(\([^)]*\))?:\s*/, "")).slice(0, 15)
@@ -55,6 +55,9 @@ export function notasVersion(cwd: string): string {
   const otros = cambios.filter((c) => !/^(feat|add|nuev|agrega|crea|fix|corrig|arregl|bug)/i.test(c)).map((c) => "- " + c).slice(0, 10)
   const doc = [`# Novedades — ${new Date().toISOString().slice(0, 10)}`, "",
     ...(nuevo.length ? ["## Nuevo", ...nuevo, ""] : []), ...(arreglo.length ? ["## Correcciones", ...arreglo, ""] : []), ...(otros.length ? ["## Otros cambios", ...otros] : [])].join("\n")
-  mkdirSync(join(cwd, "docs"), { recursive: true }); writeFileSync(join(cwd, "docs", "NOVEDADES.md"), doc)
-  return "✅ Notas de versión en docs/NOVEDADES.md:\n\n" + doc
+  mkdirSync(join(cwd, "docs"), { recursive: true })
+  const f = join(cwd, "docs", "NOVEDADES.md"), propio = !existsSync(f) || /Generado por skill_dey/.test(readFileSync(f, "utf8"))
+  const destino = propio ? f : join(cwd, "docs", "NOVEDADES.skill_dey.md")
+  writeFileSync(destino, doc + "\n\n<!-- Generado por skill_dey desde los commits -->\n")
+  return `✅ Notas de versión en docs/${destino.split(/[\\/]/).pop()}:\n\n` + doc
 }

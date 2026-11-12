@@ -1,7 +1,7 @@
 // SKILL_DEY — CALIDAD web profesional (gratis, cross-platform): accesibilidad (axe-core), responsive (móvil/escritorio) y carga.
 // 0 tokens del modelo. Usa el navegador propio de skill_dey (no toca las dependencias del proyecto).
-import { spawnSync } from "node:child_process"
-import { writeFileSync } from "node:fs"
+import { correrNodo, esLocal, ACCION_PELIGROSA } from "./navegador.ts"
+import { writeFileSync , rmSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 
@@ -34,7 +34,8 @@ for(const ruta of rutas){ const p=await mob.newPage();
   }catch{} await p.close(); }
 await mob.close(); await b.close();
 console.log('CAL:'+JSON.stringify(R));`)
-  const r = spawnSync(`node "${script}"`, { shell: true, encoding: "utf8", timeout: 600_000, maxBuffer: 5e7 })
+  const r = await correrNodo(script, tmpdir(), 600_000)
+  try { rmSync(script, { force: true }) } catch {}
   const line = (r.stdout ?? "").split("\n").find((l) => l.startsWith("CAL:"))
   let R: string[] = []
   try { R = JSON.parse(line!.slice(4)) } catch { return { lineas: [`⏭ calidad: no se pudo ejecutar (${(r.stderr ?? "").split("\n")[0].slice(0, 80)})`], fallas: 0 } }
@@ -48,6 +49,8 @@ console.log('CAL:'+JSON.stringify(R));`)
 
 /** Prueba de CARGA/concurrencia sin herramientas de pago (fetch nativo de Node): p50/p95 y % de error. */
 export async function carga(base: string, rutas: string[], usuarios = 20, rondas = 3): Promise<string[]> {
+  if (!esLocal(base)) return ["⏭ carga: solo contra tu app local (no se estresa producción)"]
+  rutas = rutas.filter((r) => !ACCION_PELIGROSA.test(r))
   const objetivo = rutas.slice(0, 4)
   const L: string[] = []
   for (const ruta of objetivo) {

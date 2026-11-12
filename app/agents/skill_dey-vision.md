@@ -1,6 +1,7 @@
 ---
 description: Ojos de SKILL_DEY. Lee imágenes, bocetos, fotos de papel, Paint o capturas y devuelve una especificación de maqueta en texto. Solo lectura.
 mode: subagent
+model: opencode/muse-spark-1.3-contributor-free
 temperature: 0
 tools:
   "skill_dey_*": false

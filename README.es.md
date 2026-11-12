@@ -38,21 +38,28 @@ Las IA escriben código rápido, pero también rompen lo que funcionaba, filtran
 | ✅ **Entrega sin errores** | Una tarea solo se cierra tras verificar: revisión de todo el proyecto, auditoría de seguridad, probador automático, formato, rendimiento (N+1) y validación en el servidor. |
 | 🛟 **Deshacer todo** | Foto automática antes de cada pedido. Escribe *"deshaz"* y tus archivos vuelven, incluso en cambios pequeños. Nunca toca tus ramas ni tu historial. |
 | 🛡️ **Guardián de ejecución** | Bloquea secretos en el código, leer `.env`, `git push --force`, commits sin verificar, `.env` subido a git, migraciones de BD sin respaldo, código truncado (`// ...resto del código`) y escrituras fuera del proyecto. |
-| 🧠 **Memoria técnica persistente** | Decisiones, lecciones y reglas de negocio viven en `.skill_dey/` (`BITACORA`, `DECISIONES`, `LECCIONES`, `NEGOCIO`, `ESTADO`, `MARCA`) y el contexto sobrevive entre sesiones. |
+| 🎯 **Solo cambia lo que pides** | Si la IA quiere tocar un archivo que no pediste, se frena y te pregunta. Nada de reescribir archivos enteros ni "mejoras" que nadie pidió. |
+| 🧩 **Piensa antes de tocar** | Antes del primer cambio escribe qué entendió, la causa y el plan. Cada edición se mide: te avisa qué otros archivos usan lo que cambió. |
+| 🚑 **Nunca deja la app rota** | Si la app estaba sana y el cambio la rompe y no se arregla en 3 intentos, vuelve sola al estado sano (y puedes "rehaz"). |
+| 🧠 **Memoria técnica persistente** | Decisiones, lecciones y reglas de negocio viven en `.skill_dey/` y el contexto sobrevive entre sesiones: *"¿dónde quedamos?"*, *"vuelve a antes de arreglar el login"*. |
 | 🤖 **Multi-agente** | Un agente principal, un **explorador** de solo lectura para búsquedas grandes, un agente de **visión** que convierte maquetas/capturas en UI y un **revisor independiente** que audita lo que no escribió. |
-| 📉 **Cuida los tokens** | Las tareas pequeñas no cargan la skill; los flujos pesados solo cuando hacen falta. Un tablero muestra tokens, costo y tiempo por respuesta. |
+| 📉 **Cuida los tokens** | Las tareas pequeñas no cargan la skill; deshacer, historial y "dónde quedamos" se resuelven por código. En OpenCode: modelo según la tarea, cambio automático cuando se acaba el cupo gratis y tablero de consumo. |
+| 🌍 **Pruebas en Chrome** | Recorre tu app en tu propio Chrome y lee consola, errores JS, red y respuestas HTTP, con capturas. |
 | 🔌 **Servidor MCP incluido** | Expone las revisiones y el deshacer como herramientas nativas para cualquier cliente MCP (protocolo hasta 2025-11-25). |
 | 🌐 **Nativo en 4 IAs** | **OpenCode, Claude Code, Gemini CLI y Antigravity CLI** con el mismo guardián en vivo, la misma skill y las mismas reglas. |
 | 🏢 **Uso seguro de IA en la empresa** | Skill `politicas-ia`: redacta y revisa la política de uso de IA para las personas (qué usar, qué no, qué datos nunca compartir). |
 
-### 🆕 Novedades de la versión 40
+### 🆕 Novedades de la versión 41
 
-- **Ahora nativo en Claude Code, Gemini CLI y Antigravity CLI**, además de OpenCode, con el **mismo guardián en vivo** en las cuatro.
-- **Más protección de datos:** bloquea borrar o vaciar bases de datos y tablas, `DELETE` sin `WHERE`, `migrate:fresh`, `prisma migrate reset`, `git reset --hard` y scripts descargados que se ejecutan sin revisar.
-- **`deshaz` instantáneo** en Claude Code: se ejecuta por código, sin gastar tokens del modelo.
-- **Servidor MCP moderno:** negocia el protocolo hasta 2025-11-25, marca qué herramientas son destructivas y suma verificar, deshacer, rehacer, historial y congelar.
+Parte de la v38.14.1 (todo lo de antes sigue igual en OpenCode) y suma:
+
+- **Nativo en Claude Code, Gemini CLI y Antigravity CLI**, con el **mismo guardián** que OpenCode: solo lo pedido, razonar antes de tocar, impacto de cada edición, deshacer, nunca dejar la app rota y continuidad entre sesiones.
+- **Una sola fuente de reglas** (`app/skill_dey-lib/guardia.ts`) para las cuatro IAs; un arreglo llega a todas a la vez.
+- **Más protección:** bloquea ejecutar scripts descargados sin revisarlos (`curl … | sh`) y reconoce claves de IA y nube de hoy (Anthropic, OpenAI, Google, GitHub, Slack, AWS temporales).
+- **Arreglado:** responder *"sí"* con tilde no se tomaba como autorización.
+- **Servidor MCP moderno:** protocolo hasta 2025-11-25, verificar, deshacer (con rehacer e historial), congelar, y menos tokens por mensaje.
 - **Nueva skill `politicas-ia`:** política de uso seguro de IA para las personas de tu empresa.
-- **Una sola fuente:** `scripts/build.mjs` genera los paquetes de cada IA y 30 pruebas automáticas los validan.
+- **36 pruebas automáticas** en Windows, macOS y Linux en cada cambio.
 
 ---
 
@@ -191,23 +198,22 @@ No necesitas comandos. Escribe normal: *"agrega el campo responsable a tickets"*
 
 | Protección | OpenCode | Claude Code | Gemini CLI | Antigravity |
 |---|:-:|:-:|:-:|:-:|
-| Copia antes del primer cambio de cada pedido + `deshaz` | ✅ | ✅ | ✅ | ✅ |
-| Bloquea borrar o vaciar BD/tablas, `DELETE` sin `WHERE`, `migrate:fresh`, `prisma migrate reset` | ✅ | ✅ | ✅ | ✅ |
-| Exige respaldo antes de migrar o modificar datos | ✅ | ✅ | ✅ | ✅ |
-| Bloquea secretos en código y leer `.env` reales | ✅ | ✅ | ✅ | ✅ |
-| Bloquea `push --force`, `reset --hard`, borrados masivos, `curl … \| sh` | ✅ | ✅ | ✅ | ✅ |
-| Bloquea código truncado y cambios fuera del proyecto o en zonas congeladas | ✅ | ✅ | ✅ | ✅ |
-| Dependencias nuevas solo si las pediste | ✅ | ✅ | ✅ | — |
-| Sintaxis revisada al instante en cada archivo editado | ✅ | ✅ | ✅ | ✅ (al cerrar) |
-| No deja terminar con errores ni sin verificación verde | ✅ | ✅ | ✅ | ✅ |
-| Anti-vueltas (corta repeticiones inútiles) | ✅ | ✅ | ✅ | ✅ |
-| Cambio automático de modelo al agotarse el cupo · tablero de consumo | ✅ | — | — | — |
+| Copia antes de cada pedido · `deshaz`, `deshaz solo <archivo>`, `vuelve a antes de <pedido>` | ✅ | ✅ | ✅ | ✅ (con la herramienta) |
+| Nunca borra ni vacía BD/tablas (SQL, ORM, archivo `.sqlite`, volúmenes Docker) · respaldo antes de migrar | ✅ | ✅ | ✅ | ✅ |
+| Bloquea secretos en código, leer o escribir `.env` reales, `push --force`, borrados masivos, `curl … \| sh` | ✅ | ✅ | ✅ | ✅ |
+| Solo cambia lo que pides · no reescribe archivos enteros | ✅ | ✅ | ✅ | ✅ |
+| Razonar antes de tocar (`Entendí · Causa · Plan`) | ✅ | ✅ | — | — |
+| Impacto: avisa qué otros archivos usan lo que cambiaste | ✅ | ✅ | ✅ | ✅ (al cerrar) |
+| Sintaxis al instante · no termina con errores · vuelve solo al estado sano | ✅ | ✅ | ✅ | ✅ |
+| Código truncado, fuera del proyecto, zonas congeladas, dependencias no pedidas, anti-vueltas | ✅ | ✅ | ✅ | ✅ |
+| "¿Dónde quedamos?" y la sesión nueva recibe los últimos pedidos | ✅ | ✅ | ✅ | — |
+| Modelo según la tarea · cambio automático de modelo · tablero de consumo | ✅ | — | — | — |
 
-Todas usan **las mismas reglas** (un solo archivo: `app/skill_dey-lib/guardia.ts`). Si una pieza del guardián falla por algo inesperado, **deja trabajar** y lo anota en `~/.config/skill_dey/errores-hook.log`: nunca congela tu IA.
+Todas usan **las mismas reglas** (`app/skill_dey-lib/guardia.ts`). Si una pieza del guardián falla por algo inesperado, **deja trabajar** y lo anota en `~/.config/skill_dey/errores-hook.log`: nunca congela tu IA.
 
 ### Servidor MCP
 
-Herramientas: `skill_dey_verificar`, `skill_dey_deshacer`, `skill_dey_rehacer`, `skill_dey_historial`, `skill_dey_congelar`, `skill_dey_revisar`, `skill_dey_seguridad`, `skill_dey_validar`, `skill_dey_documentar`, `skill_dey_organizar`, `skill_dey_produccion`, `skill_dey_movil`, `skill_dey_pruebas`, `skill_dey_capacitar`, `skill_dey_multi_ia`. Cada una marca si es de solo lectura o destructiva, para que tu IA pida permiso cuando corresponde.
+Herramientas: `skill_dey_verificar`, `skill_dey_deshacer` (también rehacer e historial), `skill_dey_chrome`, `skill_dey_seguridad`, `skill_dey_validar`, `skill_dey_documentar`, `skill_dey_organizar`, `skill_dey_produccion`, `skill_dey_movil`, `skill_dey_pruebas`, `skill_dey_capacitar`, `skill_dey_congelar`. Cada una marca si es de solo lectura o destructiva, para que tu IA pida permiso cuando corresponde. La carpeta del proyecto es obligatoria: nunca usa tu carpeta personal ni la raíz del disco.
 
 Configuración manual (cualquier cliente MCP):
 
@@ -235,12 +241,13 @@ node ~/.config/opencode/skill_dey/skill_dey.mjs revisar|seguridad|pruebas|capaci
 
 ## 🧪 Probado, con evidencia
 
-- **Registro público de 135 pruebas** de la edición OpenCode (instaladores, deshacer/rehacer, bloqueos del guardián, rastreador del sitio, probador de seguridad, documentación, cambio de modelo…): [`docs/PRUEBAS-REALIZADAS.md`](docs/PRUEBAS-REALIZADAS.md).
-- **30 pruebas automáticas** del guardián multiplataforma y del servidor MCP con los formatos reales de Claude Code, Gemini CLI y Antigravity: `npm test`. Corren en Windows, macOS y Linux en cada cambio (GitHub Actions).
+- **Revisión a fondo de la v38.14.1** y sus pruebas (Chrome con errores sembrados, proyecto de 30.000 archivos, seguridad, instalación): [`docs/PRUEBAS-REALIZADAS.md`](docs/PRUEBAS-REALIZADAS.md). Historial de las versiones 13 a 32: [`docs/PRUEBAS-HISTORICO.md`](docs/PRUEBAS-HISTORICO.md).
+- **36 pruebas automáticas** del guardián de Claude Code, Gemini CLI y Antigravity y del servidor MCP: `npm test`. Corren en Windows, macOS y Linux en cada cambio (GitHub Actions).
+- **El guardián de OpenCode decide igual que en la v38.14.1:** mismas 19 situaciones probadas lado a lado; solo cambian los dos bloqueos nuevos.
 - El plugin pasa `claude plugin validate` y se instala con Claude Code 2.1; la extensión pasa `gemini extensions validate` y se instala con Gemini CLI 0.67.
 - Un [banco de 10 casos](app/skills/skill-dey/evals/BANCO-DE-PRUEBAS.md) y un comparador (`evals/comparar.mjs`) para medir SKILL DEY contra la IA directa **con tu propio modelo**.
 
-Límites conocidos, dichos con claridad: el paquete de Antigravity sigue la especificación oficial de plugins, pero aún no se probó con `agy` en un equipo real (corre `agy plugin validate --strict ./hosts/antigravity` y cuéntanos). La calidad de las decisiones depende del modelo que uses. Los reportes de tu entorno son muy bienvenidos.
+Límites conocidos, dichos con claridad: el paquete de Antigravity sigue la especificación oficial de plugins, pero aún no se probó con `agy` en un equipo real (corre `agy plugin validate --strict ./hosts/antigravity` y cuéntanos). La calidad de las decisiones depende del modelo que uses.
 
 ---
 

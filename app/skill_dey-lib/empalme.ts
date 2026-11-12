@@ -25,7 +25,7 @@ export function empalme(cwd: string): string {
   const H = (() => { try { return analizar(cwd).filter((h) => h.prioridad === "CRÍTICO" || h.prioridad === "ALTO") } catch { return [] } })()
   const errores = (leer(join(cwd, ".skill_dey", "ERRORES-SITIO.md")).match(/^- \[ \] .+$/gm) ?? []).slice(0, 10)
   const pendientes = leer(join(cwd, ".skill_dey", "ESTADO.md")).split("\n").filter((l) => /PAUSAD|PENDIENTE|pendiente|\[ \]/.test(l)).slice(0, 10)
-  const log = spawnSync("git", ["log", "--date=short", "--pretty=format:%ad · %s", "-25"], { cwd, encoding: "utf8" }).stdout?.trim() ?? ""
+  const log = spawnSync("git", ["log", "--date=short", "--pretty=format:%ad · %s", "-25"], { cwd, encoding: "utf8", timeout: 20_000 }).stdout?.trim() ?? ""
   const R = reglas(cwd)
   const doc = [
     `# Empalme — ${app}`, `Generado por skill_dey el ${fecha}. Documento de entrega para quien recibe la aplicación.`, "",
@@ -44,7 +44,12 @@ export function empalme(cwd: string): string {
     "- Con skill_dey: escribir `/skill_dey ayuda` en OpenCode; `/skill_dey revisar` antes de cualquier cambio.", `- Protecciones activas: ${vacunas().length} vacuna(s) contra errores conocidos, copia y deshacer en cada cambio.`, "",
     "## 9. Contactos", "(Completar: quién entrega, quién recibe, proveedores, soporte.)",
   ].join("\n")
-  mkdirSync(join(cwd, "docs"), { recursive: true }); writeFileSync(join(cwd, "docs", "EMPALME.md"), doc)
+  // conserva lo que completaste a mano (antes se borraba al regenerar)
+  const previo = (() => { try { return readFileSync(join(cwd, "docs", "EMPALME.md"), "utf8") } catch { return "" } })()
+  const seccion = (t: string, h: string) => { const i = t.indexOf(h); if (i < 0) return null; const j = t.indexOf("\n## ", i + h.length); return t.slice(i, j < 0 ? t.length : j).trimEnd() }
+  let final = doc
+  for (const h of ["## 1. Qué es", "## 9. Contactos"]) { const antes = previo && seccion(previo, h), ahora = seccion(final, h); if (antes && ahora && !/\(Completar/.test(antes)) final = final.replace(ahora, () => antes) }
+  mkdirSync(join(cwd, "docs"), { recursive: true }); writeFileSync(join(cwd, "docs", "EMPALME.md"), final)
   return `✅ Paquete de empalme listo: docs/EMPALME.md (+ ${docs.replace("Documentación actualizada: ", "")})${faltan.length ? `\n⚠ ${faltan.length} variable(s) del .env sin documentar en .env.example` : ""}\nCompleta a mano solo: "Qué es" (si quedó vacío) y "Contactos".`
 }
 

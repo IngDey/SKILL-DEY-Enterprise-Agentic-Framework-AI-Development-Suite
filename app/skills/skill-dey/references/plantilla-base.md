@@ -1,6 +1,6 @@
 # App nueva — base estándar (cargar solo en modo NUEVO)
 
-1. Stack: usa el de `PREFERENCIAS.md` (`[stack]`). Si no existe, pregunta UNA vez (backend, frontend, BD) y guárdalo con `skill_dey_leccion(tipo:"preferencia", etiquetas:"[stack]")`.
+1. Stack (OBLIGATORIO antes de construir): usa el de `PREFERENCIAS.md` (`[stack]`) o `.skill_dey/ESTADO.md`. Si no existe, pregunta UNA ronda: **lenguaje back, lenguaje front, base de datos y adicionales** (p. ej. auth, colas, pagos, tiempo real, almacenamiento). Guárdalo en `ESTADO.md` (## Stack) y como `skill_dey_leccion(tipo:"preferencia", etiquetas:"[stack]")`.
 2. Entrevista breve (SKILL §3b: una ronda, máx. 7 preguntas con opciones y recomendación) → `.skill_dey/NEGOCIO.md` + "Especificación acordada" en ESTADO. Identidad visual → `.skill_dey/MARCA.md`.
 3. Esqueleto mínimo que TODA app trae desde el día 1 (antes de la primera funcionalidad):
    - Config validada al arrancar + `.env.example` (base: `assets/env.example.plantilla`) + `.gitignore`.

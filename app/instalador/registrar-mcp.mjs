@@ -23,7 +23,8 @@ const CLIENTES = [
   { nombre: "Cline", archivo: join(vscodeUser, "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json"), clave: "mcpServers" },
 ]
 
-const entrada = { command: "node", args: [MCP] }
+// ruta COMPLETA de Node: las apps abiertas desde Finder/Inicio no heredan el PATH (nvm, Homebrew) y no encontrarían "node"
+const entrada = { command: process.execPath, args: [MCP] }
 const hechos = [], saltados = []
 
 for (const c of CLIENTES) {
@@ -35,8 +36,14 @@ for (const c of CLIENTES) {
     mkdirSync(dir, { recursive: true })
     let conf = {}
     if (existsSync(c.archivo)) {
-      copyFileSync(c.archivo, c.archivo + ".antes-skill_dey.bak")
-      try { conf = JSON.parse(readFileSync(c.archivo, "utf8")) } catch { conf = {} }
+      const texto = readFileSync(c.archivo, "utf8").replace(/^\uFEFF/, "") // BOM del Bloc de notas
+      if (texto.trim()) {
+        try { conf = JSON.parse(texto) } catch { saltados.push(`${c.nombre} (su configuración tiene comentarios o un error: no la toco; agrega skill_dey a mano, ver MULTI-IA.md)`); continue }
+      }
+      if (typeof conf !== "object" || conf === null || Array.isArray(conf)) { saltados.push(`${c.nombre} (formato inesperado: no la toco)`); continue }
+      if (conf[c.clave]?.skill_dey && JSON.stringify(conf[c.clave].skill_dey) === JSON.stringify(entrada)) { hechos.push(c.nombre + " (ya estaba)"); continue }
+      const bak = c.archivo + ".antes-skill_dey.bak"
+      copyFileSync(c.archivo, existsSync(bak) ? c.archivo + `.antes-skill_dey-${new Date().toISOString().slice(0, 10)}.bak` : bak) // el primer respaldo (el original) nunca se pisa
     }
     conf[c.clave] = conf[c.clave] || {}
     conf[c.clave]["skill_dey"] = entrada

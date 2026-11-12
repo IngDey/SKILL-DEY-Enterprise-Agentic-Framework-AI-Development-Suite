@@ -20,18 +20,18 @@ const paso = (t) => console.log(`  • ${t}`)
 
 const AUTOR = { name: "Ing. Dey (@IngDey)", url: "https://github.com/IngDey" }
 const REPO = "https://github.com/IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite"
-const DESC = "Agentes de IA que programan sin romper tu app: guardián en vivo, deshacer cualquier cambio, cero errores, seguridad y documentación automática."
+const DESC = "IA que programa sin romper tu app: solo cambia lo que pides, piensa antes de tocar, deshace cualquier cambio y no entrega con errores."
 const KEYWORDS = ["ai", "agents", "skills", "mcp", "quality", "security", "undo", "zero-errors", "spanish"]
 
 console.log(`\nSKILL DEY ${V} · build`)
 
 // ---------- 1) versión ----------
-reemplazar("app/plugins/skill_dey-guardian.ts", /const VERSION = "[\d.]+"/, `const VERSION = "${V}"`)
+reemplazar("app/plugins/skill_dey-guardian.ts", /const VERSION_CODIGO = "[\d.]+"/, `const VERSION_CODIGO = "${V}"`)
 reemplazar("app/skills/skill-dey/SKILL.md", /version: "[\d.]+"/, `version: "${V}"`)
 for (const s of ["skill-dey", "politicas-ia"]) reemplazar(`app/portable/skills/${s}/SKILL.md`, /version: "[\d.]+"/, `version: "${V}"`)
-reemplazar("app/instalador/instalar.mjs", /esc\(join\(OC, "skill_dey", "VERSION"\), "[\d.]+"\)/, `esc(join(OC, "skill_dey", "VERSION"), "${V}")`)
+reemplazar("app/instalador/instalar.mjs", /let (_ver|_vok) = "[\d.]+"/g, (_, n) => `let ${n} = "${V}"`)
 reemplazar("app/instalador/instalar-sin-node.sh", /echo "[\d.]+" > "\$OC\/skill_dey\/VERSION"/, `echo "${V}" > "$OC/skill_dey/VERSION"`)
-reemplazar("app/instalador/instalar-sin-node.ps1", /'skill_dey\/VERSION'\), '[\d.]+'\)/, `'skill_dey/VERSION'), '${V}')`)
+reemplazar("app/instalador/instalar-sin-node.ps1", /\$ver = '[\d.]+'/, `$ver = '${V}'`)
 reemplazar("CITATION.cff", /^version: .*$/m, `version: ${V}`)
 paso(`versión ${V} sincronizada`)
 

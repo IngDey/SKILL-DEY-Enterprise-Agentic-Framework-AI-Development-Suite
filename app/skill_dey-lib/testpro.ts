@@ -3,12 +3,13 @@
 // 2) Corre una prueba REAL en vivo ya mismo con el navegador propio de skill_dey (sin tocar las dependencias del proyecto):
 //    cada ruta carga sin error de servidor/consola; los formularios aceptan datos válidos. Reporta PASS/FAIL.
 // 3) Si el proyecto ya tiene runner de unitarias (npm test / phpunit / pytest), lo ejecuta y resume.
+import { correrNodo, esLocal, ACCION_PELIGROSA } from "./navegador.ts"
 import { spawnSync } from "node:child_process"
-import { writeFileSync, readFileSync, mkdirSync, existsSync } from "node:fs"
-import { join, basename } from "node:path"
+import { writeFileSync, readFileSync, mkdirSync, existsSync , rmSync } from "node:fs"
+import { join, relative } from "node:path"
 import { tmpdir } from "node:os"
 import { iniciarApp, asegurarPlaywright, docrootPhp, rutasAProbar } from "./app.ts"
-import { arranqueLimpio, servicios, conTiempo } from "./procesos.ts"
+import { arranqueLimpio, servicios, conTiempo, detenerNuestros } from "./procesos.ts"
 import { listarArchivos } from "./listar.ts"
 import { calidadWeb, carga } from "./calidad.ts"
 import { esMovil, revisarMovil } from "./movil.ts"
@@ -21,9 +22,9 @@ function escenarios(cwd: string): { ruta: string; form?: boolean }[] {
   const root = docrootPhp(cwd)
   const base = rutasAProbar(cwd, listarArchivos(cwd))
   const conForm = listarArchivos(cwd).filter((f) => /\.(php|html)$/i.test(f) && /<form/i.test(leer(join(cwd, f))) && !/vendor|config|includes?|conexion|node_modules/i.test(f))
-    .map((f) => { const r = "/" + f.replace(root + "/", "").replace(/\\/g, "/"); return r.startsWith("/..") ? "/" + basename(f) : r })
+    .map((f) => "/" + relative(root, join(cwd, f)).replace(/\\/g, "/")).filter((r) => !r.startsWith("/.."))
   const excluir = /\/docs\/|\/tests?\/|\.skill_dey|node_modules|\/vendor\//i
-  const rutas = [...new Set([...base, ...conForm])].filter((r) => !excluir.test(r)).slice(0, 12)
+  const rutas = [...new Set([...base, ...conForm])].filter((r) => !excluir.test(r) && !ACCION_PELIGROSA.test(r)).slice(0, 12)
   return rutas.map((r) => ({ ruta: r, form: conForm.includes(r) }))
 }
 
@@ -85,7 +86,8 @@ for(const e of esc){ const p=await ctx.newPage(); const errs=[];
   else R.push('PASS · '+e.ruta+' · carga ok');
   await p.close(); }
 await b.close(); console.log('RES:'+JSON.stringify(R));`)
-  const r = spawnSync(`node "${script}"`, { cwd, shell: true, encoding: "utf8", timeout: 600_000, maxBuffer: 5e7 })
+  const r = await correrNodo(script, cwd, 600_000)
+  try { rmSync(script, { force: true }) } catch {}
   const line = (r.stdout ?? "").split("\n").find((l) => l.startsWith("RES:"))
   try { return JSON.parse(line!.slice(4)) } catch { return [`⏭ smoke: no se pudo ejecutar (${(r.stderr ?? "").split("\n")[0].slice(0, 90)})`] }
 }
@@ -106,22 +108,6 @@ function correrUnitarias(cwd: string): string[] {
   return L
 }
 
-/** Workflow de CI para correr la suite en cada push (gratis, GitHub Actions). */
-function ciWorkflow(): string {
-  return `name: pruebas (SKILL_DEY)
-on: [push, pull_request]
-jobs:
-  e2e:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm ci || npm i
-      - run: npm i -D @playwright/test && npx playwright install --with-deps chromium
-      - run: npx playwright test
-`
-}
 
 /** Genera la suite estándar en el repo + corre el smoke en vivo + calidad + carga + unitarias + CI. */
 export async function pruebasProfesionales(cwd: string, url?: string): Promise<{ ok: boolean; lineas: string[]; fallas: number }> {
@@ -131,18 +117,17 @@ export async function pruebasProfesionales(cwd: string, url?: string): Promise<{
   let arr: any = null, app: any = null
   try {
     let base = url
-    if (!base && servicios(cwd).length) { arr = await conTiempo(arranqueLimpio(cwd), 95_000, null).catch(() => null); base = (arr?.lista.find((a: any) => a.ok && a.s.tipo === "frontend") ?? arr?.lista.find((a: any) => a.ok))?.url }
-    if (!base) base = (app = await iniciarApp(cwd).catch(() => null))?.url
+    if (!base && servicios(cwd).length) { arr = await conTiempo(arranqueLimpio(cwd), 95_000, null).catch(() => null); if (!arr) detenerNuestros(cwd); base = (arr?.lista.find((a: any) => a.ok && a.s.tipo === "frontend") ?? arr?.lista.find((a: any) => a.ok))?.url }
+    if (!base && !servicios(cwd).length) base = (app = await iniciarApp(cwd).catch(() => null))?.url // si hay servicios y no subieron, no se arranca un segundo servidor
     base = base || "http://localhost:3000"
     const esc = escenarios(cwd)
     // 1) suite estándar en el repo (para CI) — no toca dependencias del proyecto
-    const dir = join(cwd, "tests", "e2e"); mkdirSync(dir, { recursive: true })
-    writeFileSync(join(dir, "app.spec.ts"), specEstandar(base, esc))
-    if (!existsSync(join(cwd, "playwright.config.ts")) && !existsSync(join(cwd, "playwright.config.js"))) writeFileSync(join(cwd, "playwright.config.ts"), config(base))
-    // CI: correr la suite en cada push (gratis)
-    const ciDir = join(cwd, ".github", "workflows"); mkdirSync(ciDir, { recursive: true })
-    if (!existsSync(join(ciDir, "skill_dey.yml"))) writeFileSync(join(ciDir, "skill_dey.yml"), ciWorkflow())
-    const L = [`🧪 Suite profesional generada: tests/e2e/app.spec.ts (${esc.length} escenarios) + playwright.config.ts + CI (.github/workflows/skill_dey.yml)`, "   Para CI local: `npm i -D @playwright/test && npx playwright test`"]
+    const dir = join(cwd, "tests", "e2e"), spec = join(dir, "app.spec.ts"); mkdirSync(dir, { recursive: true })
+    const propio = !existsSync(spec) || /Generado por skill_dey/.test(readFileSync(spec, "utf8")) // nunca pisa una suite escrita por ti
+    const destino = propio ? spec : join(dir, "skill_dey.spec.ts")
+    writeFileSync(destino, "// @ts-nocheck — Generado por skill_dey (no rompe tu build aunque no tengas @playwright/test)\n" + specEstandar(base, esc))
+    if (!existsSync(join(cwd, "playwright.config.ts")) && !existsSync(join(cwd, "playwright.config.js"))) writeFileSync(join(cwd, "playwright.config.ts"), "// @ts-nocheck\n" + config(base))
+    const L = [`🧪 Suite profesional generada: ${relative(cwd, destino).replace(/\\/g, "/")} (${esc.length} escenarios) + playwright.config.ts`, "   Para correrla: `npm i -D @playwright/test && npx playwright test` (para CI agrega un paso que arranque tu app antes)"]
     let fallas = 0
     const viva = pj && (app || arr?.lista?.some((a: any) => a.ok) || url)
     // 2) smoke en vivo ya mismo (si pudimos levantar la app y hay navegador)
@@ -150,17 +135,18 @@ export async function pruebasProfesionales(cwd: string, url?: string): Promise<{
       const res = await smokeEnVivo(cwd, base, pj!, esc)
       fallas = res.filter((x) => x.startsWith("FAIL")).length
       const ok = res.filter((x) => x.startsWith("PASS")).length
-      L.push(fallas ? `❌ prueba en vivo: ${fallas} fallo(s) de ${res.length}` : `✅ prueba en vivo: ${res.length} escenario(s) pasaron`, ...res.map((x) => "   " + x))
+      if (!ok && !fallas) { fallas = 1; L.push("❌ prueba en vivo: no se pudo ejecutar (navegador o app no disponibles)", ...res.map((x) => "   " + x)) } // nunca verde si no corrió nada
+      else L.push(fallas ? `❌ prueba en vivo: ${fallas} fallo(s) de ${res.length}` : `✅ prueba en vivo: ${res.length} escenario(s) pasaron`, ...res.map((x) => "   " + x))
       L.push(`📊 cobertura funcional: ${ok}/${esc.length} rutas descubiertas ejercitadas (${Math.round((ok / Math.max(1, esc.length)) * 100)}%)`)
       // 3) calidad: accesibilidad + responsive
       const cal = await calidadWeb(base, pj!, esc.map((e) => e.ruta)); fallas += cal.fallas; L.push(...cal.lineas)
       // 4) carga/concurrencia
-      L.push(...await carga(base, esc.map((e) => e.ruta)))
+      if (esLocal(base)) L.push(...await carga(base, esc.map((e) => e.ruta))); else L.push("⏭ carga: solo contra tu app local (no se estresa producción)")
     } else L.push("⏭ prueba en vivo/calidad/carga: no pude levantar la app (pásame la url); la suite igual quedó en el repo")
     // 5) unitarias existentes
     L.push(...correrUnitarias(cwd))
     // 6) extras profesionales: cobertura de código, auditoría de deps, semgrep, OpenAPI, Docker, Sentry, i18n
-    L.push(...extrasPro(cwd, esc.map((e) => e.ruta)))
+    L.push(...await extrasPro(cwd, esc.map((e) => e.ruta)))
     // registrar
     mkdirSync(join(cwd, ".skill_dey"), { recursive: true })
     writeFileSync(join(cwd, ".skill_dey", "PRUEBAS-PROFESIONALES.md"), [`# Testeo profesional · ${new Date().toISOString().slice(0, 16).replace("T", " ")}`, ...L].join("\n"))

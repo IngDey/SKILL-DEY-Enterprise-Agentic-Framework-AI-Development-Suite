@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Marketplace oficial de SKILL DEY, por Ing. Dey (@IngDey).",
-    "version": "40.0.0"
+    "version": "41.0.0"
   },
   "plugins": [
     {
       "name": "skill-dey",
       "source": "./hosts/claude-code",
-      "description": "Agentes de IA que programan sin romper tu app: guardián en vivo, deshacer cualquier cambio, cero errores, seguridad y documentación automática.",
-      "version": "40.0.0",
+      "description": "IA que programa sin romper tu app: solo cambia lo que pides, piensa antes de tocar, deshace cualquier cambio y no entrega con errores.",
+      "version": "41.0.0",
       "author": {
         "name": "Ing. Dey (@IngDey)",
         "url": "https://github.com/IngDey"

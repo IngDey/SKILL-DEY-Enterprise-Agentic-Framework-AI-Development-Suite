@@ -1,14 +1,14 @@
 ﻿# Instalador SKILL_DEY para OpenCode (Windows). Se ejecuta desde INSTALAR.bat
 $ErrorActionPreference = 'Stop'
 $src = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
-$oc  = Join-Path $env:USERPROFILE '.config/opencode'
+$oc  = if ($env:OPENCODE_CONFIG_DIR) { $env:OPENCODE_CONFIG_DIR } else { Join-Path $env:USERPROFILE '.config/opencode' }
 function D($p) { New-Item -ItemType Directory -Force $p | Out-Null }
 function Ok($t) { Write-Host "  [OK] $t" -ForegroundColor Green }
 function Av($t) { Write-Host "  [!]  $t" -ForegroundColor Yellow }
 
 try {
   if (-not (Test-Path (Join-Path $src 'skills/skill-dey/SKILL.md'))) { throw 'No encuentro los archivos. Descomprime el zip completo y ejecuta INSTALAR.bat desde la carpeta extraida.' }
-  Write-Host "`nInstalando SKILL_DEY (creado por Ing. Dey, @IngDey) en $oc`n" -ForegroundColor Cyan
+  Write-Host "`nInstalando SKILL_DEY en $oc`n" -ForegroundColor Cyan
   foreach ($d in 'skills','agents','commands','tools','plugins','skill_dey') { D (Join-Path $oc $d) }
 
   # Limpiar copias antiguas en carpetas en singular (evita duplicados)
@@ -71,7 +71,7 @@ try {
   $pf = Join-Path $oc 'skill_dey/PREFERENCIAS.md'; $tiene = Get-Content $pf -Raw -Encoding UTF8
   $falt = (Get-Content (Join-Path $src 'global/PREFERENCIAS.md') -Encoding UTF8) | Where-Object { $_.StartsWith([string][char]0x2B50) -and -not $tiene.Contains(($_.Split(']')[0] + ']')) }
   if ($falt) { [IO.File]::WriteAllText($pf, ($tiene.TrimEnd() + "`n" + ($falt -join "`n") + "`n"), (New-Object Text.UTF8Encoding $false)) }
-  [IO.File]::WriteAllText((Join-Path $oc 'skill_dey/VERSION'), '40.0.0')
+  $ver = '41.0.0'; try { $vf = (Get-Content (Join-Path $src 'skill_dey/VERSION') -Raw -Encoding UTF8).Trim(); if ($vf) { $ver = $vf } } catch {}; [IO.File]::WriteAllText((Join-Path $oc 'skill_dey/VERSION'), $ver)
   Ok 'Memoria global (lo aprendido se conserva)'
 
   # 6. Reglas globales AGENTS.md (bloque SKILL_DEY reemplazable)
@@ -90,7 +90,7 @@ try {
   # 8. Herramientas recomendadas en el equipo
   foreach ($t in 'git','node') { if (-not (Get-Command $t -ErrorAction SilentlyContinue)) { Av "Falta $t en este equipo (recomendado). Instalalo para aprovechar todo." } }
 
-  Write-Host "`n  LISTO. Cierra y abre OpenCode y escribe normal.`n  SKILL_DEY - creado por Ing. Dey (@IngDey) - github.com/IngDey`n" -ForegroundColor Cyan
+  Write-Host "`n  LISTO. Cierra y abre OpenCode y escribe normal.`n" -ForegroundColor Cyan
 } catch {
   Write-Host "`n  ERROR: $($_.Exception.Message)`n" -ForegroundColor Red
 }

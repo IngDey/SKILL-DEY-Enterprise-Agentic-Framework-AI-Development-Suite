@@ -18,7 +18,8 @@ export function escuchando(): Proc[] {
   if (WIN) {
     const tareas = new Map<number, string>()
     for (const l of sh("tasklist /fo csv /nh").split(/\r?\n/)) { const m = l.match(/^"([^"]+)","(\d+)"/); if (m) tareas.set(Number(m[2]), m[1]) }
-    for (const l of sh("netstat -ano -p tcp").split(/\r?\n/)) { const m = l.match(/TCP\s+\S+:(\d+)\s+\S+\s+LISTENING\s+(\d+)/i); if (m) out.push({ puerto: Number(m[1]), pid: Number(m[2]), cmd: tareas.get(Number(m[2])) ?? "" }) }
+    // por la dirección remota vacía (0.0.0.0:0 / [::]:0) y no por la palabra LISTENING: Windows en español dice "ESCUCHANDO"; incluye IPv6
+    for (const l of sh("netstat -ano").split(/\r?\n/)) { const m = l.match(/^\s*TCP\s+\S+:(\d+)\s+(0\.0\.0\.0:0|\[::\]:0|\*:\*)\s+\S+\s+(\d+)\s*$/i); if (m) out.push({ puerto: Number(m[1]), pid: Number(m[3]), cmd: tareas.get(Number(m[3])) ?? "" }) }
   } else {
     for (const l of sh("lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null").split("\n").slice(1)) {
       const c = l.trim().split(/\s+/); const pid = Number(c[1]); const port = Number(l.match(/:(\d+) \(LISTEN\)/)?.[1]); if (!pid || !port) continue
@@ -50,11 +51,9 @@ export function liberarPuerto(puerto: number): string {
     if (esDeDesarrollo(p)) { matarArbol(p.pid); r.push(`detenido PID ${p.pid} (${p.cmd.slice(0, 60)}) que ocupaba ${puerto}`) }
     else r.push(`⚠ ${puerto} lo usa "${p.cmd.slice(0, 50)}" (no es de desarrollo o es del sistema/BD): no lo toco, avisa al usuario`)
   }
-  // Segundo intento: si tras matar el puerto sigue ocupado por un proceso de desarrollo (quedó un hijo), fuerza por fuser/lsof
-  const quedan = escuchando().filter((p) => p.puerto === puerto && esDeDesarrollo(p))
-  if (quedan.length) { for (const p of quedan) matarArbol(p.pid)
-    if (WIN) { for (const l of sh(`netstat -ano -p tcp | findstr :${puerto}`, 5_000).split(/\r?\n/)) { const m = l.match(/LISTENING\s+(\d+)/i); if (m) spawnSync("taskkill", ["/pid", m[1], "/T", "/F"], { timeout: 8_000 }) } }
-    else sh(`fuser -k ${puerto}/tcp 2>/dev/null; lsof -ti tcp:${puerto} 2>/dev/null | xargs -r kill -9 2>/dev/null`, 5_000) }
+  // Segundo intento SOLO sobre procesos de desarrollo que ESCUCHAN ese puerto (nunca clientes conectados ni puertos parecidos)
+  try { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 300) } catch {}
+  for (const p of escuchando().filter((x) => x.puerto === puerto && esDeDesarrollo(x))) matarArbol(p.pid)
   return r.join("\n")
 }
 
@@ -102,42 +101,77 @@ export function conTiempo<T>(p: Promise<T>, ms: number, fallback: T): Promise<T>
   return new Promise((res) => { let listo = false; const t = setTimeout(() => { if (!listo) { listo = true; res(fallback) } }, ms); (t as any).unref?.(); p.then((v) => { if (!listo) { listo = true; clearTimeout(t); res(v) } }).catch(() => { if (!listo) { listo = true; clearTimeout(t); res(fallback) } }) })
 }
 async function responde(url: string) { try { await fetch(url, { signal: AbortSignal.timeout(2500) }); return true } catch { return false } }
+/** URL que de verdad responde en ese puerto: 127.0.0.1, ::1 (Vite en Node 17+ suele escuchar solo ahí) o localhost. */
+export async function urlQueResponde(puerto: number | string): Promise<string | null> {
+  for (const h of ["127.0.0.1", "[::1]", "localhost"]) { const u = `http://${h}:${puerto}`; if (await responde(u)) return u }
+  return null
+}
+const PROCS = (cwd: string) => join(cwd, ".skill_dey", "procesos.json")
+const nuestros = (cwd: string): any[] => { try { const j = JSON.parse(readFileSync(PROCS(cwd), "utf8")); return Array.isArray(j) ? j : [] } catch { return [] } }
+const anotar = (cwd: string, x: any) => { try { mkdirSync(join(cwd, ".skill_dey"), { recursive: true }); writeFileSync(PROCS(cwd), JSON.stringify([...nuestros(cwd).filter((y) => y.servicio !== x.servicio), x], null, 1)) } catch {} }
+/** Grupo de procesos (POSIX). skill_dey arranca cada servidor en su propio grupo = su PID. */
+function pgidDe(pid: number): number { if (WIN) return 0; const m = sh(`ps -o pgid= -p ${Number(pid)}`, 4_000).trim(); return Number(m) || 0 }
+/** ¿Ese PID sigue siendo el servidor que arrancó skill_dey? (no un proceso nuevo que reutilizó el número) */
+function sigueSiendoNuestro(pid: number, cmd = ""): boolean {
+  if (!pid || pid === process.pid) return false
+  const clave = (cmd.match(/[\w.-]+/g) ?? []).filter((w) => w.length > 2).slice(0, 3) // ej. "npm run dev" → npm, run, dev
+  const coincide = (linea: string) => (clave.length ? clave.every((w) => linea.includes(w)) : DEV.test(linea)) && !SISTEMA.test(linea)
+  if (WIN) { const t = sh(`wmic process where ProcessId=${Number(pid)} get CommandLine /format:list`, 6_000) || sh(`tasklist /fi "PID eq ${Number(pid)}" /fo csv /nh`, 6_000); return /\S/.test(t) && !/INFO:|No hay tareas|No tasks/i.test(t) && (clave.length ? clave.some((w) => t.includes(w)) : DEV.test(t)) && !SISTEMA.test(t) }
+  const l = sh(`ps -o pgid=,command= -p ${Number(pid)}`, 4_000).trim(); const m = l.match(/^(\d+)\s+(.*)$/)
+  return !!m && Number(m[1]) === pid && coincide(m[2]) // su propio grupo (lo arrancamos así) + el MISMO comando → no es un PID reciclado
+}
+/** Detiene SOLO los procesos que arrancó skill_dey (anotados en procesos.json) y que siguen siendo esos. Nunca toca tu propio "npm run dev". */
+export function detenerNuestros(cwd: string): string[] {
+  const r: string[] = []
+  for (const x of nuestros(cwd)) if (x.pid && !x.ajeno && sigueSiendoNuestro(Number(x.pid), String(x.cmd ?? ""))) { matarArbol(Number(x.pid)); r.push(`detenido ${x.servicio} (PID ${x.pid})`) }
+  return r
+}
 
-export type Arrancado = { s: Servicio; url: string; ok: boolean; errores: string[]; detener: () => void; pid?: number }
+export type Arrancado = { s: Servicio; url: string; ok: boolean; errores: string[]; detener: () => void; pid?: number; salida?: string }
 /** Baja lo que ocupe los puertos, sube el backend y luego el frontend, y reporta errores de arranque de cada uno. */
-export async function arranqueLimpio(cwd: string, espera = Number(process.env.SKILL_DEY_ARRANQUE_MS) || 22_000): Promise<{ lista: Arrancado[]; notas: string[] }> {
+export async function arranqueLimpio(cwd: string, espera = Number(process.env.SKILL_DEY_ARRANQUE_MS) || 22_000, solo?: Servicio[]): Promise<{ lista: Arrancado[]; notas: string[] }> {
   const topeTotal = Date.now() + Math.min(espera * 3 + 10_000, 90_000) // deadline duro: nunca más de ~90s en total
   const notas: string[] = [], lista: Arrancado[] = []
-  for (const s of servicios(cwd)) {
-    const lib = liberarPuerto(s.puerto); if (!/libre/.test(lib)) notas.push(lib)
+  for (const s of solo ?? servicios(cwd)) {
+    // ¿El puerto ya está ocupado? Si es un proceso que dejó skill_dey antes → se reinicia. Si es TUYO y responde → se usa tal cual (no se mata).
+    const ocupan = escuchando().filter((x) => x.puerto === s.puerto)
+    if (ocupan.length) {
+      const previos = new Set(nuestros(cwd).filter((x) => !x.ajeno).map((x) => Number(x.pid)))
+      const nuestro = ocupan.every((x) => previos.has(x.pid) || previos.has(pgidDe(x.pid))) // el que escucha suele ser HIJO del que arrancamos: se reconoce por su grupo
+      const u = await urlQueResponde(s.puerto)
+      if (nuestro) { for (const x of ocupan) matarArbol(x.pid) }
+      else if (u) { lista.push({ s, url: u, ok: true, errores: [], detener: () => {} }); anotar(cwd, { servicio: s.nombre, tipo: s.tipo, url: u, ok: true, puerto: s.puerto, ajeno: true }); notas.push(`${s.nombre}: uso el servidor que ya tienes corriendo en ${u} (no lo detengo)`); continue }
+      else { lista.push({ s, url: `http://127.0.0.1:${s.puerto}`, ok: false, errores: [`el puerto ${s.puerto} lo ocupa "${ocupan[0].cmd.slice(0, 50)}" y no responde: no lo toco`], detener: () => {} }); continue }
+    }
     const log: string[] = []
     const p = spawn(s.cmd, { cwd: s.dir, shell: true, detached: !WIN, env: { ...process.env, BROWSER: "none", CI: "1", FORCE_COLOR: "0" }, stdio: ["ignore", "pipe", "pipe"] })
     const tomar = (b: Buffer) => { log.push(b.toString()); if (log.length > 400) log.shift() }
+    anotar(cwd, { servicio: s.nombre, tipo: s.tipo, pid: p.pid, puerto: s.puerto, ok: false, cmd: s.cmd }) // anotado YA: si algo corta la espera, se puede detener igual
     p.stdout?.on("data", tomar); p.stderr?.on("data", tomar)
     let url = `http://127.0.0.1:${s.puerto}`, ok = false
     const fin = Math.min(Date.now() + espera, topeTotal)
     while (Date.now() < fin) {
-      const m = log.join("").match(/https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1?\]):(\d+)/); if (m) url = `http://127.0.0.1:${m[1]}`
-      if (/EADDRINUSE|address already in use|port .* (is )?(already )?in use/i.test(log.join(""))) { const pt = Number(log.join("").match(/(?:EADDRINUSE[^\d]*|port\s+)(\d{2,5})/i)?.[1] ?? s.puerto); notas.push(liberarPuerto(pt)); break }
-      if (await responde(url)) { ok = true; break }
+      const m = log.join("").match(/https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1?\]):(\d+)/)
+      if (/EADDRINUSE|address already in use|port .* (is )?(already )?in use/i.test(log.join(""))) { notas.push(`${s.nombre}: su puerto está ocupado por otro programa; no lo detengo (cámbialo o ciérralo tú)`); break }
+      const u = await urlQueResponde(m?.[1] ?? s.puerto); if (u) { url = u; ok = true; break }
       if (p.exitCode !== null) break
       await esperar(200)
     }
     await esperar(500) // errores que aparecen justo después de arrancar
     const errores = [...new Set(log.join("").split(/\r?\n/).filter((l) => ERR.test(l) && !RUIDO.test(l)).map((l) => l.trim().replace(cwd, "").slice(0, 200)))].slice(0, 8)
-    const detener = () => { try { if (p.pid) matarArbol(p.pid) } catch {} ; try { const q = escuchando().filter((x) => x.puerto === s.puerto && esDeDesarrollo(x)); for (const x of q) matarArbol(x.pid) } catch {} }
-    lista.push({ s, url, ok, pid: p.pid, errores: ok ? errores : [...errores, p.exitCode !== null ? `el proceso terminó (código ${p.exitCode})` : "no respondió a tiempo"].slice(0, 8), detener })
+    const detener = () => { try { if (p.pid) matarArbol(p.pid) } catch {} }
+    const salida = log.join("").split(/\r?\n/).filter((l) => l.trim()).slice(-12).join("\n").slice(-1500)
+    lista.push({ s, url, ok, pid: p.pid, salida, errores: ok ? errores : [...errores, p.exitCode !== null ? `el proceso terminó (código ${p.exitCode})` : "no respondió a tiempo"].slice(0, 8), detener })
     if (!ok && s.tipo === "backend") notas.push(`backend "${s.nombre}" no subió: el frontend dependerá de él`)
   }
-  mkdirSync(join(cwd, ".skill_dey"), { recursive: true })
-  writeFileSync(join(cwd, ".skill_dey", "procesos.json"), JSON.stringify(lista.map((a) => ({ servicio: a.s.nombre, tipo: a.s.tipo, url: a.url, ok: a.ok, pid: a.pid, puerto: a.s.puerto })), null, 1))
+  for (const a of lista) if (a.pid) anotar(cwd, { servicio: a.s.nombre, tipo: a.s.tipo, url: a.url, ok: a.ok, pid: a.pid, puerto: a.s.puerto, cmd: a.s.cmd })
   return { lista, notas }
 }
 
 /** Detiene lo que skill_dey dejó corriendo y libera los puertos de los servicios del proyecto. */
 export function detenerTodo(cwd: string): string {
   const r: string[] = []
-  try { for (const x of JSON.parse(readFileSync(join(cwd, ".skill_dey", "procesos.json"), "utf8"))) if (x.pid) { matarArbol(x.pid); r.push(`detenido ${x.servicio} (PID ${x.pid})`) } } catch {}
-  for (const s of servicios(cwd)) { const l = liberarPuerto(s.puerto); if (!/libre/.test(l)) r.push(l) }
-  return (r.length ? r.join("\n") : "No había procesos del proyecto corriendo.") + "\n(todos los puertos del proyecto quedaron libres)"
+  r.push(...detenerNuestros(cwd))
+  const ocupados = servicios(cwd).flatMap((s) => escuchando().filter((x) => x.puerto === s.puerto).map((x) => `${s.puerto} (${x.cmd.slice(0, 40)})`))
+  return (r.length ? r.join("\n") : "No había procesos de skill_dey corriendo.") + (ocupados.length ? `\nPuertos del proyecto usados por OTROS programas (no los toco): ${ocupados.join(", ")}. Si quieres liberarlos: skill_dey_procesos(accion: liberar, puerto: N)` : "")
 }

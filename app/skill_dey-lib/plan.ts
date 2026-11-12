@@ -28,8 +28,10 @@ export function estadoPlan(cwd: string): { total: number; pendientes: string[] }
 export function marcarPlan(cwd: string, texto: string): string {
   if (!existsSync(F(cwd))) return "no hay plan"
   const t = readFileSync(F(cwd), "utf8"); const k = texto.trim().toLowerCase()
-  const nuevo = t.split(/\r?\n/).map((l) => { const m = l.match(/^(\s*-\s*)\[\s\](\s*)(.*)$/); return m && m[3].toLowerCase().includes(k) ? `${m[1]}[x]${m[2]}${m[3]}` : l }).join("\n")
-  writeFileSync(F(cwd), nuevo); return "marcado"
+  if (k.length < 3) return "texto demasiado corto para marcar un requisito (escribe parte de su descripción)" // vacío marcaba TODO como hecho
+  let hecho = false
+  const nuevo = t.split(/\r?\n/).map((l) => { const m = l.match(/^(\s*-\s*)\[\s\](\s*)(.*)$/); if (!hecho && m && m[3].toLowerCase().includes(k)) { hecho = true; return `${m[1]}[x]${m[2]}${m[3]}` } return l }).join("\n")
+  writeFileSync(F(cwd), nuevo); return hecho ? "marcado" : "no encontré un requisito pendiente con ese texto"
 }
 
 /** Verificación de cierre: ¿quedó algo del plan sin hacer? Devuelve líneas y cuántas fallas. */

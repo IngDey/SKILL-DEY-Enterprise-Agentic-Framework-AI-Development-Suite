@@ -1,12 +1,12 @@
-// SKILL_DEY — VACUNAS (errores ya corregidos que quedan bloqueados para siempre en TODAS las apps) y
+// SKILL_DEY — VACUNAS_F() (errores ya corregidos que quedan bloqueados para siempre en TODAS las apps) y
 // REGLAS DE NEGOCIO ejecutables (consultas de solo lectura que deben dar 0 en cada verificación). Todo por código, 0 tokens.
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs"
+import { memoriaGlobal } from "./rutas.ts"
 import { join } from "node:path"
-import { homedir } from "node:os"
+
 import { contar, consultaSegura, conexion } from "./bd.ts"
 
-const GLOBAL = join(homedir(), ".config", "opencode", "skill_dey")
-const VACUNAS = join(GLOBAL, "VACUNAS.json")
+const VACUNAS_F = () => memoriaGlobal("VACUNAS_F().json") // la autoprueba la redirige a una carpeta temporal
 const leerJ = (p: string, d: any) => { try { return JSON.parse(readFileSync(p, "utf8")) } catch { return d } }
 const guardarJ = (p: string, v: any) => { mkdirSync(join(p, ".."), { recursive: true }); writeFileSync(p, JSON.stringify(v, null, 1)) }
 
@@ -15,13 +15,15 @@ export type Vacuna = { patron: string; ext: string; texto: string; fecha: string
 export function agregarVacuna(patron: string, ext: string, texto: string): string {
   let re: RegExp; try { re = new RegExp(patron) } catch (e: any) { return `vacuna rechazada: patrón inválido (${e.message})` }
   if (patron.length < 4 || re.test("") || re.test("const a = 1") || re.test("<div>") || re.test("$x = 1;")) return "vacuna rechazada: el patrón es demasiado amplio (marcaría código normal)"
-  const l: Vacuna[] = leerJ(VACUNAS, [])
+  // cuantificadores anidados tipo (\w+\s?)+ → backtracking catastrófico: congelaría OpenCode en TODAS tus apps
+  if (patron.length > 300 || /\((?:[^()\\]|\\.)*[+*}](?:[^()\\]|\\.)*\)\s*[+*{]/.test(patron)) return "vacuna rechazada: patrón con cuantificadores anidados (puede congelar el editor). Escríbelo más simple."
+  const l: Vacuna[] = leerJ(VACUNAS_F(), [])
   if (l.some((v) => v.patron === patron)) return "vacuna ya existía"
-  l.push({ patron, ext: ext || "php|m?[jt]sx?|cjs|vue|svelte|py", texto, fecha: new Date().toISOString().slice(0, 10) }); guardarJ(VACUNAS, l)
+  l.push({ patron, ext: ext || "php|m?[jt]sx?|cjs|vue|svelte|py", texto, fecha: new Date().toISOString().slice(0, 10) }); guardarJ(VACUNAS_F(), l)
   return `🛡 vacuna #${l.length} activa en todas tus apps: ${texto}`
 }
-export const vacunas = (): Vacuna[] => leerJ(VACUNAS, [])
-export function quitarVacuna(n: number): string { const l: Vacuna[] = leerJ(VACUNAS, []); if (!l[n - 1]) return "no existe esa vacuna"; const [v] = l.splice(n - 1, 1); guardarJ(VACUNAS, l); return `vacuna quitada: ${v.texto}` }
+export const vacunas = (): Vacuna[] => leerJ(VACUNAS_F(), [])
+export function quitarVacuna(n: number): string { const l: Vacuna[] = leerJ(VACUNAS_F(), []); if (!l[n - 1]) return "no existe esa vacuna"; const [v] = l.splice(n - 1, 1); guardarJ(VACUNAS_F(), l); return `vacuna quitada: ${v.texto}` }
 
 export type Regla = { texto: string; sql: string; fecha: string }
 const archivoReglas = (cwd: string) => join(cwd, ".skill_dey", "REGLAS.json")

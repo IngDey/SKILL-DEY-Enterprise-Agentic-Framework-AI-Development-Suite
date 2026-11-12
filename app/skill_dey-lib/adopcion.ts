@@ -1,7 +1,6 @@
 // SKILL_DEY — adopción de una app existente: hallazgos de seguridad, lógica y calidad detectados POR CÓDIGO (0 tokens).
 // El modelo después solo lee este informe (no toda la app) y razona la lógica de negocio sobre lo marcado.
-import { spawnSync } from "node:child_process"
-import { listarArchivos, esRepoGit } from "./listar.ts"
+import { listarArchivos } from "./listar.ts"
 import { existsSync, readFileSync, statSync } from "node:fs"
 import { join } from "node:path"
 
@@ -10,17 +9,21 @@ const IGN = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage
 const leer = (p: string) => { try { return readFileSync(p, "utf8") } catch { return "" } }
 
 export function esProyectoAvanzado(cwd: string): boolean {
-  const n = listarArchivos(cwd).filter((f) => /\.(php|m?[jt]sx?|vue|py|java|cs|rb|go)$/.test(f) && !IGN.test(f)).length
-  return n >= 8
+  let n = 0
+  for (const f of listarArchivos(cwd, 3000)) if (/\.(php|m?[jt]sx?|vue|py|java|cs|rb|go)$/.test(f) && !IGN.test(f) && ++n >= 8) return true // corta apenas llega a 8
+  return false
 }
 
+const VALIDA = /\b(empty|isset|filter_var|validate|trim|strlen)\s*\(|['"][^'"\n]*\brequired\b[^'"\n]*['"]|\.required\s*\(|if\s*\(\s*!/g // empty(/isset(/validate(/'required'/.required(/if (!x)
 export function analizar(cwd: string): Hallazgo[] {
   const files = listarArchivos(cwd).filter((f) => f && !IGN.test(f) && /\.(php|m?[jt]sx?|cjs|vue|svelte|py|html|blade\.php|twig|sql)$/.test(f) && existsSync(join(cwd, f)) && statSync(join(cwd, f)).size < 1_500_000)
   const H: Hallazgo[] = []
   const add = (prioridad: Hallazgo["prioridad"], tipo: Hallazgo["tipo"], texto: string, donde: string[]) => { if (donde.length) H.push({ prioridad, tipo, texto, donde: [...new Set(donde)].slice(0, 12) }) }
+  const cache = new Map<string, string[]>() // cada archivo se lee UNA vez (antes se releía en cada búsqueda)
+  const lineas = (f: string) => { let l = cache.get(f); if (!l) { l = leer(join(cwd, f)).split(/\r?\n/); cache.set(f, l) } return l }
   const buscar = (re: RegExp, filtro: (f: string) => boolean = () => true, excluir?: RegExp) => {
     const r: string[] = []
-    for (const f of files.filter(filtro)) leer(join(cwd, f)).split(/\r?\n/).forEach((l, i) => { if (re.test(l) && !(excluir && excluir.test(l))) r.push(`${f}:${i + 1}`) })
+    for (const f of files.filter(filtro)) lineas(f).forEach((l, i) => { if (re.test(l) && !(excluir && excluir.test(l))) r.push(`${f}:${i + 1}`) })
     return r
   }
   const php = (f: string) => /\.php$/.test(f), js = (f: string) => /\.(m?[jt]sx?|cjs|vue|svelte)$/.test(f), py = (f: string) => f.endsWith(".py")
@@ -51,15 +54,16 @@ export function analizar(cwd: string): Hallazgo[] {
       if (!estados.has(k)) estados.set(k, new Map()); const v = estados.get(k)!; if (!v.has(m[1])) v.set(m[1], []); v.get(m[1])!.push(`${f}:${i + 1}`)
     }
   })
-  for (const [k, variantes] of estados) if (variantes.size > 1) add("MEDIO", "lógica", `Mismo estado/valor escrito distinto (${[...variantes.keys()].map((x) => `"${x}"`).join(" vs ")}): comparaciones que fallan en silencio`, [...variantes.values()].flat())
+  for (const [, variantes] of estados) if (variantes.size > 1) add("MEDIO", "lógica", `Mismo estado/valor escrito distinto (${[...variantes.keys()].map((x) => `"${x}"`).join(" vs ")}): comparaciones que fallan en silencio`, [...variantes.values()].flat())
   const requeridosFront = new Set<string>()
-  for (const f of files.filter((f) => /\.(html|php|vue|[jt]sx|blade\.php|twig)$/.test(f))) for (const m of leer(join(cwd, f)).matchAll(/<(?:input|select|textarea)[^>]*\brequired\b[^>]*>/gi)) { const n = m[0].match(/name=["']([\w\[\]]+)["']/)?.[1]; if (n) requeridosFront.add(n.replace(/\[\]$/, "")) }
-  const sinValidarBack: string[] = []
-  for (const n of requeridosFront) {
-    const usos = buscar(new RegExp(`\\$_(POST|REQUEST)\\[['"]${n}['"]\\]|req\\.body\\.${n}\\b|request\\.(form|json)\\[['"]${n}['"]\\]`), (f) => php(f) || js(f) || py(f))
-    const validado = buscar(new RegExp(`(empty|isset|filter_var|validate|trim|required|strlen)\\s*\\(?[^\\n]*${n}|${n}['"]?\\s*=>\\s*['"][^'"]*required|if\\s*\\(\\s*!\\s*(req\\.body\\.)?${n}\\b`), (f) => php(f) || js(f) || py(f))
-    if (usos.length && !validado.length) sinValidarBack.push(`${n} (${usos[0]})`)
-  }
+  for (const f of files.filter((f) => /\.(html|php|vue|[jt]sx|blade\.php|twig)$/.test(f))) for (const m of lineas(f).join("\n").matchAll(/<(?:input|select|textarea)[^>]*\brequired\b[^>]*>/gi)) { const n = m[0].match(/name=["']([\w\[\]]+)["']/)?.[1]; if (n) requeridosFront.add(n.replace(/\[\]$/, "")) }
+  // una sola pasada: dónde se USA cada campo en el servidor y cuáles aparecen en una validación
+  const usados = new Map<string, string>(), validados = new Set<string>()
+  for (const f of files.filter((f) => php(f) || js(f) || py(f))) lineas(f).forEach((l, i) => {
+    for (const m of l.matchAll(/\$_(?:POST|REQUEST)\[['"](\w+)['"]\]|req\.body\.(\w+)|request\.(?:form|json)\[['"](\w+)['"]\]/g)) { const n = m[1] ?? m[2] ?? m[3]; if (n && !usados.has(n)) usados.set(n, `${f}:${i + 1}`) }
+    for (const v of l.matchAll(VALIDA)) for (const w of l.slice(v.index ?? 0).match(/\w+/g) ?? []) validados.add(w) // solo lo que va DESPUÉS de una validación real
+  })
+  const sinValidarBack = [...requeridosFront].filter((n) => usados.has(n) && !validados.has(n)).map((n) => `${n} (${usados.get(n)})`)
   add("MEDIO", "lógica", "Campos obligatorios validados solo en el navegador (el servidor los acepta vacíos)", sinValidarBack)
   add("MEDIO", "lógica", "Cálculos de dinero/cantidades con float o redondeo intermedio (posibles descuadres)", [...buscar(/\b(round|toFixed|number_format)\s*\([^)]*\)\s*[\+\-\*\/]/, (f) => php(f) || js(f)), ...buscar(/parseFloat\([^)]*(precio|valor|total|monto|litros|cantidad)/i, js)])
   add("BAJO", "lógica", "Reglas marcadas como pendientes en el código (TODO/FIXME/HACK)", buscar(/\b(TODO|FIXME|HACK|XXX)\b/))

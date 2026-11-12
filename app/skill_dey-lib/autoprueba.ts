@@ -1,31 +1,44 @@
 // SKILL_DEY — autoprueba: prueba CADA pieza de skill_dey en un proyecto de prueba temporal (nunca en tu app) y mide su velocidad.
 // Responde "¿funciona?" y "¿qué tan rápido/óptimo?" con evidencia, sin gastar tokens del modelo (todo es código).
 import { spawn, spawnSync } from "node:child_process"
+import { ocDir, sdDir } from "./rutas.ts"
 import { mkdtempSync, writeFileSync, readFileSync, existsSync, mkdirSync, rmSync } from "node:fs"
 import { join } from "node:path"
-import { tmpdir, homedir } from "node:os"
+import { tmpdir } from "node:os"
 import { createServer, connect } from "node:net"
 import { foto, deshacer } from "./respaldo.ts"
 import { revisarTodo } from "./escaneo.ts"
 import { analizar } from "./adopcion.ts"
 import { documentar } from "./documentar.ts"
-import { escuchando, liberarPuerto } from "./procesos.ts"
+import { liberarPuerto } from "./procesos.ts"
 import { rastrearSitio } from "./sitio.ts"
+import { PW_DIR } from "./app.ts"
+import { usarChrome } from "./navegador.ts"
+import { createServer as crearHttp } from "node:http"
 import { agregarVacuna, vacunas, quitarVacuna } from "./reglas.ts"
 import { consultaSegura } from "./bd.ts"
 import { intencion } from "./comandos.ts"
 import { auditarSeguridad } from "./seguridad.ts"
-import { validacionServidor, consultasEnBucle, formatear } from "./extras.ts"
+import { validacionServidor, consultasEnBucle } from "./extras.ts"
 import { organizar } from "./organizar.ts"
-import { listarArchivos, esRepoGit } from "./listar.ts"
+import { listarArchivos } from "./listar.ts"
 import { guardarPlan, verificarPlan, marcarPlan } from "./plan.ts"
 import { empalme } from "./empalme.ts"
 import { buscarSkill } from "./buscar_skill.ts"
 import { aprenderDeCorrida } from "./aprender.ts"
 import { esMovil, revisarMovil } from "./movil.ts"
-import { apiOpenapi, sentryCheck, i18nCheck } from "./pro.ts"
+import { apiOpenapi, sentryCheck } from "./pro.ts"
 import { instalarMultiIA } from "./multiia.ts"
 import { instalarHook, reporte } from "./robustez.ts"
+import { mapaMental } from "./mapa_mental.ts"
+import { guardarPlan as _gp } from "./plan.ts"
+import { clasificar, modeloPara } from "./ruteo.ts"
+import { generarMockup } from "./diseno.ts"
+import { optimizarPrompt } from "./prompt.ts"
+import { buscarMemoria } from "./indice.ts"
+import { registrarTraza, panel } from "./trazas.ts"
+import { checkpoint, volver } from "./respaldo.ts"
+import { esErrorDeRegion, esErrorDeLimite } from "./modelos.ts"
 
 type Fila = { pieza: string; ok: boolean | null; ms: number; nota: string }
 const puertoLibre = () => new Promise<number>((r) => { const s = createServer(); s.listen(0, "127.0.0.1", () => { const p = (s.address() as any).port; s.close(() => r(p)) }) })
@@ -39,6 +52,8 @@ const hay = (c: string) => spawnSync(process.platform === "win32" ? "where" : "s
 export async function autoprueba(verificar: (args: any, ctx: any) => Promise<string>): Promise<string> {
   const F: Fila[] = []
   const dir = mkdtempSync(join(tmpdir(), "skill_dey-autoprueba-"))
+  const memoriaAntes = process.env.SKILL_DEY_MEMORIA_GLOBAL
+  process.env.SKILL_DEY_MEMORIA_GLOBAL = join(dir, ".memoria-global") // lecciones y vacunas de prueba NO tocan las tuyas
   const prueba = async (pieza: string, fn: () => Promise<[boolean | null, string]> | [boolean | null, string]) => {
     const t0 = Date.now()
     try { const [ok, nota] = await fn(); F.push({ pieza, ok, ms: Date.now() - t0, nota }) }
@@ -117,6 +132,18 @@ export async function autoprueba(verificar: (args: any, ctx: any) => Promise<str
       const ok = /organizar/.test(o) && /SQL dentro de la capa visual|fuera de su capa|Reutilizar|huérfanos/i.test(o)
       return [ok, ok ? "detecta SQL en capa visual y reporta estructura ✓" : "no reportó estructura"]
     })
+    await prueba("Chrome: lee consola, errores JS y red", async () => {
+      const pj = join(PW_DIR, "package.json")
+      if (!existsSync(join(PW_DIR, "node_modules", "playwright"))) return [null, "omitido: el navegador de pruebas se prepara al instalar o en la 1ª prueba"]
+      const nav = usarChrome()
+      const srv = crearHttp((q, r) => { if (q.url === "/x500") { r.statusCode = 500; return r.end() } r.setHeader("content-type", "text/html"); r.end('<!doctype html><body>ok<script>console.error("sd-prueba");fetch("/x500");setTimeout(()=>{noExiste()},5)</script></body>') })
+      await new Promise<void>((ok) => srv.listen(0, "127.0.0.1", () => ok()))
+      try {
+        const r = await rastrearSitio(dir, `http://127.0.0.1:${(srv.address() as any).port}/`, pj, 1)
+        const c = r.errores.some((e) => /consola error/.test(e.tipo) && /sd-prueba/.test(e.detalle)), j = r.errores.some((e) => /excepción JS/.test(e.tipo)), n = r.errores.some((e) => /500/.test(e.tipo))
+        return [r.conNavegador && c && j && n, `${nav ? nav.split(/[\\/]/).pop() : "Chromium"} · consola ${c ? "✓" : "✗"} · JS ${j ? "✓" : "✗"} · red/HTTP ${n ? "✓" : "✗"}`]
+      } finally { srv.close() }
+    })
     await prueba("Validación de servidor + rendimiento (N+1)", () => {
       esc("form.php", '<?php if($_POST){ echo "guardado ".$_POST["correo"]; } ?><form method="post"><input name="correo" required><input name="nombre" required></form>')
       esc("lista.php", '<?php foreach($items as $i){ $r = $db->query("SELECT * FROM t WHERE id=".$i); } ?>')
@@ -175,8 +202,8 @@ export async function autoprueba(verificar: (args: any, ctx: any) => Promise<str
       esc("sitio/index.php", '<?php echo "<a href=\\"/falta.php\\">x</a><img src=\\"/no.png\\">";\n')
       const p = await puertoLibre()
       const { routerPhp } = await import("./app.ts")
-      const srv = spawn("php", ["-S", `127.0.0.1:${p}`, "-t", join(dir, "sitio"), routerPhp()], { stdio: "ignore" })
-      for (let i = 0; i < 20; i++) { try { await fetch(`http://127.0.0.1:${p}/`); break } catch { await esperar(60) } }
+      const srv = spawn("php", ["-S", `127.0.0.1:${p}`, "-t", join(dir, "sitio"), routerPhp()], { stdio: "ignore" }); hijos.push(srv)
+      for (let i = 0; i < 20; i++) { try { await fetch(`http://127.0.0.1:${p}/`, { signal: AbortSignal.timeout(2000) }); break } catch { await esperar(60) } }
       const r = await rastrearSitio(dir, `http://127.0.0.1:${p}/`, null, 5); srv.kill()
       const ok = r.errores.some((e) => /404/.test(e.tipo)) && r.errores.length >= 2
       return [ok, ok ? `encontró ${r.errores.length} errores sembrados` : `encontró ${r.errores.length} de 2`]
@@ -207,8 +234,8 @@ export async function autoprueba(verificar: (args: any, ctx: any) => Promise<str
       const a = join(dir, "apiapp"); mkdirSync(join(a, "api"), { recursive: true }); writeFileSync(join(a, "api", "x.js"), "// api")
       const r1 = apiOpenapi(a, ["/", "/users"]); const specOk = existsSync(join(a, "docs", "openapi.json"))
       const s = join(dir, "sapp"); mkdirSync(s, { recursive: true }); writeFileSync(join(s, "package.json"), '{"dependencies":{"@sentry/node":"1"}}'); writeFileSync(join(s, ".env"), "SENTRY_DSN=x")
-      const ok = /OpenAPI/.test(r1) && specOk && /integrado/.test(sentryCheck(s))
-      return [ok, ok ? "genera OpenAPI starter + detecta Sentry ✓" : "falló la detección"]
+      const ok = /OpenAPI/.test(r1) && !specOk && /integrado/.test(sentryCheck(s))
+      return [ok, ok ? "detecta API sin OpenAPI (sin crear archivos que no pediste) + detecta Sentry ✓" : "falló la detección"]
     })
     await prueba("Multi-IA: reglas en el formato de cada asistente", () => {
       const m = join(dir, "multiapp"); mkdirSync(m, { recursive: true })
@@ -218,14 +245,69 @@ export async function autoprueba(verificar: (args: any, ctx: any) => Promise<str
       return [ok, ok ? "escribe reglas para Claude/Cursor/Copilot/Windsurf/Codex/Gemini/Cline ✓" : "faltó algún archivo de IA"]
     })
     await prueba("Robustez: git hook + reporte de uso", () => {
-      const r = join(dir, "repo"); mkdirSync(join(r, ".git", "hooks"), { recursive: true })
+      const r = join(dir, "repo"); mkdirSync(r, { recursive: true }); spawnSync("git", ["init", "-q"], { cwd: r, timeout: 20_000 }) // repo real (también prueba core.hooksPath/worktrees)
       const h = instalarHook(r); const hookOk = existsSync(join(r, ".git", "hooks", "pre-commit")) && /git hook instalado/.test(h)
       mkdirSync(join(r, ".skill_dey"), { recursive: true }); writeFileSync(join(r, ".skill_dey", "APRENDIZAJE.md"), "# x\n❌ [pruebas] HTTP 500 error (2026-01-01)\n❌ [pruebas] HTTP 500 error (2026-01-02)\n")
       const rep = reporte(r).join(" "); const ok = hookOk && /HTTP 500|más repetidos|fallos aprendidos: 2/.test(rep)
       return [ok, ok ? "git hook instalado + reporte resume fallos ✓" : "falló hook/reporte"]
     })
+    await prueba("Mapa mental del plan (Mermaid)", () => {
+      const m = join(dir, "mapapp"); mkdirSync(m, { recursive: true }); writeFileSync(join(m, "app.js"), "// x")
+      _gp(m, ["login de usuarios", "reporte de ventas"], "Demo")
+      const r = mapaMental(m, "Demo")
+      const md = existsSync(join(m, ".skill_dey", "MAPA.md")) ? readFileSync(join(m, ".skill_dey", "MAPA.md"), "utf8") : ""
+      const ok = /mindmap/.test(r.mermaid) && /Requisitos/.test(r.mermaid) && /login de usuarios/.test(r.mermaid) && /```mermaid/.test(md)
+      return [ok, ok ? "dibuja requisitos + arquitectura en Mermaid ✓" : "no generó el mapa"]
+    })
+    await prueba("Ruteo de modelos por complejidad", () => {
+      const simple = clasificar("cambia el color del botón a azul") === "simple"
+      const complejo = clasificar("refactoriza la autenticación y la base de datos de la app") === "complejo"
+      // elige barato/potente usando una lista de prueba (NO toca tu MODELOS.json real)
+      const prueba = ["x/gpt-4o-mini", "y/claude-opus"]
+      const eligeBien = modeloPara("simple", "", prueba)?.id === "x/gpt-4o-mini" && modeloPara("complejo", "", prueba)?.id === "y/claude-opus"
+      const ok = simple && complejo && eligeBien
+      return [ok, ok ? "clasifica simple/complejo y elige barato/potente ✓" : "falló la clasificación o la elección"]
+    })
+    await prueba("Mockup de UI desde un brief", () => {
+      const m = join(dir, "mockapp"); mkdirSync(m, { recursive: true })
+      const r = generarMockup(m, "login con dashboard y tabla")
+      const f = join(m, "docs", "mockups", "mockup-login-con-dashboard-y-tabla.html")
+      const r2 = generarMockup(m, "login con dashboard y tabla") // el segundo NO pisa al primero
+      const ok = r.ok && r2.ok && existsSync(f) && existsSync(f.replace(".html", "-2.html")) && /Iniciar sesión|Panel|Registros/.test(readFileSync(f, "utf8"))
+      return [ok, ok ? "genera mockup responsive con las secciones del brief, sin pisar los anteriores ✓" : "no generó el mockup"]
+    })
+    await prueba("Optimizador del pedido (prompt)", () => {
+      const r = optimizarPrompt("agrega un formulario de registro")
+      const ok = /Objetivo:/.test(r) && /Criterios de aceptación/.test(r) && /obligatorios/.test(r) && /Nivel estimado/.test(r)
+      return [ok, ok ? "reescribe el pedido con objetivo, criterios y lo que falta aclarar ✓" : "no estructuró el prompt"]
+    })
+    await prueba("RAG ligero (BM25) + panel de observabilidad", () => {
+      const r = join(dir, "ragapp"); mkdirSync(join(r, ".skill_dey"), { recursive: true })
+      writeFileSync(join(r, ".skill_dey", "LECCIONES.md"), "- usar índices en la tabla de facturación para acelerar reportes\n- el login valida sesión con tokens\n- los colores de marca son azul y gris\n")
+      const hits = buscarMemoria(r, "facturación reportes lentos", 3)
+      const ragOk = hits.length > 0 && /facturaci/.test(hits[0])
+      registrarTraza(r, { ts: Date.now(), modelo: "x/test", tokens: 1200, costo: 0, dur: 800, herramientas: 2 })
+      const p = panel(r); const panelOk = existsSync(join(r, ".skill_dey", "PANEL.html"))
+      const ok = ragOk && p.ok && panelOk
+      return [ok, ok ? "BM25 trae lo relevante + panel.html generado ✓" : "falló BM25 o panel"]
+    })
+    await prueba("Time-travel (checkpoint + volver)", () => {
+      const r = join(dir, "ttapp"); mkdirSync(r, { recursive: true }); writeFileSync(join(r, "a.txt"), "v1")
+      const c = checkpoint(r, "inicio"); const creado = /Checkpoint "inicio"/.test(c)
+      writeFileSync(join(r, "a.txt"), "v2-roto")
+      volver(r, "inicio")
+      const restaurado = (() => { try { return readFileSync(join(r, "a.txt"), "utf8") === "v1" } catch { return false } })()
+      return [creado && restaurado, creado && restaurado ? "guarda punto y vuelve exacto (reversible) ✓" : "no restauró el checkpoint"]
+    })
+    await prueba("Cambia de modelo ante error de región (no se rompe)", () => {
+      const msg = { error: "Upstream request failed: This Go model requires Global regions. Select Global in your workspace's Privacy settings to use it." }
+      const detecta = esErrorDeRegion(msg)
+      const noConfunde = !esErrorDeRegion({ error: "rate limit exceeded (429)" }) && !esErrorDeLimite(msg)
+      const ok = detecta && noConfunde
+      return [ok, ok ? "reconoce el error de región y cambia de modelo (no lo confunde con límite) ✓" : "no detectó bien el error de región"]
+    })
     await prueba("Peso de las instrucciones (tokens fijos)", () => {
-      const oc = join(homedir(), ".config", "opencode")
+      const oc = ocDir()
       const leerOc = (f: string) => { try { return readFileSync(join(oc, f), "utf8") } catch { return "" } }
       const desc = (t: string) => [...t.matchAll(/description:\s*"([^"]*)"|describe\("([^"]*)"\)/g)].map((m) => m[1] ?? m[2]).join(" ")
       const tk = (t: string) => Math.round(t.length / 4) // ≈ 4 caracteres por token
@@ -233,11 +315,11 @@ export async function autoprueba(verificar: (args: any, ctx: any) => Promise<str
       const total = agente + skill + herr
       return [total > 0 && total < 2500, `~${total} tokens por sesión (agente ${agente} + skill ${skill} + herramientas ${herr}); referencias solo cuando se necesitan`]
     })
-  } finally { for (const h of hijos) try { h.kill("SIGKILL") } catch {} ; try { rmSync(dir, { recursive: true, force: true }) } catch {} }
+  } finally { for (const h of hijos) try { h.kill("SIGKILL") } catch {} ; if (memoriaAntes === undefined) delete process.env.SKILL_DEY_MEMORIA_GLOBAL; else process.env.SKILL_DEY_MEMORIA_GLOBAL = memoriaAntes; try { rmSync(dir, { recursive: true, force: true }) } catch {} }
 
   const bien = F.filter((f) => f.ok === true).length, mal = F.filter((f) => f.ok === false), total = F.reduce((a, f) => a + f.ms, 0)
   const lento = F.filter((f) => f.ms > 5000)
-  const log = (() => { try { return readFileSync(join(homedir(), ".config", "opencode", "skill_dey", "errores-guardian.log"), "utf8").trim().split("\n").slice(-3) } catch { return [] } })()
+  const log = (() => { try { return readFileSync(sdDir("errores-guardian.log"), "utf8").trim().split("\n").slice(-3) } catch { return [] } })()
   return [
     `SKILL_DEY autoprueba · ${bien}/${F.length} piezas OK · ${(total / 1000).toFixed(1)} s en total (proyecto temporal, tu app no se toca)`,
     ...F.map((f) => `${f.ok === true ? "✅" : f.ok === false ? "❌" : "⏭"} ${f.pieza} · ${f.ms} ms · ${f.nota}`),

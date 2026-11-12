@@ -1,10 +1,10 @@
 // SKILL_DEY — APRENDER de cada corrida (gratis, 0 tokens del modelo). Guarda qué funcionó y qué falló para no repetir,
 // y promueve los fallos con patrón a la biblioteca GLOBAL que se comparte entre todas las apps.
 import { appendFileSync, readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
+import { memoriaGlobal } from "./rutas.ts"
 import { join } from "node:path"
-import { homedir } from "node:os"
 
-const GLOBAL = join(homedir(), ".config", "opencode", "skill_dey")
+
 const leer = (p: string) => { try { return readFileSync(p, "utf8") } catch { return "" } }
 const yaEsta = (f: string, linea: string) => leer(f).split("\n").some((l) => l.trim() === linea.trim())
 
@@ -23,9 +23,9 @@ function podar(f: string, maxLineas = 180) {
 export function aprenderDeCorrida(cwd: string, etiqueta: string, lineas: string[]): string {
   const fecha = new Date().toISOString().slice(0, 10)
   const proy = join(cwd, ".skill_dey", "APRENDIZAJE.md")
-  const glob = join(GLOBAL, "LECCIONES-GLOBALES.md")
+  const glob = memoriaGlobal("LECCIONES-GLOBALES.md")
   try { mkdirSync(join(cwd, ".skill_dey"), { recursive: true }) } catch {}
-  try { mkdirSync(GLOBAL, { recursive: true }) } catch {}
+  try { mkdirSync(memoriaGlobal(), { recursive: true }) } catch {}
   let nuevas = 0
   const fallos = lineas.filter((l) => /^(FAIL|❌|CRÍTICO|ALTO)/.test(l.trim()))
   const exitos = lineas.filter((l) => /^(PASS|✅)/.test(l.trim())).length

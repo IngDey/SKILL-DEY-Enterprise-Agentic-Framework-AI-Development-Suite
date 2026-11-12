@@ -32,3 +32,4 @@ Prohibido silenciar (`@`, `catch {}`, `error_reporting(0)`, `?.` que esconde un 
 
 ## "Revisa / corrige todos los errores"
 `skill_dey_verificar(todo:true)` (código + arranque + recorrido del sitio → `.skill_dey/ERRORES-SITIO.md`, agrupado por causa). Orden: rompe (500, excepción, blanco) → seguridad → datos → consola/red → visual. Corrige, marca `[x]`, repite `skill_dey_sitio` hasta 0. Lo que exija decisión del usuario: dilo con la opción recomendada.
+Error que solo se ve en el navegador o "revisa en Chrome": `skill_dey_sitio` (Chrome real: consola, excepciones JS, red, HTTP; mira las capturas de `.skill_dey/shots/sitio/`). Con login: `visible:true` (perfil propio que recuerda la sesión) o `conectar:true` (tu Chrome abierto). Producción/URL remota = solo lectura automática.

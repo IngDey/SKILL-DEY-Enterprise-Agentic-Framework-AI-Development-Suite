@@ -1,6 +1,7 @@
 ---
 description: Explorador SKILL_DEY de bajo costo. Búsquedas amplias en el código, leer archivos o logs grandes y devolver solo conclusiones con archivo:línea. No edita nada.
 mode: subagent
+model: opencode/nemotron-3.5-lightning-free
 temperature: 0
 tools:
   skill_dey_deshacer: false

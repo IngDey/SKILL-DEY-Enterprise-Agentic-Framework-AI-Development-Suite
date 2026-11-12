@@ -1,4 +1,4 @@
-# SKILL DEY 40
+# SKILL DEY 41
 
 El estándar de desarrollo con IA para tus apps: entiende lo que pides, construye **sin romper** la app, no entrega nada con **errores**, con pruebas profesionales, seguridad, documentación, video de capacitación y el menor gasto de tokens posible.
 
@@ -8,7 +8,7 @@ Nativo en **OpenCode, Claude Code, Gemini CLI y Antigravity CLI**, con el mismo 
 - **Mac / Linux:** doble clic en `INSTALAR.command` (o en terminal: `bash INSTALAR.command`).
 - **Windows:** doble clic en `INSTALAR.bat`.
 
-Necesitas Node.js 20+ (y se recomienda Git). El instalador detecta qué IAs tienes y deja SKILL DEY en cada una. Si tu IA pregunta "¿confías en esta carpeta?", respondes tú. Luego cierra y abre tu IA.
+Necesitas Node.js 20+ (y se recomienda Git). Al final el instalador confirma la versión instalada. El instalador detecta qué IAs tienes y deja SKILL DEY en cada una. Si tu IA pregunta "¿confías en esta carpeta?", respondes tú. Luego cierra y abre tu IA.
 
 También puedes instalarlo desde tu IA:
 - **Claude Code:** `/plugin marketplace add IngDey/SKILL-DEY-Enterprise-Agentic-Framework-AI-Development-Suite` y luego `/plugin install skill-dey@skill-dey`
@@ -16,7 +16,7 @@ También puedes instalarlo desde tu IA:
 - **Antigravity CLI:** `agy plugin install ./hosts/antigravity`
 
 ## Usar
-No necesitas comandos: escribe normal. `deshaz` revierte el último cambio. `finalizar skill dey` / `iniciar skill dey` lo apagan y encienden.
+No necesitas comandos: escribe normal. `deshaz` revierte el último cambio (`deshaz solo <archivo>`, `vuelve a antes de <pedido>`, `historial`, `¿dónde quedamos?`). `finalizar skill dey` / `iniciar skill dey` lo apagan y encienden. Detalle de instalación: `docs/LEEME-INSTALACION.md`.
 
 ## Carpetas de este paquete
 - `app/` — la fuente única (motor, guardián, skills, agentes, instaladores).

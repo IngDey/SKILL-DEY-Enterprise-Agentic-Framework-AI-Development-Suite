@@ -1,9 +1,10 @@
 // SKILL_DEY — documentación y script de BD generados POR CÓDIGO (0 tokens del modelo).
 // Produce/actualiza: docs/DICCIONARIO-DATOS.md · database/instalacion.sql · docs/MANUAL-TECNICO.md (secciones AUTO) · docs/MANUAL-USUARIO.md (esqueleto por pantalla).
 // Las partes escritas a mano o por el agente (fuera de los marcadores AUTO) nunca se borran.
+import { listarArchivos } from "./listar.ts"
 import { spawnSync } from "node:child_process"
-import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from "node:fs"
-import { join, relative, extname, basename } from "node:path"
+import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync } from "node:fs"
+import { join, basename } from "node:path"
 import { manualUsuario } from "./manual.ts"
 import { volcarEsquema, conexion } from "./bd.ts"
 
@@ -11,11 +12,7 @@ type Col = { nombre: string; tipo: string; nulo: boolean; defecto?: string; clav
 type Tabla = { nombre: string; columnas: Col[]; origen: string; comentario?: string }
 
 const IGN = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage|\.venv|venv|__pycache__)([\\/]|$)/
-function archivos(cwd: string): string[] {
-  const g = spawnSync("git", ["ls-files", "-co", "--exclude-standard"], { cwd, encoding: "utf8", maxBuffer: 100_000_000 })
-  if (g.status === 0) return g.stdout.split(/\r?\n/).filter((f) => f && !IGN.test(f))
-  const out: string[] = []; const walk = (d: string) => { for (const e of readdirSync(d)) { const p = join(d, e); if (IGN.test(p)) continue; statSync(p).isDirectory() ? walk(p) : out.push(relative(cwd, p)) } }; walk(cwd); return out
-}
+const archivos = (cwd: string): string[] => listarArchivos(cwd, 8000).filter((f) => !IGN.test(f)) // acotado y por ruta relativa (no congela proyectos enormes)
 const leer = (p: string) => { try { return readFileSync(p, "utf8") } catch { return "" } }
 
 // ---------- esquema de BD: SQL, Prisma, Laravel ----------
@@ -74,7 +71,7 @@ function desdeBdViva(cwd: string): { tablas: Tabla[]; motor: string } | null {
 
 export function esquema(cwd: string): { tablas: Tabla[]; sqlArchivos: string[]; motor: string } {
   const fs = archivos(cwd)
-  const sqlArchivos = fs.filter((f) => f.endsWith(".sql") && !f.endsWith("database/instalacion.sql")).sort()
+  const sqlArchivos = fs.filter((f) => f.endsWith(".sql") && !/database[\\/]instalacion(\.skill_dey)?\.sql$/.test(f) && (() => { try { return statSync(join(cwd, f)).size < 1_000_000 } catch { return false } })()).sort()
   let tablas: Tabla[] = []
   for (const f of sqlArchivos) tablas.push(...desdeSQL(leer(join(cwd, f)), f))
   for (const f of fs.filter((f) => f.endsWith("schema.prisma"))) tablas.push(...desdePrisma(leer(join(cwd, f)), f))
@@ -93,7 +90,7 @@ function conAuto(ruta: string, titulo: string, secciones: Record<string, string>
   for (const [id, cuerpo] of Object.entries(secciones)) {
     const bloque = `<!-- AUTO:${id} (generado por skill_dey; no editar dentro) -->\n${cuerpo.trim()}\n<!-- /AUTO:${id} -->`
     const re = new RegExp(`<!-- AUTO:${id} [\\s\\S]*?<!-- /AUTO:${id} -->`)
-    doc = re.test(doc) ? doc.replace(re, bloque) : doc.trimEnd() + "\n\n" + bloque + "\n"
+    doc = re.test(doc) ? doc.replace(re, () => bloque) : doc.trimEnd() + "\n\n" + bloque + "\n"
   }
   mkdirSync(join(ruta, ".."), { recursive: true }); writeFileSync(ruta, doc)
 }
@@ -122,14 +119,16 @@ export function documentar(cwd: string): string {
     }
     const ddl = (ts: Tabla[]) => ts.map((t) => `CREATE TABLE IF NOT EXISTS ${t.nombre} (\n${t.columnas.map((c) => `  ${c.nombre} ${c.tipo}${c.nulo ? "" : " NOT NULL"}${c.defecto ? " DEFAULT " + c.defecto : ""}${c.clave === "PK" ? " PRIMARY KEY" : c.clave === "UNIQUE" ? " UNIQUE" : ""}`).concat(t.columnas.filter((c) => c.clave?.startsWith("FK → ")).map((c) => `  FOREIGN KEY (${c.nombre}) REFERENCES ${c.clave!.slice(5).replace(".", "(")})`)).join(",\n")}\n);`).join("\n\n")
     if (!script) {
-      const deSQL = sqlArchivos.map((f) => `-- ===== ${f} =====\n${leer(join(cwd, f)).trim()}\n`).join("\n")
+      const soloDDL = (t: string) => t.split(/;\s*(?:\r?\n|$)/).map((x) => x.trim()).filter((x) => /^(--[^\n]*\n\s*)*(create|alter|comment\s+on)\b/i.test(x)).map((x) => x + ";").join("\n\n")
+      const deSQL = sqlArchivos.map((f) => { const d = soloDDL(leer(join(cwd, f))); return d ? `-- ===== ${f} (solo estructura) =====\n${d}\n` : "" }).filter(Boolean).join("\n")
       const otras = tablas.filter((t) => !t.origen.endsWith(".sql"))
       script = [deSQL, otras.length ? `-- ===== Tablas definidas en migraciones/modelos (convertidas a SQL) =====\n${ddl(otras)}` : ""].filter(Boolean).join("\n")
     }
     if (!script) script = tablas.map((t) => `CREATE TABLE IF NOT EXISTS ${t.nombre} (\n${t.columnas.filter((c) => !c.nombre.includes("/")).map((c) => `  ${c.nombre} ${c.tipo.replace(/^STRING$/, "VARCHAR(255)").replace(/^INTEGER$/, "INTEGER")}${c.nulo ? "" : " NOT NULL"}${c.defecto ? " DEFAULT " + c.defecto : ""}${c.clave === "PK" ? " PRIMARY KEY" : ""}`).join(",\n")}\n);`).join("\n\n")
     mkdirSync(join(cwd, "database"), { recursive: true })
-    writeFileSync(join(cwd, "database", "instalacion.sql"), `-- Script de instalación de la base de datos — ${nombreApp}\n-- Motor: ${motor} · Generado por skill_dey el ${fecha} a partir de: ${[...new Set(tablas.map((t) => t.origen))].join(", ")}\n-- Uso: crear la BD vacía y ejecutar este archivo. Revisar tipos si se cambia de motor.\n\n${script.trim()}\n`)
-    hecho.push("database/instalacion.sql")
+    const destinoSql = (() => { const f = join(cwd, "database", "instalacion.sql"); return !existsSync(f) || /Generado por skill_dey/.test(leer(f).slice(0, 400)) ? f : join(cwd, "database", "instalacion.skill_dey.sql") })()
+    writeFileSync(destinoSql, `-- Script de instalación de la base de datos — ${nombreApp}\n-- Motor: ${motor} · Generado por skill_dey el ${fecha} a partir de: ${[...new Set(tablas.map((t) => t.origen))].join(", ")}\n-- Uso: crear la BD vacía y ejecutar este archivo. Revisar tipos si se cambia de motor.\n\n${script.trim()}\n`)
+    hecho.push("database/" + destinoSql.split(/[\\/]/).pop())
   }
 
   // 2) Manual técnico (secciones AUTO)

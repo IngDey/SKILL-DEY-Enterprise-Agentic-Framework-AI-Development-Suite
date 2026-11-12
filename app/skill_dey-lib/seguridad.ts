@@ -1,6 +1,5 @@
 // SKILL_DEY — auditoría de seguridad POR CÓDIGO (0 tokens): revisa huecos que el modelo suele olvidar al construir.
 // Corre sola en el cierre de cambios grandes y en la adopción. Cubre lo que las buenas prácticas por línea no ven (necesita el archivo entero).
-import { spawnSync } from "node:child_process"
 import { existsSync, readFileSync, statSync } from "node:fs"
 import { listarArchivos } from "./listar.ts"
 import { join } from "node:path"
@@ -15,7 +14,12 @@ export function auditarSeguridad(cwd: string): Hueco[] {
   const files = listarArchivos(cwd).filter((f) => !IGN.test(f) && web(f) && existsSync(join(cwd, f)) && statSync(join(cwd, f)).size < 1_500_000)
   const H: Hueco[] = []
   const add = (prioridad: Hueco["prioridad"], texto: string, donde: string[]) => { if (donde.length) H.push({ prioridad, texto, donde: [...new Set(donde)].slice(0, 10) }) }
-  const buscar = (re: RegExp, filtro: (f: string) => boolean, excluir?: RegExp) => { const r: string[] = []; for (const f of files.filter(filtro)) { const t = leer(join(cwd, f)); if (re.test(t) && !(excluir && excluir.test(t))) r.push(f) } return r }
+  // La excepción se mira CERCA de cada hallazgo (antes: en todo el archivo → un "Content-Type" cualquiera escondía una subida sin validar)
+  const buscar = (re: RegExp, filtro: (f: string) => boolean, excluir?: RegExp) => {
+    const r: string[] = [], g = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g")
+    for (const f of files.filter(filtro)) { const t = leer(join(cwd, f)); for (const m of t.matchAll(g)) { const i = m.index ?? 0; if (!excluir || !excluir.test(t.slice(Math.max(0, i - 1500), i + 1500))) { r.push(f); break } } }
+    return r
+  }
 
   // Contraseñas sin cifrar
   add("CRÍTICO", "Contraseña guardada sin cifrar (usa password_hash/bcrypt/argon2)", [
@@ -30,19 +34,19 @@ export function auditarSeguridad(cwd: string): Hueco[] {
       paginas.filter((f) => !conSesion.includes(f) && !/login|logout|index|registro|register|recuperar|forgot|public|install/i.test(f) && /(echo|print|<\?=|<html|<form|<table|json_encode)/i.test(leer(join(cwd, f)))))
   }
   // Formularios que modifican datos sin token CSRF
-  add("ALTO", "Formulario POST sin token CSRF (añade y valida un token)", buscar(/<form[^>]*method\s*=\s*["']?post/i, web, /csrf|_token|authenticity_token|nonce|csrf_field|@csrf/i))
+  add("ALTO", "Formulario POST sin token CSRF (añade y valida un token)", buscar(/<form[^>]*method\s*=\s*["']?post/i, web, /csrf|(?<![A-Za-z])_token\b|authenticity_token|csrf_field|@csrf|nonce/i))
   // Acceso a un registro por id sin filtrar por el dueño/usuario
   add("ALTO", "Consulta por id tomado de la URL sin validar el dueño (otro usuario ve/edita datos ajenos)", [
     ...buscar(/WHERE\s+id\s*=\s*['"]?\s*(\.|\$\{?)?\s*\$_(GET|POST|REQUEST)\[/i, php, /user_id|usuario_id|owner|and\s+\w*user/i),
     ...buscar(/findByPk|findOne\(\s*\{?\s*id\s*:\s*(req\.params|req\.query)/i, js, /user|owner|where.*user/i)])
   // Subida de archivos sin validar tipo/tamaño
   add("ALTO", "Subida de archivos sin validar tipo ni tamaño", [
-    ...buscar(/move_uploaded_file|\$_FILES\[/i, php, /mime|getimagesize|pathinfo|finfo|extension|type|size|MAX_FILE/i),
+    ...buscar(/move_uploaded_file|\$_FILES\[/i, php, /mime_content_type|getimagesize|finfo|pathinfo\s*\(|\[\s*['"](type|size)['"]\s*\]|MAX_FILE_SIZE|in_array\s*\([^)]*(ext|extension|mime)/i),
     ...buscar(/multer|formidable|busboy|\.upload\(/i, js, /fileFilter|limits|mimetype|allowed/i)])
   // Modo debug encendido / errores visibles
   add("ALTO", "Modo depuración o errores visibles al usuario (expón solo en desarrollo)", [
     ...buscar(/display_errors\s*[,=]\s*['"]?(1|On)|error_reporting\s*\(\s*E_ALL\s*\)/i, php),
-    ...buscar(/APP_DEBUG\s*=\s*true/i, (f) => /\.env$/.test(f))])
+    ...(/^\s*APP_DEBUG\s*=\s*["']?true/im.test(leer(join(cwd, ".env"))) && /^\s*APP_ENV\s*=\s*["']?prod/im.test(leer(join(cwd, ".env"))) ? [".env (APP_DEBUG=true con APP_ENV=production)"] : [])])
   // CORS abierto a todos
   add("MEDIO", "CORS abierto a cualquier origen (*) (limita a los dominios necesarios)", [
     ...buscar(/Access-Control-Allow-Origin["'\s:,]+\*/i, web),

@@ -1,16 +1,60 @@
 #!/usr/bin/env node
-// SKILL DEY 40.0.0 · generado por scripts/build.mjs desde app/skill_dey-lib/cli.ts — no editar a mano
+// SKILL DEY 41.0.0 · generado por scripts/build.mjs desde app/skill_dey-lib/cli.ts — no editar a mano
 // app/skill_dey-lib/cli.ts
-import { resolve } from "node:path";
+import { resolve as resolve2 } from "node:path";
+
+// app/skill_dey-lib/listar.ts
+import { spawnSync } from "node:child_process";
+import { readdirSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
+var IGN = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage|\.venv|venv|__pycache__|\.next|\.nuxt|storage[\\/]framework|bootstrap[\\/]cache)([\\/]|$)|\.min\.(js|css)$|\.bundle\.js$/i;
+function listarArchivos(cwd, maxFiles = 20000) {
+  const g = spawnSync("git", ["-c", "core.quotepath=off", "ls-files", "-co", "--exclude-standard", "-z"], { cwd, encoding: "utf8", maxBuffer: 1e8, timeout: 20000 });
+  if (g.status === 0 && g.stdout.trim())
+    return g.stdout.split("\x00").filter((f) => f && !IGN.test(f)).slice(0, maxFiles);
+  const out = [];
+  const walk = (d, prof) => {
+    if (out.length >= maxFiles || prof > 12)
+      return;
+    let ents = [];
+    try {
+      ents = readdirSync(d);
+    } catch {
+      return;
+    }
+    for (const e of ents) {
+      if (e.startsWith(".") && e !== ".env.example")
+        continue;
+      const p = join(d, e);
+      const rel = relative(cwd, p);
+      if (IGN.test(rel) || IGN.test("/" + rel))
+        continue;
+      let st;
+      try {
+        st = statSync(p);
+      } catch {
+        continue;
+      }
+      if (st.isDirectory())
+        walk(p, prof + 1);
+      else if (st.size < 3000000)
+        out.push(rel.replace(/\\/g, "/"));
+      if (out.length >= maxFiles)
+        return;
+    }
+  };
+  walk(cwd, 0);
+  return out;
+}
 
 // app/skill_dey-lib/documentar.ts
-import { spawnSync as spawnSync2 } from "node:child_process";
-import { existsSync as existsSync2, readFileSync as readFileSync3, writeFileSync, mkdirSync as mkdirSync2, readdirSync, statSync } from "node:fs";
-import { join as join3, relative, basename as basename2 } from "node:path";
+import { spawnSync as spawnSync3 } from "node:child_process";
+import { existsSync as existsSync2, readFileSync as readFileSync3, writeFileSync, mkdirSync as mkdirSync2, statSync as statSync2 } from "node:fs";
+import { join as join4, basename as basename2 } from "node:path";
 
 // app/skill_dey-lib/manual.ts
 import { readFileSync } from "node:fs";
-import { join, basename } from "node:path";
+import { join as join2, basename } from "node:path";
 var cache = new Map;
 var leer = (p) => {
   if (cache.has(p))
@@ -75,7 +119,7 @@ function columnas(src) {
   return [...new Set([...src.matchAll(/<th\b[^>]*>([\s\S]*?)<\/th>/gi)].map((m) => limpiar(m[1])).filter((x) => x && x.length < 40))].slice(0, 15);
 }
 function fichaPantalla(cwd, f, todas) {
-  const src = leer(join(cwd, f)), titulo = tituloPantalla(f, src);
+  const src = leer(join2(cwd, f)), titulo = tituloPantalla(f, src);
   const C = campos(src), B = botones(src), M = mensajes(src), TH = columnas(src);
   const login = (C.some((c) => c.tipo === "contraseña") || /<form/i.test(src)) && /login|ingres|iniciar sesi|acceso|signin/i.test(basename(f) + " " + titulo);
   const graficos = /new Chart\(|chart\.js|apexcharts|echarts|highcharts|recharts|<canvas/i.test(src);
@@ -84,7 +128,7 @@ function fichaPantalla(cwd, f, todas) {
   const sesion = /\$_SESSION\[|session_start\(|Auth::|middleware\(['"]auth|useAuth|requireAuth|isAuthenticated/.test(src);
   const rol = src.match(/\$_SESSION\[['"](rol|role|perfil|tipo_usuario)['"]\]\s*[!=]==?\s*['"]([^'"]+)['"]/i)?.[2];
   const nombreArchivo = basename(f);
-  const desde = todas.filter((o) => o !== f).map((o) => ({ o, s: leer(join(cwd, o)) })).filter(({ s }) => new RegExp(`href\\s*=\\s*["'][^"']*${nombreArchivo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i").test(s) || new RegExp(`to\\s*=\\s*["']/${nombreArchivo.replace(/\.[^.]+$/, "")}["']`).test(s)).map(({ o, s }) => {
+  const desde = todas.filter((o) => o !== f).map((o) => ({ o, s: leer(join2(cwd, o)) })).filter(({ s }) => new RegExp(`href\\s*=\\s*["'][^"']*${nombreArchivo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i").test(s) || new RegExp(`to\\s*=\\s*["']/${nombreArchivo.replace(/\.[^.]+$/, "")}["']`).test(s)).map(({ o, s }) => {
     const a = s.match(new RegExp(`<a\\b[^>]*href\\s*=\\s*["'][^"']*${nombreArchivo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[^>]*>([\\s\\S]*?)<\\/a>`, "i"));
     return `${tituloPantalla(o, s)}${a && limpiar(a[1]) ? ` → "${limpiar(a[1])}"` : ""}`;
   }).slice(0, 5);
@@ -117,7 +161,7 @@ function fichaPantalla(cwd, f, todas) {
 function manualUsuario(cwd, vistas, doc) {
   cache.clear();
   let fichas = 0;
-  vistas = vistas.filter((v) => /<(html|body|form|table|div|main|section|h1|h2|template)\b|echo\s|print\s|<\?=|return\s*\(?\s*</i.test(leer(join(cwd, v))));
+  vistas = vistas.filter((v) => /<(html|body|form|table|div|main|section|h1|h2|template)\b|echo\s|print\s|<\?=|return\s*\(?\s*</i.test(leer(join2(cwd, v))));
   for (const v of vistas) {
     const id = v.replace(/\\/g, "/"), { titulo, cuerpo } = fichaPantalla(cwd, v, vistas);
     const bloque = `<!-- AUTO:pantalla:${id} (generado por skill_dey desde el código; lo de abajo de este bloque es tuyo) -->
@@ -143,9 +187,9 @@ ${bloque}
 }
 
 // app/skill_dey-lib/bd.ts
-import { spawnSync } from "node:child_process";
+import { spawnSync as spawnSync2 } from "node:child_process";
 import { readFileSync as readFileSync2, copyFileSync, existsSync, mkdirSync } from "node:fs";
-import { join as join2, isAbsolute } from "node:path";
+import { join as join3, isAbsolute } from "node:path";
 var leer2 = (p) => {
   try {
     return readFileSync2(p, "utf8");
@@ -154,14 +198,15 @@ var leer2 = (p) => {
   }
 };
 function conexion(cwd) {
-  const env = leer2(join2(cwd, ".env"));
+  const env = leer2(join3(cwd, ".env"));
   if (!env)
     return null;
   const v = (...ks) => {
     for (const k of ks) {
-      const m = env.match(new RegExp(`^\\s*${k}\\s*=\\s*["']?([^"'\\r\\n#]*)`, "m"));
-      if (m && m[1].trim())
-        return m[1].trim();
+      const m = env.match(new RegExp(`^\\s*${k}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\r\\n#]*))`, "m"));
+      const x = (m?.[1] ?? m?.[2] ?? m?.[3] ?? "").trim();
+      if (x)
+        return x;
     }
     return "";
   };
@@ -180,11 +225,11 @@ function conexion(cwd) {
   if (!db)
     return null;
   const motor = /sqlite/.test(tipo) || /\.(sqlite3?|db)$/i.test(db) ? "sqlite" : /pg|postgres/.test(tipo) ? "pg" : "mysql";
-  return { motor, host, port, db: motor === "sqlite" && !isAbsolute(db) ? join2(cwd, db) : db, user, pass };
+  return { motor, host, port, db: motor === "sqlite" && !isAbsolute(db) ? join3(cwd, db) : db, user, pass };
 }
 function correr(c, cmd, sql = "", otraBd) {
   const db = otraBd ?? c.db;
-  const r = c.motor === "sqlite" ? spawnSync("sqlite3", cmd === "dump" ? [db, ".schema"] : ["-noheader", db, sql], { encoding: "utf8", timeout: 25000 }) : c.motor === "pg" ? spawnSync(cmd === "dump" ? "pg_dump" : "psql", cmd === "dump" ? ["--schema-only", "--no-owner", "--no-privileges", "-h", c.host, ...c.port ? ["-p", c.port] : [], ...c.user ? ["-U", c.user] : [], db] : ["-tA", "-h", c.host, ...c.port ? ["-p", c.port] : [], ...c.user ? ["-U", c.user] : [], "-d", db, "-c", sql], { encoding: "utf8", timeout: 25000, env: { ...process.env, PGPASSWORD: c.pass } }) : spawnSync(cmd === "dump" ? "mysqldump" : "mysql", cmd === "dump" ? ["--no-data", "--skip-comments", "--skip-add-drop-table", "--skip-lock-tables", "-h", c.host, ...c.port ? ["-P", c.port] : [], ...c.user ? ["-u", c.user] : [], db] : ["-N", "-B", "-h", c.host, ...c.port ? ["-P", c.port] : [], ...c.user ? ["-u", c.user] : [], db, "-e", sql], { encoding: "utf8", timeout: 25000, env: { ...process.env, MYSQL_PWD: c.pass } });
+  const r = c.motor === "sqlite" ? spawnSync2("sqlite3", cmd === "dump" ? ["-readonly", db, ".schema"] : ["-readonly", "-noheader", db, sql], { encoding: "utf8", timeout: 25000 }) : c.motor === "pg" ? spawnSync2(cmd === "dump" ? "pg_dump" : "psql", cmd === "dump" ? ["--schema-only", "--no-owner", "--no-privileges", "-h", c.host, ...c.port ? ["-p", c.port] : [], ...c.user ? ["-U", c.user] : [], db] : ["-tA", "-h", c.host, ...c.port ? ["-p", c.port] : [], ...c.user ? ["-U", c.user] : [], "-d", db, "-c", sql], { encoding: "utf8", timeout: 25000, env: { ...process.env, PGPASSWORD: c.pass, PGOPTIONS: "-c default_transaction_read_only=on" } }) : spawnSync2(cmd === "dump" ? "mysqldump" : "mysql", cmd === "dump" ? ["--no-data", "--skip-comments", "--skip-add-drop-table", "--skip-lock-tables", "-h", c.host, ...c.port ? ["-P", c.port] : [], ...c.user ? ["-u", c.user] : [], db] : ["-N", "-B", "-h", c.host, ...c.port ? ["-P", c.port] : [], ...c.user ? ["-u", c.user] : [], db, "-e", `START TRANSACTION READ ONLY; ${sql}; ROLLBACK;`], { encoding: "utf8", timeout: 25000, env: { ...process.env, MYSQL_PWD: c.pass } });
   return { ok: r.status === 0, out: `${r.stdout ?? ""}`.trim() || `${r.stderr ?? r.error?.message ?? ""}`.trim() };
 }
 function volcarEsquema(cwd) {
@@ -194,7 +239,7 @@ function volcarEsquema(cwd) {
   const r = correr(c, "dump");
   return { sql: r.ok ? r.out : "", motor: { mysql: "MySQL/MariaDB", pg: "PostgreSQL", sqlite: "SQLite" }[c.motor] };
 }
-var consultaSegura = (sql) => /^\s*select\b/i.test(sql) && !/;\s*\S/.test(sql) && !/\b(insert|update|delete|drop|alter|create|truncate|grant|revoke|into\s+outfile|load_file|pg_sleep|sleep\s*\(|copy\s)\b/i.test(sql);
+var consultaSegura = (sql) => /^\s*select\b/i.test(sql) && !/;\s*\S/.test(sql) && !/\b(insert|update|delete|drop|alter|create|truncate|grant|revoke|replace|merge|call|exec|execute|attach|detach|pragma|vacuum|into\s+(outfile|dumpfile)|load_file|load_extension|writefile|readfile|edit\s*\(|lo_(export|import)|pg_(sleep|terminate_backend|cancel_backend|reload_conf|read_file|read_binary_file|ls_dir|write)|dblink|setval|nextval|set_config|sleep\s*\(|benchmark\s*\(|get_lock|copy\s)\b/i.test(sql);
 function contar(cwd, sql) {
   if (!consultaSegura(sql))
     return { ok: false, error: "consulta no permitida (solo SELECT de lectura)" };
@@ -210,23 +255,8 @@ function contar(cwd, sql) {
 }
 
 // app/skill_dey-lib/documentar.ts
-var IGN = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage|\.venv|venv|__pycache__)([\\/]|$)/;
-function archivos(cwd) {
-  const g = spawnSync2("git", ["ls-files", "-co", "--exclude-standard"], { cwd, encoding: "utf8", maxBuffer: 1e8 });
-  if (g.status === 0)
-    return g.stdout.split(/\r?\n/).filter((f) => f && !IGN.test(f));
-  const out = [];
-  const walk = (d) => {
-    for (const e of readdirSync(d)) {
-      const p = join3(d, e);
-      if (IGN.test(p))
-        continue;
-      statSync(p).isDirectory() ? walk(p) : out.push(relative(cwd, p));
-    }
-  };
-  walk(cwd);
-  return out;
-}
+var IGN2 = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage|\.venv|venv|__pycache__)([\\/]|$)/;
+var archivos = (cwd) => listarArchivos(cwd, 8000).filter((f) => !IGN2.test(f));
 var leer3 = (p) => {
   try {
     return readFileSync3(p, "utf8");
@@ -325,14 +355,20 @@ function desdeBdViva(cwd) {
 }
 function esquema(cwd) {
   const fs = archivos(cwd);
-  const sqlArchivos = fs.filter((f) => f.endsWith(".sql") && !f.endsWith("database/instalacion.sql")).sort();
+  const sqlArchivos = fs.filter((f) => f.endsWith(".sql") && !/database[\\/]instalacion(\.skill_dey)?\.sql$/.test(f) && (() => {
+    try {
+      return statSync2(join4(cwd, f)).size < 1e6;
+    } catch {
+      return false;
+    }
+  })()).sort();
   let tablas = [];
   for (const f of sqlArchivos)
-    tablas.push(...desdeSQL(leer3(join3(cwd, f)), f));
+    tablas.push(...desdeSQL(leer3(join4(cwd, f)), f));
   for (const f of fs.filter((f) => f.endsWith("schema.prisma")))
-    tablas.push(...desdePrisma(leer3(join3(cwd, f)), f));
+    tablas.push(...desdePrisma(leer3(join4(cwd, f)), f));
   for (const f of fs.filter((f) => /migrations?[\\/].*\.php$/.test(f)).sort())
-    tablas.push(...desdeLaravel(leer3(join3(cwd, f)), f));
+    tablas.push(...desdeLaravel(leer3(join4(cwd, f)), f));
   let motorVivo = "";
   if (!tablas.length) {
     const v = desdeBdViva(cwd);
@@ -344,7 +380,7 @@ function esquema(cwd) {
   const vistas = new Map;
   for (const t of tablas)
     vistas.set(t.nombre.toLowerCase(), t);
-  const env = leer3(join3(cwd, ".env.example")) + leer3(join3(cwd, "prisma", "schema.prisma"));
+  const env = leer3(join4(cwd, ".env.example")) + leer3(join4(cwd, "prisma", "schema.prisma"));
   const motor = motorVivo || (/postgres/i.test(env) ? "PostgreSQL" : /mysql|mariadb/i.test(env) ? "MySQL/MariaDB" : /sqlite/i.test(env) ? "SQLite" : /sqlserver|mssql/i.test(env) ? "SQL Server" : "SQL estándar");
   return { tablas: [...vistas.values()], sqlArchivos, motor };
 }
@@ -357,26 +393,26 @@ ${manualInicial}`;
 ${cuerpo.trim()}
 <!-- /AUTO:${id} -->`;
     const re = new RegExp(`<!-- AUTO:${id} [\\s\\S]*?<!-- /AUTO:${id} -->`);
-    doc = re.test(doc) ? doc.replace(re, bloque) : doc.trimEnd() + `
+    doc = re.test(doc) ? doc.replace(re, () => bloque) : doc.trimEnd() + `
 
 ` + bloque + `
 `;
   }
-  mkdirSync2(join3(ruta, ".."), { recursive: true });
+  mkdirSync2(join4(ruta, ".."), { recursive: true });
   writeFileSync(ruta, doc);
 }
 function documentar(cwd) {
   const fs = archivos(cwd), hecho = [];
   const pkg = (() => {
     try {
-      return JSON.parse(leer3(join3(cwd, "package.json")));
+      return JSON.parse(leer3(join4(cwd, "package.json")));
     } catch {
       return null;
     }
   })();
   const comp = (() => {
     try {
-      return JSON.parse(leer3(join3(cwd, "composer.json")));
+      return JSON.parse(leer3(join4(cwd, "composer.json")));
     } catch {
       return null;
     }
@@ -396,13 +432,13 @@ function documentar(cwd) {
     ].join(`
 `)).join(`
 `);
-    conAuto(join3(cwd, "docs", "DICCIONARIO-DATOS.md"), `Diccionario de datos — ${nombreApp}`, { resumen: `Motor: ${motor} · Tablas: ${tablas.length} · Actualizado: ${fecha}`, tablas: dic }, `Descripción funcional de las tablas (escríbela aquí; lo de abajo se actualiza solo):
+    conAuto(join4(cwd, "docs", "DICCIONARIO-DATOS.md"), `Diccionario de datos — ${nombreApp}`, { resumen: `Motor: ${motor} · Tablas: ${tablas.length} · Actualizado: ${fecha}`, tablas: dic }, `Descripción funcional de las tablas (escríbela aquí; lo de abajo se actualiza solo):
 `);
     hecho.push(`docs/DICCIONARIO-DATOS.md (${tablas.length} tablas)`);
     let script = "";
     const prisma = fs.find((f) => f.endsWith("schema.prisma"));
-    if (prisma && existsSync2(join3(cwd, "node_modules", ".bin", process.platform === "win32" ? "prisma.cmd" : "prisma"))) {
-      const r = spawnSync2("npx", ["--no-install", "prisma", "migrate", "diff", "--from-empty", "--to-schema-datamodel", prisma, "--script"], { cwd, encoding: "utf8", shell: process.platform === "win32", timeout: 120000 });
+    if (prisma && existsSync2(join4(cwd, "node_modules", ".bin", process.platform === "win32" ? "prisma.cmd" : "prisma"))) {
+      const r = spawnSync3("npx", ["--no-install", "prisma", "migrate", "diff", "--from-empty", "--to-schema-datamodel", prisma, "--script"], { cwd, encoding: "utf8", shell: process.platform === "win32", timeout: 120000 });
       if (r.status === 0)
         script = r.stdout;
     }
@@ -413,9 +449,15 @@ ${t.columnas.map((c) => `  ${c.nombre} ${c.tipo}${c.nulo ? "" : " NOT NULL"}${c.
 
 `);
     if (!script) {
-      const deSQL = sqlArchivos.map((f) => `-- ===== ${f} =====
-${leer3(join3(cwd, f)).trim()}
-`).join(`
+      const soloDDL = (t) => t.split(/;\s*(?:\r?\n|$)/).map((x) => x.trim()).filter((x) => /^(--[^\n]*\n\s*)*(create|alter|comment\s+on)\b/i.test(x)).map((x) => x + ";").join(`
+
+`);
+      const deSQL = sqlArchivos.map((f) => {
+        const d = soloDDL(leer3(join4(cwd, f)));
+        return d ? `-- ===== ${f} (solo estructura) =====
+${d}
+` : "";
+      }).filter(Boolean).join(`
 `);
       const otras = tablas.filter((t) => !t.origen.endsWith(".sql"));
       script = [deSQL, otras.length ? `-- ===== Tablas definidas en migraciones/modelos (convertidas a SQL) =====
@@ -429,16 +471,20 @@ ${t.columnas.filter((c) => !c.nombre.includes("/")).map((c) => `  ${c.nombre} ${
 );`).join(`
 
 `);
-    mkdirSync2(join3(cwd, "database"), { recursive: true });
-    writeFileSync(join3(cwd, "database", "instalacion.sql"), `-- Script de instalación de la base de datos — ${nombreApp}
+    mkdirSync2(join4(cwd, "database"), { recursive: true });
+    const destinoSql = (() => {
+      const f = join4(cwd, "database", "instalacion.sql");
+      return !existsSync2(f) || /Generado por skill_dey/.test(leer3(f).slice(0, 400)) ? f : join4(cwd, "database", "instalacion.skill_dey.sql");
+    })();
+    writeFileSync(destinoSql, `-- Script de instalación de la base de datos — ${nombreApp}
 -- Motor: ${motor} · Generado por skill_dey el ${fecha} a partir de: ${[...new Set(tablas.map((t) => t.origen))].join(", ")}
 -- Uso: crear la BD vacía y ejecutar este archivo. Revisar tipos si se cambia de motor.
 
 ${script.trim()}
 `);
-    hecho.push("database/instalacion.sql");
+    hecho.push("database/" + destinoSql.split(/[\\/]/).pop());
   }
-  const ex = leer3(join3(cwd, ".env.example")).split(/\r?\n/).filter((l) => /^\s*[A-Z_][A-Z0-9_]*\s*=/.test(l)).map((l) => {
+  const ex = leer3(join4(cwd, ".env.example")).split(/\r?\n/).filter((l) => /^\s*[A-Z_][A-Z0-9_]*\s*=/.test(l)).map((l) => {
     const [k, ...r] = l.split("=");
     const coment = r.join("=").split("#").slice(1).join("#").trim();
     return `| ${k.trim()} | ${coment} |`;
@@ -447,7 +493,7 @@ ${script.trim()}
   const stack = [pkg && "Node.js", comp && "PHP (Composer)", fs.some((f) => f.endsWith(".php")) && !comp && "PHP", fs.some((f) => f.endsWith(".py")) && "Python", fs.some((f) => /\.(tsx?|jsx)$/.test(f)) && "TypeScript/JSX", pkg?.dependencies?.react && "React", pkg?.dependencies?.vue && "Vue", pkg?.dependencies?.express && "Express", comp?.require?.["laravel/framework"] && "Laravel"].filter(Boolean).join(" · ");
   const rutas = [];
   for (const f of fs.filter((f) => /\.(m?[jt]s|php|py)$/.test(f)).slice(0, 800)) {
-    const t = leer3(join3(cwd, f));
+    const t = leer3(join4(cwd, f));
     for (const m of t.matchAll(/(?:app|router|Route)(?:\.|::)(get|post|put|patch|delete)\s*\(\s*['"]([^'"]+)['"]/gi))
       rutas.push(`| ${m[1].toUpperCase()} | ${m[2]} | ${f} |`);
     for (const m of t.matchAll(/@(?:app|bp|router)\.(get|post|put|delete|route)\(\s*['"]([^'"]+)['"]/g))
@@ -456,7 +502,7 @@ ${script.trim()}
   const paginas = fs.filter((f) => f.endsWith(".php") && !/vendor|config|includes?|lib|src[\\/]|app[\\/]|clases?|models?|controllers?|migrations?|tests?/i.test(f));
   const carpetas = [...new Set(fs.map((f) => f.split(/[\\/]/)[0]).filter((d) => !d.includes(".")))].slice(0, 25);
   const deps = Object.keys({ ...pkg?.dependencies ?? {}, ...comp?.require ?? {} }).slice(0, 40);
-  conAuto(join3(cwd, "docs", "MANUAL-TECNICO.md"), `Manual técnico — ${nombreApp}`, {
+  conAuto(join4(cwd, "docs", "MANUAL-TECNICO.md"), `Manual técnico — ${nombreApp}`, {
     general: `Stack detectado: ${stack || "—"} · Base de datos: ${tablas.length ? motor + ` (${tablas.length} tablas, ver DICCIONARIO-DATOS.md)` : "—"} · Actualizado: ${fecha}`,
     instalacion: ["1. Clonar/copiar el proyecto.", pkg ? "2. `npm install`" : comp ? "2. `composer install`" : "2. Instalar dependencias del stack.", "3. Copiar `.env.example` a `.env` y completar los valores.", tablas.length ? "4. Crear la base de datos y ejecutar `database/instalacion.sql` (o las migraciones)." : "", "5. Iniciar con el comando de la tabla Comandos."].filter(Boolean).join(`
 `),
@@ -475,13 +521,13 @@ ${script.trim()}
 `);
   hecho.push("docs/MANUAL-TECNICO.md");
   const vistas = [...paginas, ...fs.filter((f) => /(pages|views|screens)[\\/].*\.(vue|svelte|[jt]sx|html|blade\.php)$/.test(f))].slice(0, 80);
-  const mu = join3(cwd, "docs", "MANUAL-USUARIO.md");
+  const mu = join4(cwd, "docs", "MANUAL-USUARIO.md");
   let doc = existsSync2(mu) ? readFileSync3(mu, "utf8") : `# Manual de usuario — ${nombreApp}
 
 Cómo usar la aplicación, pantalla por pantalla.
 `;
   const r = manualUsuario(cwd, vistas, doc);
-  mkdirSync2(join3(cwd, "docs"), { recursive: true });
+  mkdirSync2(join4(cwd, "docs"), { recursive: true });
   writeFileSync(mu, r.doc);
   hecho.push(`docs/MANUAL-USUARIO.md (${r.fichas} pantallas documentadas)`);
   return `Documentación actualizada: ${hecho.join(" · ")}`;
@@ -493,12 +539,12 @@ import { existsSync as existsSync3, readFileSync as readFileSync5, statSync as s
 import { join as join6 } from "node:path";
 
 // app/skill_dey-lib/sintaxis.ts
-import { spawnSync as spawnSync3 } from "node:child_process";
+import { spawnSync as spawnSync4 } from "node:child_process";
 import { readFileSync as readFileSync4, writeFileSync as writeFileSync2, rmSync } from "node:fs";
-import { join as join4, basename as basename3, isAbsolute as isAbsolute2 } from "node:path";
+import { join as join5, basename as basename3, isAbsolute as isAbsolute2 } from "node:path";
 import { tmpdir } from "node:os";
 function errorJs(cwd, archivo) {
-  const abs = isAbsolute2(archivo) ? archivo : join4(cwd, archivo);
+  const abs = isAbsolute2(archivo) ? archivo : join5(cwd, archivo);
   let src = "";
   try {
     src = readFileSync4(abs, "utf8");
@@ -508,10 +554,10 @@ function errorJs(cwd, archivo) {
   if (/\.js$/i.test(abs) && /<[A-Za-z][\w.]*[\s>\/]/.test(src) && /(\/>|<\/[A-Za-z])/.test(src))
     return "";
   const esm = /\.js$/i.test(abs) && /^\s*(import\s|import\{|export\s|export\{)/m.test(src);
-  const tmp = esm ? join4(tmpdir(), `skill_dey-chk-${process.pid}-${Date.now()}-${basename3(abs)}.mjs`) : "";
+  const tmp = esm ? join5(tmpdir(), `skill_dey-chk-${process.pid}-${Date.now()}-${basename3(abs)}.mjs`) : "";
   if (tmp)
     writeFileSync2(tmp, src);
-  const r = spawnSync3("node", ["--check", tmp || abs], { cwd, encoding: "utf8", timeout: 20000 });
+  const r = spawnSync4("node", ["--check", tmp || abs], { cwd, encoding: "utf8", timeout: 20000 });
   if (tmp)
     try {
       rmSync(tmp);
@@ -520,50 +566,6 @@ function errorJs(cwd, archivo) {
     return "";
   return `${r.stdout ?? ""}${r.stderr ?? ""}`.split(tmp || "\x00").join(archivo).split(/\r?\n/).filter((l) => l.trim() && !/^\s*at \S|^Node\.js v/.test(l)).slice(-6).join(`
 `);
-}
-
-// app/skill_dey-lib/listar.ts
-import { spawnSync as spawnSync4 } from "node:child_process";
-import { readdirSync as readdirSync2, statSync as statSync2 } from "node:fs";
-import { join as join5, relative as relative2 } from "node:path";
-var IGN2 = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage|\.venv|venv|__pycache__|\.next|\.nuxt|storage[\\/]framework|bootstrap[\\/]cache)([\\/]|$)|\.min\.(js|css)$|\.bundle\.js$/i;
-function listarArchivos(cwd, maxFiles = 20000) {
-  const g = spawnSync4("git", ["ls-files", "-co", "--exclude-standard"], { cwd, encoding: "utf8", maxBuffer: 1e8 });
-  if (g.status === 0 && g.stdout.trim())
-    return g.stdout.split(/\r?\n/).filter((f) => f && !IGN2.test(f));
-  const out = [];
-  const walk = (d, prof) => {
-    if (out.length >= maxFiles || prof > 12)
-      return;
-    let ents = [];
-    try {
-      ents = readdirSync2(d);
-    } catch {
-      return;
-    }
-    for (const e of ents) {
-      if (e.startsWith(".") && e !== ".env.example")
-        continue;
-      const p = join5(d, e);
-      const rel = relative2(cwd, p);
-      if (IGN2.test(rel) || IGN2.test("/" + rel))
-        continue;
-      let st;
-      try {
-        st = statSync2(p);
-      } catch {
-        continue;
-      }
-      if (st.isDirectory())
-        walk(p, prof + 1);
-      else if (st.size < 3000000)
-        out.push(rel.replace(/\\/g, "/"));
-      if (out.length >= maxFiles)
-        return;
-    }
-  };
-  walk(cwd, 0);
-  return out;
 }
 
 // app/skill_dey-lib/escaneo.ts
@@ -578,6 +580,9 @@ function revisarTodo(cwd) {
   const files = listarArchivos(cwd).filter((f) => !IGN3.test(f) && existsSync3(join6(cwd, f)) && statSync3(join6(cwd, f)).size < 2000000);
   const L = [];
   let errores = 0;
+  const t0 = Date.now(), TOPE = 90000;
+  const aTiempo = () => Date.now() - t0 < TOPE;
+  const corte = (n, total) => n < total ? ` (revisados ${n} de ${total}: se acabó el tiempo; usa skill_dey_verificar sobre lo cambiado)` : "";
   const falla = (titulo, det) => {
     errores += det.length || 1;
     L.push(`❌ ${titulo}`, ...det.slice(0, 10).map((d) => "   " + d.replace(cwd, "").slice(0, 200)), ...det.length > 10 ? [`   … y ${det.length - 10} más`] : []);
@@ -585,30 +590,45 @@ function revisarTodo(cwd) {
   const php = files.filter((f) => f.endsWith(".php"));
   if (php.length && hay("php", cwd)) {
     const malos = [];
-    for (let i = 0;i < php.length; i += 40) {
-      const lote = php.slice(i, i + 40);
-      const r = sh(lote.map((f) => `php -l "${f}"`).join(WIN ? " & " : " ; "), cwd, 120000);
-      for (const l of r.out.split(/\r?\n/))
+    let n = 0;
+    for (const f of php) {
+      if (!aTiempo())
+        break;
+      n++;
+      const r = spawnSync5("php", ["-l", f], { cwd, encoding: "utf8", timeout: 20000 });
+      for (const l of `${r.stdout ?? ""}${r.stderr ?? ""}`.split(/\r?\n/))
         if (/(Parse error|Fatal error|Errors parsing)/i.test(l) && !/No syntax errors/i.test(l))
           malos.push(l.trim());
     }
-    malos.length ? falla(`PHP: ${malos.length} archivo(s) con error de sintaxis (de ${php.length})`, malos) : L.push(`✅ PHP: ${php.length} archivos sin errores de sintaxis`);
+    malos.length ? falla(`PHP: ${malos.length} archivo(s) con error de sintaxis (de ${php.length})`, malos) : L.push(`✅ PHP: ${n} archivos sin errores de sintaxis${corte(n, php.length)}`);
   }
   const js = files.filter((f) => /\.(m?js|cjs)$/.test(f));
   if (js.length) {
     const malos = [];
+    let n = 0;
     for (const f of js) {
+      if (!aTiempo())
+        break;
+      n++;
       const x = errorJs(cwd, f);
       if (x)
         malos.push(`${f}: ${(x.split(/\r?\n/).find((l) => /Error/.test(l)) ?? "error").trim()}`);
     }
-    malos.length ? falla(`JavaScript: ${malos.length} archivo(s) con error (de ${js.length})`, malos) : L.push(`✅ JavaScript: ${js.length} archivos sin errores de sintaxis`);
+    malos.length ? falla(`JavaScript: ${malos.length} archivo(s) con error (de ${js.length})`, malos) : L.push(`✅ JavaScript: ${n} archivos sin errores de sintaxis${corte(n, js.length)}`);
   }
   const py = files.filter((f) => f.endsWith(".py"));
   const pyCmd = ["python3", "python", "py"].find((c) => sh(`${c} --version`, cwd, 1e4).code === 0);
   if (py.length && pyCmd) {
-    const r = sh(`${pyCmd} -m py_compile ${py.map((f) => `"${f}"`).join(" ")}`, cwd, 300000);
-    r.code !== 0 ? falla("Python: errores de sintaxis", r.out.split(/\r?\n/).filter((l) => /Error|File "/.test(l))) : L.push(`✅ Python: ${py.length} archivos sin errores de sintaxis`);
+    const det = [];
+    let n = 0;
+    for (let i = 0;i < py.length && aTiempo(); i += 100) {
+      const lote = py.slice(i, i + 100);
+      n += lote.length;
+      const r = spawnSync5(pyCmd, ["-m", "py_compile", ...lote], { cwd, encoding: "utf8", timeout: 120000 });
+      if (r.status !== 0)
+        det.push(...`${r.stdout ?? ""}${r.stderr ?? ""}`.split(/\r?\n/).filter((l) => /Error|File "/.test(l)));
+    }
+    det.length ? falla("Python: errores de sintaxis", det) : L.push(`✅ Python: ${n} archivos sin errores de sintaxis${corte(n, py.length)}`);
   }
   const json = files.filter((f) => f.endsWith(".json") && !/lock/.test(f) && !/tsconfig|jsconfig|\.vscode/.test(f));
   const jmalos = json.filter((f) => {
@@ -660,6 +680,7 @@ var leer4 = (p) => {
     return "";
   }
 };
+var VALIDA = /\b(empty|isset|filter_var|validate|trim|strlen)\s*\(|['"][^'"\n]*\brequired\b[^'"\n]*['"]|\.required\s*\(|if\s*\(\s*!/g;
 function analizar(cwd) {
   const files = listarArchivos(cwd).filter((f) => f && !IGN4.test(f) && /\.(php|m?[jt]sx?|cjs|vue|svelte|py|html|blade\.php|twig|sql)$/.test(f) && existsSync4(join7(cwd, f)) && statSync4(join7(cwd, f)).size < 1500000);
   const H = [];
@@ -667,10 +688,19 @@ function analizar(cwd) {
     if (donde.length)
       H.push({ prioridad, tipo, texto, donde: [...new Set(donde)].slice(0, 12) });
   };
+  const cache = new Map;
+  const lineas = (f) => {
+    let l = cache.get(f);
+    if (!l) {
+      l = leer4(join7(cwd, f)).split(/\r?\n/);
+      cache.set(f, l);
+    }
+    return l;
+  };
   const buscar = (re, filtro = () => true, excluir) => {
     const r = [];
     for (const f of files.filter(filtro))
-      leer4(join7(cwd, f)).split(/\r?\n/).forEach((l, i) => {
+      lineas(f).forEach((l, i) => {
         if (re.test(l) && !(excluir && excluir.test(l)))
           r.push(`${f}:${i + 1}`);
       });
@@ -706,23 +736,30 @@ function analizar(cwd) {
         v.get(m[1]).push(`${f}:${i + 1}`);
       }
     });
-  for (const [k, variantes] of estados)
+  for (const [, variantes] of estados)
     if (variantes.size > 1)
       add("MEDIO", "lógica", `Mismo estado/valor escrito distinto (${[...variantes.keys()].map((x) => `"${x}"`).join(" vs ")}): comparaciones que fallan en silencio`, [...variantes.values()].flat());
   const requeridosFront = new Set;
   for (const f of files.filter((f) => /\.(html|php|vue|[jt]sx|blade\.php|twig)$/.test(f)))
-    for (const m of leer4(join7(cwd, f)).matchAll(/<(?:input|select|textarea)[^>]*\brequired\b[^>]*>/gi)) {
+    for (const m of lineas(f).join(`
+`).matchAll(/<(?:input|select|textarea)[^>]*\brequired\b[^>]*>/gi)) {
       const n = m[0].match(/name=["']([\w\[\]]+)["']/)?.[1];
       if (n)
         requeridosFront.add(n.replace(/\[\]$/, ""));
     }
-  const sinValidarBack = [];
-  for (const n of requeridosFront) {
-    const usos = buscar(new RegExp(`\\$_(POST|REQUEST)\\[['"]${n}['"]\\]|req\\.body\\.${n}\\b|request\\.(form|json)\\[['"]${n}['"]\\]`), (f) => php(f) || js(f) || py(f));
-    const validado = buscar(new RegExp(`(empty|isset|filter_var|validate|trim|required|strlen)\\s*\\(?[^\\n]*${n}|${n}['"]?\\s*=>\\s*['"][^'"]*required|if\\s*\\(\\s*!\\s*(req\\.body\\.)?${n}\\b`), (f) => php(f) || js(f) || py(f));
-    if (usos.length && !validado.length)
-      sinValidarBack.push(`${n} (${usos[0]})`);
-  }
+  const usados = new Map, validados = new Set;
+  for (const f of files.filter((f) => php(f) || js(f) || py(f)))
+    lineas(f).forEach((l, i) => {
+      for (const m of l.matchAll(/\$_(?:POST|REQUEST)\[['"](\w+)['"]\]|req\.body\.(\w+)|request\.(?:form|json)\[['"](\w+)['"]\]/g)) {
+        const n = m[1] ?? m[2] ?? m[3];
+        if (n && !usados.has(n))
+          usados.set(n, `${f}:${i + 1}`);
+      }
+      for (const v of l.matchAll(VALIDA))
+        for (const w of l.slice(v.index ?? 0).match(/\w+/g) ?? [])
+          validados.add(w);
+    });
+  const sinValidarBack = [...requeridosFront].filter((n) => usados.has(n) && !validados.has(n)).map((n) => `${n} (${usados.get(n)})`);
   add("MEDIO", "lógica", "Campos obligatorios validados solo en el navegador (el servidor los acepta vacíos)", sinValidarBack);
   add("MEDIO", "lógica", "Cálculos de dinero/cantidades con float o redondeo intermedio (posibles descuadres)", [...buscar(/\b(round|toFixed|number_format)\s*\([^)]*\)\s*[\+\-\*\/]/, (f) => php(f) || js(f)), ...buscar(/parseFloat\([^)]*(precio|valor|total|monto|litros|cantidad)/i, js)]);
   add("BAJO", "lógica", "Reglas marcadas como pendientes en el código (TODO/FIXME/HACK)", buscar(/\b(TODO|FIXME|HACK|XXX)\b/));
@@ -739,23 +776,211 @@ function analizar(cwd) {
 }
 
 // app/skill_dey-lib/empalme.ts
-import { spawnSync as spawnSync8 } from "node:child_process";
-import { existsSync as existsSync7, readFileSync as readFileSync10, writeFileSync as writeFileSync6, mkdirSync as mkdirSync6, statSync as statSync5, readdirSync as readdirSync5 } from "node:fs";
-import { join as join11, basename as basename5 } from "node:path";
+import { spawnSync as spawnSync9 } from "node:child_process";
+import { existsSync as existsSync8, readFileSync as readFileSync10, writeFileSync as writeFileSync6, mkdirSync as mkdirSync7, statSync as statSync5, readdirSync as readdirSync4 } from "node:fs";
+import { join as join13, basename as basename5 } from "node:path";
 
 // app/skill_dey-lib/procesos.ts
-import { spawn as spawn2, spawnSync as spawnSync7 } from "node:child_process";
-import { existsSync as existsSync6, readFileSync as readFileSync8, mkdirSync as mkdirSync4, writeFileSync as writeFileSync4, readdirSync as readdirSync4 } from "node:fs";
-import { join as join9, basename as basename4 } from "node:path";
+import { spawn as spawn3, spawnSync as spawnSync8 } from "node:child_process";
+import { existsSync as existsSync7, readFileSync as readFileSync8, mkdirSync as mkdirSync5, writeFileSync as writeFileSync4, readdirSync as readdirSync3 } from "node:fs";
+import { join as join11, basename as basename4 } from "node:path";
+
+// app/skill_dey-lib/navegador.ts
+import { existsSync as existsSync5, mkdirSync as mkdirSync3 } from "node:fs";
+
+// app/skill_dey-lib/rutas.ts
+import { join as join8 } from "node:path";
+import { homedir } from "node:os";
+var ocDir = (...p) => join8(process.env.OPENCODE_CONFIG_DIR || join8(homedir(), ".config", "opencode"), ...p);
+var sdDir = (...p) => ocDir("skill_dey", ...p);
+var memoriaGlobal = (...p) => join8(process.env.SKILL_DEY_MEMORIA_GLOBAL || sdDir(), ...p);
+
+// app/skill_dey-lib/navegador.ts
+import { join as join9 } from "node:path";
+import { homedir as homedir2 } from "node:os";
+import { spawn, spawnSync as spawnSync6 } from "node:child_process";
+var WIN2 = process.platform === "win32";
+function rutaChrome() {
+  const env = process.env.SKILL_DEY_CHROMIUM;
+  if (env && existsSync5(env))
+    return env;
+  const H = homedir2(), E = process.env;
+  const c = process.platform === "darwin" ? ["Google Chrome.app/Contents/MacOS/Google Chrome", "Microsoft Edge.app/Contents/MacOS/Microsoft Edge", "Brave Browser.app/Contents/MacOS/Brave Browser", "Chromium.app/Contents/MacOS/Chromium"].flatMap((a) => ["/Applications/" + a, join9(H, "Applications", a)]) : WIN2 ? [E.PROGRAMFILES, E["PROGRAMFILES(X86)"], E.LOCALAPPDATA].filter(Boolean).flatMap((b) => [
+    join9(b, "Google", "Chrome", "Application", "chrome.exe"),
+    join9(b, "Microsoft", "Edge", "Application", "msedge.exe"),
+    join9(b, "BraveSoftware", "Brave-Browser", "Application", "brave.exe")
+  ]) : ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/opt/google/chrome/chrome", "/usr/bin/microsoft-edge", "/usr/bin/brave-browser", "/usr/bin/chromium", "/usr/bin/chromium-browser", "/snap/bin/chromium"];
+  return c.find((p) => {
+    try {
+      return existsSync5(p);
+    } catch {
+      return false;
+    }
+  }) ?? null;
+}
+function usarChrome() {
+  const r = rutaChrome();
+  if (r)
+    process.env.SKILL_DEY_CHROMIUM = r;
+  return r;
+}
+function perfilChrome() {
+  const d = sdDir("chrome-perfil");
+  try {
+    mkdirSync3(d, { recursive: true });
+  } catch {}
+  return d;
+}
+async function chromeAbierto(puerto = 9222) {
+  for (const h of ["127.0.0.1", "localhost"]) {
+    try {
+      const r = await fetch(`http://${h}:${puerto}/json/version`, { signal: AbortSignal.timeout(1500) });
+      if (r.ok)
+        return `http://${h}:${puerto}`;
+    } catch {}
+  }
+  return null;
+}
+function comoAbrirChrome(puerto = 9222) {
+  const exe = rutaChrome() ?? (WIN2 ? "chrome.exe" : "google-chrome");
+  if (WIN2)
+    return `Start-Process "${exe}" -ArgumentList '--remote-debugging-port=${puerto}','--user-data-dir="${perfilChrome()}"'`;
+  return `"${exe}" --remote-debugging-port=${puerto} --user-data-dir="${perfilChrome()}"`;
+}
+var ACCION_PELIGROSA = /(elimin|borr|delete|remove|destroy|quitar|anular|\bbaja\b|dar[-_ ]de[-_ ]baja|vaciar|truncate|drop|reset|logout|log-out|signout|salir|cerrar[-_ ]?(sesion|sesión|caja|mes|periodo|período)|desactiv|cancel|papelera|trash|purge|limpiar|install|setup|migrat|seed|import|aprob|approve|rechaz|reject|pagar|\bpay\b|pago|checkout|comprar|\bbuy\b|factur|invoice|emitir|transfer|despach|liquidar|n[oó]mina|payroll|reembols|refund|publicar|publish|notificar|notify|enviar[-_ ]?(correo|mail|masivo|a[-_ ]todos)|send[-_ ]?(mail|email)|confirmar[-_ ]?(pedido|compra|pago|despacho|orden)|\bdel\.php\b|\/del\b)/i;
+function esLocal(url) {
+  try {
+    const h = new URL(url).hostname;
+    return /^(localhost|127\.\d+\.\d+\.\d+|\[?::1\]?|0\.0\.0\.0)$/.test(h) || /\.(localhost|test)$/.test(h);
+  } catch {
+    return false;
+  }
+}
+function matarArbol(pid) {
+  if (!pid)
+    return;
+  try {
+    if (WIN2)
+      spawnSync6("taskkill", ["/pid", String(pid), "/T", "/F"], { windowsHide: true, timeout: 1e4 });
+    else
+      process.kill(-pid, "SIGKILL");
+  } catch {}
+  try {
+    process.kill(pid, "SIGKILL");
+  } catch {}
+}
+function correrProceso(cmd, args, cwd, ms = 170000, env = {}, senal) {
+  return new Promise((ok) => {
+    let stdout = "", stderr = "", fin = false, tiempoAgotado = false;
+    let hijo;
+    try {
+      hijo = spawn(cmd, args, { cwd, env: { ...process.env, ...env }, detached: !WIN2, windowsHide: true, shell: WIN2 && cmd !== "node", stdio: ["ignore", "pipe", "pipe"] });
+    } catch (e) {
+      ok({ stdout: "", stderr: String(e?.message ?? e), status: 1, tiempoAgotado: false });
+      return;
+    }
+    const cerrar = (status) => {
+      if (fin)
+        return;
+      fin = true;
+      clearTimeout(t);
+      ok({ stdout, stderr, status, tiempoAgotado });
+    };
+    const t = setTimeout(() => {
+      tiempoAgotado = true;
+      matarArbol(hijo.pid);
+      cerrar(null);
+    }, ms);
+    if (senal) {
+      if (senal.aborted) {
+        matarArbol(hijo.pid);
+        cerrar(null);
+      } else
+        senal.addEventListener("abort", () => {
+          matarArbol(hijo.pid);
+          cerrar(null);
+        }, { once: true });
+    }
+    hijo.stdout?.on("data", (d) => {
+      if (stdout.length < 50000000)
+        stdout += d;
+    });
+    hijo.stderr?.on("data", (d) => {
+      if (stderr.length < 200000)
+        stderr += d;
+    });
+    hijo.on("error", (e) => {
+      stderr += String(e?.message ?? e);
+      cerrar(1);
+    });
+    hijo.on("close", (c) => cerrar(c));
+  });
+}
+async function correrShell(cmd, cwd, ms = 120000, env = {}, senal) {
+  const r = await new Promise((ok) => {
+    let stdout = "", stderr = "", fin = false, tiempoAgotado = false;
+    let hijo;
+    try {
+      hijo = spawn(cmd, { cwd, env: { ...process.env, ...env }, shell: true, detached: !WIN2, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+    } catch (e) {
+      ok({ stdout: "", stderr: String(e?.message ?? e), status: 1, tiempoAgotado: false });
+      return;
+    }
+    const cerrar = (status) => {
+      if (fin)
+        return;
+      fin = true;
+      clearTimeout(t);
+      ok({ stdout, stderr, status, tiempoAgotado });
+    };
+    const t = setTimeout(() => {
+      tiempoAgotado = true;
+      matarArbol(hijo.pid);
+      cerrar(null);
+    }, ms);
+    if (senal) {
+      if (senal.aborted) {
+        matarArbol(hijo.pid);
+        cerrar(null);
+      } else
+        senal.addEventListener("abort", () => {
+          matarArbol(hijo.pid);
+          cerrar(null);
+        }, { once: true });
+    }
+    hijo.stdout?.on("data", (d) => {
+      if (stdout.length < 50000000)
+        stdout += d;
+    });
+    hijo.stderr?.on("data", (d) => {
+      if (stderr.length < 2000000)
+        stderr += d;
+    });
+    hijo.on("error", (e) => {
+      stderr += String(e?.message ?? e);
+      cerrar(1);
+    });
+    hijo.on("close", (c) => cerrar(c));
+  });
+  return { code: r.status ?? 1, out: `${r.stdout}${r.stderr}`.trimEnd(), timeout: r.tiempoAgotado };
+}
+var correrNodo = (script, cwd, ms = 170000, env = {}, senal) => correrProceso("node", [script], cwd, ms, env, senal);
+var ABRIR_NAVEGADOR = `
+const _CDP = process.env.SKILL_DEY_CDP || '', _VIS = process.env.SKILL_DEY_VISIBLE === '1', _EXE = process.env.SKILL_DEY_CHROMIUM || undefined;
+let b = null, ctx = null, _propio = true;
+if (_CDP) { b = await chromium.connectOverCDP(_CDP); ctx = b.contexts()[0] ?? await b.newContext(); _propio = false; }
+else if (_VIS && process.env.SKILL_DEY_PERFIL) { ctx = await chromium.launchPersistentContext(process.env.SKILL_DEY_PERFIL, { executablePath: _EXE, headless: false, viewport: { width: 1366, height: 900 } }); }
+else { b = await chromium.launch({ executablePath: _EXE, headless: !_VIS }); ctx = await b.newContext({ viewport: { width: 1366, height: 900 } }); }
+const _cerrar = async () => { try { if (_propio) { if (b) await b.close(); else await ctx.close(); } } catch {} };`;
 
 // app/skill_dey-lib/app.ts
-import { spawn, spawnSync as spawnSync6 } from "node:child_process";
-import { existsSync as existsSync5, readFileSync as readFileSync7, mkdirSync as mkdirSync3, writeFileSync as writeFileSync3, readdirSync as readdirSync3 } from "node:fs";
-import { join as join8, relative as relative3 } from "node:path";
-import { homedir, tmpdir as tmpdir2 } from "node:os";
+import { spawn as spawn2, spawnSync as spawnSync7 } from "node:child_process";
+import { existsSync as existsSync6, readFileSync as readFileSync7, mkdirSync as mkdirSync4, writeFileSync as writeFileSync3, readdirSync as readdirSync2 } from "node:fs";
+import { join as join10, relative as relative2 } from "node:path";
+import { tmpdir as tmpdir2 } from "node:os";
 import { createServer } from "node:net";
-var WIN2 = process.platform === "win32";
-var PW_DIR = join8(homedir(), ".config", "opencode", "skill_dey", "playwright");
+var WIN3 = process.platform === "win32";
+var PW_DIR = sdDir("playwright");
 var puertoLibre = () => new Promise((ok) => {
   const s = createServer();
   s.listen(0, "127.0.0.1", () => {
@@ -779,8 +1004,8 @@ function matar(p) {
   if (!p.pid)
     return;
   try {
-    if (WIN2)
-      spawnSync6("taskkill", ["/pid", String(p.pid), "/T", "/F"], { timeout: 8000 });
+    if (WIN3)
+      spawnSync7("taskkill", ["/pid", String(p.pid), "/T", "/F"], { timeout: 8000 });
     else {
       try {
         process.kill(-p.pid, "SIGKILL");
@@ -796,7 +1021,7 @@ function matar(p) {
   }
 }
 function routerPhp() {
-  const f = join8(tmpdir2(), "skill_dey-router.php");
+  const f = join10(tmpdir2(), "skill_dey-router.php");
   writeFileSync3(f, `<?php
 $ruta = urldecode(parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH) ?? "/");
 $archivo = $_SERVER["DOCUMENT_ROOT"] . $ruta;
@@ -807,12 +1032,12 @@ http_response_code(404); echo "404 no encontrado: " . htmlspecialchars($ruta);
   return f;
 }
 function docrootPhp(cwd) {
-  return ["public", "public_html", "www", "htdocs", "web"].map((d) => join8(cwd, d)).find(existsSync5) ?? cwd;
+  return ["public", "public_html", "www", "htdocs", "web"].map((d) => join10(cwd, d)).find(existsSync6) ?? cwd;
 }
 async function iniciarApp(cwd) {
   const pkg = (() => {
     try {
-      return JSON.parse(readFileSync7(join8(cwd, "package.json"), "utf8"));
+      return JSON.parse(readFileSync7(join10(cwd, "package.json"), "utf8"));
     } catch {
       return null;
     }
@@ -826,23 +1051,23 @@ async function iniciarApp(cwd) {
   } else if (pkg?.scripts?.start) {
     cmd = "npm start";
     como = "npm start";
-  } else if (existsSync5(join8(cwd, "artisan"))) {
+  } else if (existsSync6(join10(cwd, "artisan"))) {
     cmd = `php artisan serve --port=${puerto}`;
     como = "php artisan serve";
-  } else if (existsSync5(join8(cwd, "manage.py"))) {
-    cmd = `${WIN2 ? "python" : "python3"} manage.py runserver 127.0.0.1:${puerto}`;
+  } else if (existsSync6(join10(cwd, "manage.py"))) {
+    cmd = `${WIN3 ? "python" : "python3"} manage.py runserver 127.0.0.1:${puerto}`;
     como = "django runserver";
-  } else if (existsSync5(join8(cwd, "composer.json")) || existsSync5(join8(cwd, "index.php")) || existsSync5(join8(docrootPhp(cwd), "index.php")) || readdirSync3(docrootPhp(cwd)).some((f) => f.endsWith(".php"))) {
+  } else if (existsSync6(join10(cwd, "composer.json")) || existsSync6(join10(cwd, "index.php")) || existsSync6(join10(docrootPhp(cwd), "index.php")) || readdirSync2(docrootPhp(cwd)).some((f) => f.endsWith(".php"))) {
     cmd = `php -d display_errors=1 -d error_reporting=E_ALL -d log_errors=1 -S 127.0.0.1:${puerto} -t "${docrootPhp(cwd)}" "${routerPhp()}"`;
     como = "php -S";
-  } else if (existsSync5(join8(cwd, "index.html"))) {
-    cmd = `${WIN2 ? "python" : "python3"} -m http.server ${puerto} --bind 127.0.0.1`;
+  } else if (existsSync6(join10(cwd, "index.html"))) {
+    cmd = `${WIN3 ? "python" : "python3"} -m http.server ${puerto} --bind 127.0.0.1`;
     como = "servidor estático";
   }
   if (!cmd)
     return null;
   const log = [];
-  const p = spawn(cmd, { cwd, shell: true, env, detached: !WIN2, stdio: ["ignore", "pipe", "pipe"] });
+  const p = spawn2(cmd, { cwd, shell: true, env, detached: !WIN3, stdio: ["ignore", "pipe", "pipe"] });
   const captar = (b) => {
     const t = b.toString();
     log.push(t);
@@ -855,61 +1080,78 @@ async function iniciarApp(cwd) {
   let url = `http://127.0.0.1:${puerto}`;
   while (Date.now() < fin) {
     const m = log.join("").match(/https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1?\]):(\d+)/);
-    if (m)
-      url = `http://127.0.0.1:${m[2]}`;
+    const pto = m?.[2] ?? String(puerto);
     const errores = () => log.join("").split(/\r?\n/).filter((l) => /(PHP )?(Fatal error|Parse error|Warning|Notice|Deprecated)|Traceback|Error:|Exception|UnhandledPromise|ERR!/i.test(l) && !/DeprecationWarning: The `punycode`/.test(l)).map((l) => l.trim().slice(0, 200));
-    if (await responde(url, 1500))
-      return { url, detener: () => matar(p), como, errores };
+    for (const h of ["127.0.0.1", "[::1]", "localhost"]) {
+      const u = `http://${h}:${pto}`;
+      if (await responde(u, 1500)) {
+        url = u;
+        return { url, detener: () => matar(p), como, errores };
+      }
+    }
     if (p.exitCode !== null)
       break;
   }
   matar(p);
   return null;
 }
+var preparando = null;
 function asegurarPlaywright(cwdProyecto) {
-  const local = join8(cwdProyecto, "node_modules", "playwright");
-  if (existsSync5(local))
-    return join8(cwdProyecto, "package.json");
-  const pj = join8(PW_DIR, "package.json");
-  if (!existsSync5(join8(PW_DIR, "node_modules", "playwright"))) {
-    mkdirSync3(PW_DIR, { recursive: true });
-    if (!existsSync5(pj))
-      writeFileSync3(pj, JSON.stringify({ name: "skill-dey-playwright", private: true }));
-    const i = spawnSync6("npm", ["i", "playwright", "@axe-core/playwright", "--no-audit", "--no-fund", "--silent"], { cwd: PW_DIR, shell: WIN2, timeout: 300000 });
-    if (i.status !== 0)
-      return null;
-    spawnSync6("npx", ["playwright", "install", "chromium"], { cwd: PW_DIR, shell: WIN2, timeout: 600000 });
-  }
-  return pj;
+  const chrome = usarChrome();
+  if (existsSync6(join10(cwdProyecto, "node_modules", "playwright")))
+    return join10(cwdProyecto, "package.json");
+  const pj = join10(PW_DIR, "package.json");
+  if (existsSync6(join10(PW_DIR, "node_modules", "playwright")))
+    return pj;
+  if (!preparando)
+    preparando = (async () => {
+      try {
+        mkdirSync4(PW_DIR, { recursive: true });
+        if (!existsSync6(pj))
+          writeFileSync3(pj, JSON.stringify({ name: "skill-dey-playwright", private: true }));
+        const i = await correrShell("npm i playwright @axe-core/playwright --no-audit --no-fund --silent", PW_DIR, 300000, { PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1" });
+        if (i.code !== 0) {
+          preparando = null;
+          return false;
+        }
+        if (!chrome)
+          await correrShell("npx playwright install chromium", PW_DIR, 600000);
+        return true;
+      } catch {
+        preparando = null;
+        return false;
+      }
+    })();
+  return null;
 }
 function rutasAProbar(cwd, archivos) {
   const root = docrootPhp(cwd);
-  const php = archivos.filter((f) => f.endsWith(".php") && !/vendor|config|includes?|lib|src\/|app\/|clases?|models?|controllers?/i.test(f)).map((f) => "/" + relative3(root, join8(cwd, f)).replace(/\\/g, "/")).filter((r) => !r.startsWith("/.."));
-  const html = archivos.filter((f) => f.endsWith(".html")).map((f) => "/" + relative3(root, join8(cwd, f)).replace(/\\/g, "/")).filter((r) => !r.startsWith("/.."));
+  const php = archivos.filter((f) => f.endsWith(".php") && !/vendor|config|includes?|lib|src\/|app\/|clases?|models?|controllers?/i.test(f)).map((f) => "/" + relative2(root, join10(cwd, f)).replace(/\\/g, "/")).filter((r) => !r.startsWith("/.."));
+  const html = archivos.filter((f) => f.endsWith(".html")).map((f) => "/" + relative2(root, join10(cwd, f)).replace(/\\/g, "/")).filter((r) => !r.startsWith("/.."));
   return [...new Set(["/", ...php, ...html])].slice(0, 6);
 }
 
 // app/skill_dey-lib/procesos.ts
-var WIN3 = process.platform === "win32";
+var WIN4 = process.platform === "win32";
 var DEV = /\b(node|nodemon|tsx|ts-node|vite|next|nuxt|npm|npx|pnpm|yarn|bun|deno|php|php-cgi|artisan|python\d*|uvicorn|gunicorn|flask|java|dotnet|ruby|rails|go|air|webpack|esbuild)\b/i;
 var SISTEMA = /\b(systemd|launchd|explorer|svchost|wininit|lsass|csrss|winlogon|services\.exe|kernel|WindowServer|loginwindow|sshd|postgres|mysqld|mariadbd|redis-server|mongod|docker|com\.docker|opencode)\b/i;
 function sh2(c, t = 8000) {
-  const r = spawnSync7(c, { shell: true, encoding: "utf8", timeout: t });
+  const r = spawnSync8(c, { shell: true, encoding: "utf8", timeout: t });
   return r.status === 0 ? r.stdout : "";
 }
 function escuchando() {
   const out = [];
-  if (WIN3) {
+  if (WIN4) {
     const tareas = new Map;
     for (const l of sh2("tasklist /fo csv /nh").split(/\r?\n/)) {
       const m = l.match(/^"([^"]+)","(\d+)"/);
       if (m)
         tareas.set(Number(m[2]), m[1]);
     }
-    for (const l of sh2("netstat -ano -p tcp").split(/\r?\n/)) {
-      const m = l.match(/TCP\s+\S+:(\d+)\s+\S+\s+LISTENING\s+(\d+)/i);
+    for (const l of sh2("netstat -ano").split(/\r?\n/)) {
+      const m = l.match(/^\s*TCP\s+\S+:(\d+)\s+(0\.0\.0\.0:0|\[::\]:0|\*:\*)\s+\S+\s+(\d+)\s*$/i);
       if (m)
-        out.push({ puerto: Number(m[1]), pid: Number(m[2]), cmd: tareas.get(Number(m[2])) ?? "" });
+        out.push({ puerto: Number(m[1]), pid: Number(m[3]), cmd: tareas.get(Number(m[3])) ?? "" });
     }
   } else {
     for (const l of sh2("lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null").split(`
@@ -949,11 +1191,10 @@ function escuchando() {
     return true;
   });
 }
-var esDeDesarrollo = (p) => p.pid > 1 && p.pid !== process.pid && p.pid !== process.ppid && DEV.test(p.cmd) && !SISTEMA.test(p.cmd);
-function matarArbol(pid) {
+function matarArbol2(pid) {
   try {
-    if (WIN3) {
-      spawnSync7("taskkill", ["/pid", String(pid), "/T", "/F"], { timeout: 8000 });
+    if (WIN4) {
+      spawnSync8("taskkill", ["/pid", String(pid), "/T", "/F"], { timeout: 8000 });
       return;
     }
     try {
@@ -964,34 +1205,6 @@ function matarArbol(pid) {
     } catch {}
   } catch {}
 }
-function liberarPuerto(puerto) {
-  const ps = escuchando().filter((p) => p.puerto === puerto);
-  if (!ps.length)
-    return `puerto ${puerto} libre`;
-  const r = [];
-  for (const p of ps) {
-    if (esDeDesarrollo(p)) {
-      matarArbol(p.pid);
-      r.push(`detenido PID ${p.pid} (${p.cmd.slice(0, 60)}) que ocupaba ${puerto}`);
-    } else
-      r.push(`⚠ ${puerto} lo usa "${p.cmd.slice(0, 50)}" (no es de desarrollo o es del sistema/BD): no lo toco, avisa al usuario`);
-  }
-  const quedan = escuchando().filter((p) => p.puerto === puerto && esDeDesarrollo(p));
-  if (quedan.length) {
-    for (const p of quedan)
-      matarArbol(p.pid);
-    if (WIN3) {
-      for (const l of sh2(`netstat -ano -p tcp | findstr :${puerto}`, 5000).split(/\r?\n/)) {
-        const m = l.match(/LISTENING\s+(\d+)/i);
-        if (m)
-          spawnSync7("taskkill", ["/pid", m[1], "/T", "/F"], { timeout: 8000 });
-      }
-    } else
-      sh2(`fuser -k ${puerto}/tcp 2>/dev/null; lsof -ti tcp:${puerto} 2>/dev/null | xargs -r kill -9 2>/dev/null`, 5000);
-  }
-  return r.join(`
-`);
-}
 var leer5 = (p) => {
   try {
     return readFileSync8(p, "utf8");
@@ -1000,15 +1213,15 @@ var leer5 = (p) => {
   }
 };
 function puertoEnv(dir) {
-  const env = leer5(join9(dir, ".env")) + `
-` + leer5(join9(dir, ".env.example"));
+  const env = leer5(join11(dir, ".env")) + `
+` + leer5(join11(dir, ".env.example"));
   const m = env.match(/^\s*(?:APP_)?PORT\s*=\s*(\d{2,5})/m) ?? env.match(/^\s*(?:SERVER|API|BACKEND)_PORT\s*=\s*(\d{2,5})/m);
   return m ? Number(m[1]) : undefined;
 }
 function detectar(dir, nombre) {
   const pkg = (() => {
     try {
-      return JSON.parse(leer5(join9(dir, "package.json")));
+      return JSON.parse(leer5(join11(dir, "package.json")));
     } catch {
       return null;
     }
@@ -1020,19 +1233,19 @@ function detectar(dir, nombre) {
     const puerto = puertoEnv(dir) ?? (deps.vite ? 5173 : deps.next ? 3000 : deps["@angular/core"] ? 4200 : deps.nuxt ? 3000 : 3000);
     return { nombre, dir, tipo, cmd: pkg.scripts.dev ? "npm run dev" : "npm start", puerto };
   }
-  if (existsSync6(join9(dir, "artisan")))
+  if (existsSync7(join11(dir, "artisan")))
     return { nombre, dir, tipo: "backend", cmd: "php artisan serve --port=" + (puertoEnv(dir) ?? 8000), puerto: puertoEnv(dir) ?? 8000 };
-  if (existsSync6(join9(dir, "manage.py")))
-    return { nombre, dir, tipo: "backend", cmd: `${WIN3 ? "python" : "python3"} manage.py runserver ${puertoEnv(dir) ?? 8000}`, puerto: puertoEnv(dir) ?? 8000 };
-  const docroot = ["public", "public_html", "www", "htdocs"].map((d) => join9(dir, d)).find(existsSync6) ?? dir;
+  if (existsSync7(join11(dir, "manage.py")))
+    return { nombre, dir, tipo: "backend", cmd: `${WIN4 ? "python" : "python3"} manage.py runserver ${puertoEnv(dir) ?? 8000}`, puerto: puertoEnv(dir) ?? 8000 };
+  const docroot = ["public", "public_html", "www", "htdocs"].map((d) => join11(dir, d)).find(existsSync7) ?? dir;
   const hayPhp = (() => {
     try {
-      return readdirSync4(docroot).some((f) => f.endsWith(".php"));
+      return readdirSync3(docroot).some((f) => f.endsWith(".php"));
     } catch {
       return false;
     }
   })();
-  if (existsSync6(join9(docroot, "index.php")) || existsSync6(join9(dir, "composer.json")) || hayPhp) {
+  if (existsSync7(join11(docroot, "index.php")) || existsSync7(join11(dir, "composer.json")) || hayPhp) {
     const p = puertoEnv(dir) ?? 8000;
     return { nombre, dir, tipo: "app", cmd: `php -d display_errors=1 -d error_reporting=E_ALL -S 127.0.0.1:${p} -t "${docroot}" "${routerPhp()}"`, puerto: p };
   }
@@ -1042,14 +1255,14 @@ function servicios(cwd) {
   const s = [];
   const raizPhp = (() => {
     try {
-      return existsSync6(join9(cwd, "composer.json")) || readdirSync4(cwd).some((f) => f.endsWith(".php"));
+      return existsSync7(join11(cwd, "composer.json")) || readdirSync3(cwd).some((f) => f.endsWith(".php"));
     } catch {
       return false;
     }
   })();
   for (const d of ["backend", "server", "api", "back", "servidor", "frontend", "client", "web", "front", "cliente", "app"]) {
-    const x = existsSync6(join9(cwd, d)) ? detectar(join9(cwd, d), d) : null;
-    if (x && !(raizPhp && x.cmd.includes(" -S ") && !existsSync6(join9(cwd, d, "composer.json"))))
+    const x = existsSync7(join11(cwd, d)) ? detectar(join11(cwd, d), d) : null;
+    if (x && !(raizPhp && x.cmd.includes(" -S ") && !existsSync7(join11(cwd, d, "composer.json"))))
       s.push(x);
   }
   if (!s.length) {
@@ -1095,34 +1308,100 @@ async function responde2(url) {
     return false;
   }
 }
-async function arranqueLimpio(cwd, espera = Number(process.env.SKILL_DEY_ARRANQUE_MS) || 22000) {
+async function urlQueResponde(puerto) {
+  for (const h of ["127.0.0.1", "[::1]", "localhost"]) {
+    const u = `http://${h}:${puerto}`;
+    if (await responde2(u))
+      return u;
+  }
+  return null;
+}
+var PROCS = (cwd) => join11(cwd, ".skill_dey", "procesos.json");
+var nuestros = (cwd) => {
+  try {
+    const j = JSON.parse(readFileSync8(PROCS(cwd), "utf8"));
+    return Array.isArray(j) ? j : [];
+  } catch {
+    return [];
+  }
+};
+var anotar = (cwd, x) => {
+  try {
+    mkdirSync5(join11(cwd, ".skill_dey"), { recursive: true });
+    writeFileSync4(PROCS(cwd), JSON.stringify([...nuestros(cwd).filter((y) => y.servicio !== x.servicio), x], null, 1));
+  } catch {}
+};
+function pgidDe(pid) {
+  if (WIN4)
+    return 0;
+  const m = sh2(`ps -o pgid= -p ${Number(pid)}`, 4000).trim();
+  return Number(m) || 0;
+}
+function sigueSiendoNuestro(pid, cmd = "") {
+  if (!pid || pid === process.pid)
+    return false;
+  const clave = (cmd.match(/[\w.-]+/g) ?? []).filter((w) => w.length > 2).slice(0, 3);
+  const coincide = (linea) => (clave.length ? clave.every((w) => linea.includes(w)) : DEV.test(linea)) && !SISTEMA.test(linea);
+  if (WIN4) {
+    const t = sh2(`wmic process where ProcessId=${Number(pid)} get CommandLine /format:list`, 6000) || sh2(`tasklist /fi "PID eq ${Number(pid)}" /fo csv /nh`, 6000);
+    return /\S/.test(t) && !/INFO:|No hay tareas|No tasks/i.test(t) && (clave.length ? clave.some((w) => t.includes(w)) : DEV.test(t)) && !SISTEMA.test(t);
+  }
+  const l = sh2(`ps -o pgid=,command= -p ${Number(pid)}`, 4000).trim();
+  const m = l.match(/^(\d+)\s+(.*)$/);
+  return !!m && Number(m[1]) === pid && coincide(m[2]);
+}
+function detenerNuestros(cwd) {
+  const r = [];
+  for (const x of nuestros(cwd))
+    if (x.pid && !x.ajeno && sigueSiendoNuestro(Number(x.pid), String(x.cmd ?? ""))) {
+      matarArbol2(Number(x.pid));
+      r.push(`detenido ${x.servicio} (PID ${x.pid})`);
+    }
+  return r;
+}
+async function arranqueLimpio(cwd, espera = Number(process.env.SKILL_DEY_ARRANQUE_MS) || 22000, solo) {
   const topeTotal = Date.now() + Math.min(espera * 3 + 1e4, 90000);
   const notas = [], lista = [];
-  for (const s of servicios(cwd)) {
-    const lib = liberarPuerto(s.puerto);
-    if (!/libre/.test(lib))
-      notas.push(lib);
+  for (const s of solo ?? servicios(cwd)) {
+    const ocupan = escuchando().filter((x) => x.puerto === s.puerto);
+    if (ocupan.length) {
+      const previos = new Set(nuestros(cwd).filter((x) => !x.ajeno).map((x) => Number(x.pid)));
+      const nuestro = ocupan.every((x) => previos.has(x.pid) || previos.has(pgidDe(x.pid)));
+      const u = await urlQueResponde(s.puerto);
+      if (nuestro) {
+        for (const x of ocupan)
+          matarArbol2(x.pid);
+      } else if (u) {
+        lista.push({ s, url: u, ok: true, errores: [], detener: () => {} });
+        anotar(cwd, { servicio: s.nombre, tipo: s.tipo, url: u, ok: true, puerto: s.puerto, ajeno: true });
+        notas.push(`${s.nombre}: uso el servidor que ya tienes corriendo en ${u} (no lo detengo)`);
+        continue;
+      } else {
+        lista.push({ s, url: `http://127.0.0.1:${s.puerto}`, ok: false, errores: [`el puerto ${s.puerto} lo ocupa "${ocupan[0].cmd.slice(0, 50)}" y no responde: no lo toco`], detener: () => {} });
+        continue;
+      }
+    }
     const log = [];
-    const p = spawn2(s.cmd, { cwd: s.dir, shell: true, detached: !WIN3, env: { ...process.env, BROWSER: "none", CI: "1", FORCE_COLOR: "0" }, stdio: ["ignore", "pipe", "pipe"] });
+    const p = spawn3(s.cmd, { cwd: s.dir, shell: true, detached: !WIN4, env: { ...process.env, BROWSER: "none", CI: "1", FORCE_COLOR: "0" }, stdio: ["ignore", "pipe", "pipe"] });
     const tomar = (b) => {
       log.push(b.toString());
       if (log.length > 400)
         log.shift();
     };
+    anotar(cwd, { servicio: s.nombre, tipo: s.tipo, pid: p.pid, puerto: s.puerto, ok: false, cmd: s.cmd });
     p.stdout?.on("data", tomar);
     p.stderr?.on("data", tomar);
     let url = `http://127.0.0.1:${s.puerto}`, ok = false;
     const fin = Math.min(Date.now() + espera, topeTotal);
     while (Date.now() < fin) {
       const m = log.join("").match(/https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1?\]):(\d+)/);
-      if (m)
-        url = `http://127.0.0.1:${m[1]}`;
       if (/EADDRINUSE|address already in use|port .* (is )?(already )?in use/i.test(log.join(""))) {
-        const pt = Number(log.join("").match(/(?:EADDRINUSE[^\d]*|port\s+)(\d{2,5})/i)?.[1] ?? s.puerto);
-        notas.push(liberarPuerto(pt));
+        notas.push(`${s.nombre}: su puerto está ocupado por otro programa; no lo detengo (cámbialo o ciérralo tú)`);
         break;
       }
-      if (await responde2(url)) {
+      const u = await urlQueResponde(m?.[1] ?? s.puerto);
+      if (u) {
+        url = u;
         ok = true;
         break;
       }
@@ -1135,29 +1414,25 @@ async function arranqueLimpio(cwd, espera = Number(process.env.SKILL_DEY_ARRANQU
     const detener = () => {
       try {
         if (p.pid)
-          matarArbol(p.pid);
-      } catch {}
-      try {
-        const q = escuchando().filter((x) => x.puerto === s.puerto && esDeDesarrollo(x));
-        for (const x of q)
-          matarArbol(x.pid);
+          matarArbol2(p.pid);
       } catch {}
     };
-    lista.push({ s, url, ok, pid: p.pid, errores: ok ? errores : [...errores, p.exitCode !== null ? `el proceso terminó (código ${p.exitCode})` : "no respondió a tiempo"].slice(0, 8), detener });
+    const salida = log.join("").split(/\r?\n/).filter((l) => l.trim()).slice(-12).join(`
+`).slice(-1500);
+    lista.push({ s, url, ok, pid: p.pid, salida, errores: ok ? errores : [...errores, p.exitCode !== null ? `el proceso terminó (código ${p.exitCode})` : "no respondió a tiempo"].slice(0, 8), detener });
     if (!ok && s.tipo === "backend")
       notas.push(`backend "${s.nombre}" no subió: el frontend dependerá de él`);
   }
-  mkdirSync4(join9(cwd, ".skill_dey"), { recursive: true });
-  writeFileSync4(join9(cwd, ".skill_dey", "procesos.json"), JSON.stringify(lista.map((a) => ({ servicio: a.s.nombre, tipo: a.s.tipo, url: a.url, ok: a.ok, pid: a.pid, puerto: a.s.puerto })), null, 1));
+  for (const a of lista)
+    if (a.pid)
+      anotar(cwd, { servicio: a.s.nombre, tipo: a.s.tipo, url: a.url, ok: a.ok, pid: a.pid, puerto: a.s.puerto, cmd: a.s.cmd });
   return { lista, notas };
 }
 
 // app/skill_dey-lib/reglas.ts
-import { readFileSync as readFileSync9, writeFileSync as writeFileSync5, mkdirSync as mkdirSync5 } from "node:fs";
-import { join as join10 } from "node:path";
-import { homedir as homedir2 } from "node:os";
-var GLOBAL = join10(homedir2(), ".config", "opencode", "skill_dey");
-var VACUNAS = join10(GLOBAL, "VACUNAS.json");
+import { readFileSync as readFileSync9, writeFileSync as writeFileSync5, mkdirSync as mkdirSync6 } from "node:fs";
+import { join as join12 } from "node:path";
+var VACUNAS_F = () => memoriaGlobal("VACUNAS_F().json");
 var leerJ = (p, d) => {
   try {
     return JSON.parse(readFileSync9(p, "utf8"));
@@ -1165,8 +1440,8 @@ var leerJ = (p, d) => {
     return d;
   }
 };
-var vacunas = () => leerJ(VACUNAS, []);
-var archivoReglas = (cwd) => join10(cwd, ".skill_dey", "REGLAS.json");
+var vacunas = () => leerJ(VACUNAS_F(), []);
+var archivoReglas = (cwd) => join12(cwd, ".skill_dey", "REGLAS.json");
 var reglas = (cwd) => leerJ(archivoReglas(cwd), []);
 function verificarReglas(cwd) {
   const l = reglas(cwd);
@@ -1217,18 +1492,18 @@ function empalme(cwd) {
   const docs = documentar(cwd);
   const pkg = (() => {
     try {
-      return JSON.parse(leer6(join11(cwd, "package.json")));
+      return JSON.parse(leer6(join13(cwd, "package.json")));
     } catch {
       return null;
     }
   })();
   const app = pkg?.name ?? basename5(cwd), fecha = new Date().toISOString().slice(0, 10);
-  const negocio = leer6(join11(cwd, ".skill_dey", "NEGOCIO.md")).split(`
+  const negocio = leer6(join13(cwd, ".skill_dey", "NEGOCIO.md")).split(`
 `).filter((l) => l.trim() && !l.startsWith("#") && !/…\s*$/.test(l)).slice(0, 15);
-  const ejemplo = nombres(leer6(join11(cwd, ".env.example"))), reales = nombres(leer6(join11(cwd, ".env")));
+  const ejemplo = nombres(leer6(join13(cwd, ".env.example"))), reales = nombres(leer6(join13(cwd, ".env")));
   const faltan = reales.filter((n) => !ejemplo.includes(n));
   const srv = servicios(cwd), c = conexion(cwd);
-  const pantallas = (leer6(join11(cwd, "docs", "MANUAL-USUARIO.md")).match(/^## .+$/gm) ?? []).map((h) => h.slice(3));
+  const pantallas = (leer6(join13(cwd, "docs", "MANUAL-USUARIO.md")).match(/^## .+$/gm) ?? []).map((h) => h.slice(3));
   const H = (() => {
     try {
       return analizar(cwd).filter((h) => h.prioridad === "CRÍTICO" || h.prioridad === "ALTO");
@@ -1236,10 +1511,10 @@ function empalme(cwd) {
       return [];
     }
   })();
-  const errores = (leer6(join11(cwd, ".skill_dey", "ERRORES-SITIO.md")).match(/^- \[ \] .+$/gm) ?? []).slice(0, 10);
-  const pendientes = leer6(join11(cwd, ".skill_dey", "ESTADO.md")).split(`
+  const errores = (leer6(join13(cwd, ".skill_dey", "ERRORES-SITIO.md")).match(/^- \[ \] .+$/gm) ?? []).slice(0, 10);
+  const pendientes = leer6(join13(cwd, ".skill_dey", "ESTADO.md")).split(`
 `).filter((l) => /PAUSAD|PENDIENTE|pendiente|\[ \]/.test(l)).slice(0, 10);
-  const log = spawnSync8("git", ["log", "--date=short", "--pretty=format:%ad · %s", "-25"], { cwd, encoding: "utf8" }).stdout?.trim() ?? "";
+  const log = spawnSync9("git", ["log", "--date=short", "--pretty=format:%ad · %s", "-25"], { cwd, encoding: "utf8", timeout: 20000 }).stdout?.trim() ?? "";
   const R = reglas(cwd);
   const doc = [
     `# Empalme — ${app}`,
@@ -1282,19 +1557,40 @@ function empalme(cwd) {
     "(Completar: quién entrega, quién recibe, proveedores, soporte.)"
   ].join(`
 `);
-  mkdirSync6(join11(cwd, "docs"), { recursive: true });
-  writeFileSync6(join11(cwd, "docs", "EMPALME.md"), doc);
+  const previo = (() => {
+    try {
+      return readFileSync10(join13(cwd, "docs", "EMPALME.md"), "utf8");
+    } catch {
+      return "";
+    }
+  })();
+  const seccion = (t, h) => {
+    const i = t.indexOf(h);
+    if (i < 0)
+      return null;
+    const j = t.indexOf(`
+## `, i + h.length);
+    return t.slice(i, j < 0 ? t.length : j).trimEnd();
+  };
+  let final = doc;
+  for (const h of ["## 1. Qué es", "## 9. Contactos"]) {
+    const antes = previo && seccion(previo, h), ahora = seccion(final, h);
+    if (antes && ahora && !/\(Completar/.test(antes))
+      final = final.replace(ahora, () => antes);
+  }
+  mkdirSync7(join13(cwd, "docs"), { recursive: true });
+  writeFileSync6(join13(cwd, "docs", "EMPALME.md"), final);
   return `✅ Paquete de empalme listo: docs/EMPALME.md (+ ${docs.replace("Documentación actualizada: ", "")})${faltan.length ? `
 ⚠ ${faltan.length} variable(s) del .env sin documentar en .env.example` : ""}
 Completa a mano solo: "Qué es" (si quedó vacío) y "Contactos".`;
 }
 
 // app/skill_dey-lib/saber.ts
-import { existsSync as existsSync8, readFileSync as readFileSync11, writeFileSync as writeFileSync7, mkdirSync as mkdirSync7, appendFileSync } from "node:fs";
-import { join as join12 } from "node:path";
-import { spawnSync as spawnSync9 } from "node:child_process";
+import { existsSync as existsSync9, readFileSync as readFileSync11, writeFileSync as writeFileSync7, mkdirSync as mkdirSync8, appendFileSync } from "node:fs";
+import { join as join14 } from "node:path";
+import { spawnSync as spawnSync10 } from "node:child_process";
 function notasVersion(cwd) {
-  const log = spawnSync9("git", ["log", "--date=short", "--pretty=format:%s", "-40"], { cwd, encoding: "utf8" }).stdout?.trim() ?? "";
+  const log = spawnSync10("git", ["log", "--date=short", "--pretty=format:%s", "-40"], { cwd, encoding: "utf8", timeout: 20000 }).stdout?.trim() ?? "";
   if (!log)
     return "Sin historial de git para generar notas.";
   const cambios = log.split(`
@@ -1310,17 +1606,22 @@ function notasVersion(cwd) {
     ...otros.length ? ["## Otros cambios", ...otros] : []
   ].join(`
 `);
-  mkdirSync7(join12(cwd, "docs"), { recursive: true });
-  writeFileSync7(join12(cwd, "docs", "NOVEDADES.md"), doc);
-  return `✅ Notas de versión en docs/NOVEDADES.md:
+  mkdirSync8(join14(cwd, "docs"), { recursive: true });
+  const f = join14(cwd, "docs", "NOVEDADES.md"), propio = !existsSync9(f) || /Generado por skill_dey/.test(readFileSync11(f, "utf8"));
+  const destino = propio ? f : join14(cwd, "docs", "NOVEDADES.skill_dey.md");
+  writeFileSync7(destino, doc + `
+
+<!-- Generado por skill_dey desde los commits -->
+`);
+  return `✅ Notas de versión en docs/${destino.split(/[\\/]/).pop()}:
 
 ` + doc;
 }
 
 // app/skill_dey-lib/extras.ts
-import { spawnSync as spawnSync10 } from "node:child_process";
-import { existsSync as existsSync9, readFileSync as readFileSync12, writeFileSync as writeFileSync8, statSync as statSync6 } from "node:fs";
-import { join as join13, basename as basename6 } from "node:path";
+import { spawnSync as spawnSync11 } from "node:child_process";
+import { existsSync as existsSync10, readFileSync as readFileSync12, writeFileSync as writeFileSync8, statSync as statSync6, rmSync as rmSync2, openSync, readSync, closeSync } from "node:fs";
+import { join as join15, basename as basename6, isAbsolute as isAbsolute3 } from "node:path";
 var leer7 = (p) => {
   try {
     return readFileSync12(p, "utf8");
@@ -1329,64 +1630,73 @@ var leer7 = (p) => {
   }
 };
 var sh3 = (c, cwd, t = 120000) => {
-  const r = spawnSync10(c, { cwd, shell: true, encoding: "utf8", timeout: t, maxBuffer: 50000000 });
+  const r = spawnSync11(c, { cwd, shell: true, encoding: "utf8", timeout: t, maxBuffer: 50000000 });
   return { code: r.status ?? 1, out: `${r.stdout ?? ""}${r.stderr ?? ""}` };
 };
 var hay2 = (c, cwd) => sh3(process.platform === "win32" ? `where ${c}` : `command -v ${c}`, cwd, 8000).code === 0;
 var archivos2 = (cwd) => listarArchivos(cwd);
-function formatear(cwd, soloCambiados = true) {
-  const files = soloCambiados ? spawnSync10("git", ["diff", "--name-only", "HEAD"], { cwd, encoding: "utf8" }).stdout.split(/\r?\n/).filter(Boolean) : [];
-  const existe = (...f) => f.some((x) => existsSync9(join13(cwd, x)));
+function formatear(cwd, soloCambiados = true, lista) {
+  const files = lista ?? (soloCambiados ? (spawnSync11("git", ["-c", "core.quotepath=off", "diff", "--name-only", "HEAD"], { cwd, encoding: "utf8", timeout: 20000 }).stdout ?? "").split(/\r?\n/).filter(Boolean) : []);
+  const existe = (...f) => f.some((x) => existsSync10(join15(cwd, x)));
+  const qq = (f) => process.platform === "win32" ? `"${f}"` : `'${f.replace(/'/g, "'\\''")}'`;
   const r = [];
-  const prettier = existe(".prettierrc", ".prettierrc.json", ".prettierrc.js", "prettier.config.js") || /"prettier"/.test(leer7(join13(cwd, "package.json")));
-  if (prettier && existsSync9(join13(cwd, "node_modules", ".bin", "prettier"))) {
-    const js = files.filter((f) => /\.(m?[jt]sx?|cjs|vue|svelte|css|scss|json|html|md)$/.test(f));
-    if (js.length || !soloCambiados) {
-      const t = sh3(`npx --no-install prettier --write ${soloCambiados ? js.map((f) => `"${f}"`).join(" ") : "."}`, cwd);
+  const prettier = existe(".prettierrc", ".prettierrc.json", ".prettierrc.js", ".prettierrc.cjs", ".prettierrc.yaml", ".prettierrc.yml", "prettier.config.js", "prettier.config.cjs", "prettier.config.mjs") || /"prettier"\s*:/.test(leer7(join15(cwd, "package.json")));
+  const js = files.filter((f) => /\.(m?[jt]sx?|cjs|vue|svelte|css|scss|json|html|md)$/.test(f));
+  if (prettier && existsSync10(join15(cwd, "node_modules", ".bin", "prettier")) && (js.length || !soloCambiados)) {
+    const t = sh3(`npx --no-install prettier --write ${soloCambiados ? js.map(qq).join(" ") : "."}`, cwd);
+    if (t.code === 0)
+      r.push("prettier");
+  }
+  const php = files.filter((f) => f.endsWith(".php"));
+  if (php.length || !soloCambiados) {
+    if (existe("vendor/bin/php-cs-fixer") && existe(".php-cs-fixer.php", ".php-cs-fixer.dist.php")) {
+      const t = sh3(`php vendor/bin/php-cs-fixer fix --quiet --path-mode=intersection ${soloCambiados ? "-- " + php.map(qq).join(" ") : ""}`, cwd);
       if (t.code === 0)
-        r.push(`prettier: ${js.length || "todos"} archivo(s)`);
+        r.push("php-cs-fixer");
+    } else if (existe("vendor/bin/pint") && existe("pint.json", ".pint.json", "artisan")) {
+      const t = sh3(`php vendor/bin/pint --quiet ${soloCambiados ? php.map(qq).join(" ") : ""}`, cwd);
+      if (t.code === 0)
+        r.push("laravel pint");
     }
   }
-  if (existe("vendor/bin/php-cs-fixer", ".php-cs-fixer.php", ".php-cs-fixer.dist.php")) {
-    const t = sh3("php vendor/bin/php-cs-fixer fix --quiet 2>/dev/null || vendor/bin/php-cs-fixer fix --quiet", cwd);
-    if (t.code === 0)
-      r.push("php-cs-fixer");
-  } else if (existe(".pint.json") || existsSync9(join13(cwd, "vendor/bin/pint"))) {
-    const t = sh3("vendor/bin/pint --quiet", cwd);
-    if (t.code === 0)
-      r.push("laravel pint");
-  }
   const py = files.filter((f) => f.endsWith(".py"));
-  if ((py.length || !soloCambiados) && hay2("black", cwd)) {
-    const t = sh3(`black -q ${soloCambiados ? py.map((f) => `"${f}"`).join(" ") : "."}`, cwd);
-    if (t.code === 0)
-      r.push("black");
-  } else if ((py.length || !soloCambiados) && hay2("ruff", cwd)) {
-    sh3(`ruff format ${soloCambiados ? py.map((f) => `"${f}"`).join(" ") : "."}`, cwd);
-    r.push("ruff format");
+  const pyproject = leer7(join15(cwd, "pyproject.toml"));
+  if (py.length || !soloCambiados) {
+    if (/\[tool\.black\]/.test(pyproject) && hay2("black", cwd)) {
+      const t = sh3(`black -q ${soloCambiados ? py.map(qq).join(" ") : "."}`, cwd);
+      if (t.code === 0)
+        r.push("black");
+    } else if ((/\[tool\.ruff/.test(pyproject) || existe("ruff.toml", ".ruff.toml")) && hay2("ruff", cwd)) {
+      sh3(`ruff format ${soloCambiados ? py.map(qq).join(" ") : "."}`, cwd);
+      r.push("ruff format");
+    }
   }
   return r.length ? `✅ formato aplicado (${r.join(" · ")})` : "⏭ formato: el proyecto no tiene formateador configurado (prettier/php-cs-fixer/pint/black/ruff)";
 }
+var VALIDA2 = /\b(empty|isset|filter_var|validate|trim|strlen)\s*\(|['"][^'"\n]*\brequired\b[^'"\n]*['"]|\.required\s*\(|if\s*\(\s*!/g;
 function validacionServidor(cwd) {
   const req = new Set;
   for (const f of archivos2(cwd).filter((f) => /\.(html|php|vue|[jt]sx|blade\.php|twig)$/.test(f)))
-    for (const m of leer7(join13(cwd, f)).matchAll(/<(?:input|select|textarea)[^>]*\brequired\b[^>]*>/gi)) {
+    for (const m of leer7(join15(cwd, f)).matchAll(/<(?:input|select|textarea)[^>]*\brequired\b[^>]*>/gi)) {
       const n = m[0].match(/name=["']([\w[\]]+)["']/)?.[1];
       if (n)
         req.add(n.replace(/\[\]$/, ""));
     }
   if (!req.size)
     return "No hay campos obligatorios en formularios, o es una SPA (valida en el controlador de la API).";
-  const sinValidar = [];
-  for (const n of req) {
-    const usado = archivos2(cwd).some((f) => new RegExp(`\\$_(POST|REQUEST)\\[['"]${n}['"]\\]|req\\.body\\.${n}\\b|request\\.(form|json)`).test(leer7(join13(cwd, f))));
-    const validado = archivos2(cwd).some((f) => new RegExp(`(empty|isset|filter_var|validate|trim|required)\\s*\\(?[^\\n]*${n}|["']${n}["']\\s*=>\\s*['"][^'"]*required|if\\s*\\(\\s*!\\s*(req\\.body\\.)?${n}\\b`).test(leer7(join13(cwd, f))));
-    if (usado && !validado)
-      sinValidar.push(n);
-  }
+  const usados = new Set, validados = new Set;
+  for (const f of archivos2(cwd).filter((f) => /\.(php|m?[jt]s|py)$/.test(f)))
+    for (const l of leer7(join15(cwd, f)).split(/\r?\n/)) {
+      for (const m of l.matchAll(/\$_(?:POST|REQUEST)\[['"](\w+)['"]\]|req\.body\.(\w+)|request\.(?:form|json)\[['"](\w+)['"]\]/g))
+        usados.add(m[1] ?? m[2] ?? m[3]);
+      for (const v of l.matchAll(VALIDA2))
+        for (const w of l.slice(v.index ?? 0).match(/\w+/g) ?? [])
+          validados.add(w);
+    }
+  const sinValidar = [...req].filter((n) => usados.has(n) && !validados.has(n));
   if (!sinValidar.length)
     return "✅ validación de servidor: todos los campos obligatorios se validan en el backend.";
-  const esLaravel = existsSync9(join13(cwd, "artisan")), esNode = existsSync9(join13(cwd, "package.json"));
+  const esLaravel = existsSync10(join15(cwd, "artisan")), esNode = existsSync10(join15(cwd, "package.json"));
   const ejemplo = esLaravel ? `$datos = $request->validate([
 ${sinValidar.map((n) => `  '${n}' => 'required',`).join(`
 `)}
@@ -1403,7 +1713,7 @@ Agrega en el controlador:
 ${ejemplo}`;
 }
 function erroresProduccion(cwd) {
-  const env = leer7(join13(cwd, ".env"));
+  const env = leer7(join15(cwd, ".env"));
   const candidatos = [
     env.match(/^\s*LOG_PATH\s*=\s*["']?([^"'\r\n]+)/m)?.[1],
     "storage/logs/laravel.log",
@@ -1413,7 +1723,7 @@ function erroresProduccion(cwd) {
     "php_errors.log",
     "var/log/app.log"
   ].filter(Boolean);
-  const f = candidatos.map((c) => c.startsWith("/") ? c : join13(cwd, c)).find((p) => {
+  const f = candidatos.map((c) => isAbsolute3(c) ? c : join15(cwd, c)).find((p) => {
     try {
       return statSync6(p).isFile();
     } catch {
@@ -1422,7 +1732,16 @@ function erroresProduccion(cwd) {
   });
   if (!f)
     return "No encontré un archivo de log (define LOG_PATH en .env o dime la ruta). En producción con Sentry/Rollbar, pásame el acceso o el export.";
-  const txt = leer7(f).split(/\r?\n/).slice(-400);
+  const txt = (() => {
+    try {
+      const tam = statSync6(f).size, n = Math.min(tam, 400000), fd = openSync(f, "r"), b = Buffer.alloc(n);
+      readSync(fd, b, 0, n, tam - n);
+      closeSync(fd);
+      return b.toString("utf8");
+    } catch {
+      return "";
+    }
+  })().split(/\r?\n/).slice(-400);
   const errs = txt.filter((l) => /(ERROR|CRITICAL|EMERGENCY|Fatal error|Uncaught|Exception|Stack trace|PHP Warning|SQLSTATE|\[error\])/i.test(l));
   const grupos = new Map;
   for (const e of errs) {
@@ -1438,12 +1757,288 @@ function erroresProduccion(cwd) {
 Corrige por causa raíz el más frecuente primero (references/depuracion.md).`;
 }
 
+// app/skill_dey-lib/respaldo.ts
+import { spawnSync as spawnSync12 } from "node:child_process";
+import { existsSync as existsSync11, mkdirSync as mkdirSync9, readFileSync as readFileSync13, writeFileSync as writeFileSync9, copyFileSync as copyFileSync2, unlinkSync, readdirSync as readdirSync5, statSync as statSync7, lstatSync, rmSync as rmSync3 } from "node:fs";
+import { join as join16, dirname, resolve, relative as relative3, isAbsolute as isAbsolute4 } from "node:path";
+import { homedir as homedir3 } from "node:os";
+import { createHash } from "node:crypto";
+var ID = { GIT_AUTHOR_NAME: "SKILL_DEY", GIT_AUTHOR_EMAIL: "skill_dey@local", GIT_COMMITTER_NAME: "SKILL_DEY", GIT_COMMITTER_EMAIL: "skill_dey@local" };
+var GITC = ["-c", "core.quotepath=off", "-c", "core.autocrlf=false", "-c", "core.safecrlf=false"];
+var EXCL_DIRS = [".skill_dey", "node_modules", "vendor", ".venv", "venv", "dist", "build", ".next", ".nuxt", "coverage", "__pycache__"];
+var EXCL_EXT = [
+  "zip",
+  "rar",
+  "7z",
+  "gz",
+  "tar",
+  "iso",
+  "dmg",
+  "exe",
+  "msi",
+  "mp4",
+  "mov",
+  "avi",
+  "mkv",
+  "mp3",
+  "wav",
+  "psd",
+  "bak",
+  "dump",
+  "log",
+  "sqlite",
+  "sqlite3",
+  "db",
+  "db-wal",
+  "db-shm",
+  "db-journal",
+  "mdb",
+  "accdb",
+  "csv",
+  "xlsx",
+  "xls"
+];
+var POSITIVOS = [...EXCL_DIRS.map((d) => `:(glob)**/${d}/**`), ...EXCL_EXT.map((e) => `:(glob)**/*.${e}`)];
+var EXCLUIR = POSITIVOS.map((p) => p.replace(":(glob)", ":(exclude,glob)"));
+var EXCL_RE = new RegExp(`(^|/)(${EXCL_DIRS.map((d) => d.replace(/\./g, "\\.")).join("|")})/|\\.(${EXCL_EXT.join("|")})$`, "i");
+var PROTEGIDO = /(^|\/)(\.env(?!\.example$)(\..*)?|\.skill_dey\/.*)$/i;
+var MAX_FOTOS = 150;
+var MAX_ARCHIVO = 30;
+function git(cwd, args, env = {}, input) {
+  const r = spawnSync12("git", [...GITC, ...args], { cwd, encoding: "utf8", maxBuffer: 500000000, timeout: 120000, input, env: { ...process.env, ...ID, ...env } });
+  return { ok: r.status === 0, out: (r.stdout ?? "").trim(), raw: r.stdout ?? "", err: (r.stderr ?? "").trim(), sinGit: !!r.error };
+}
+var lista0 = (s) => s.split("\x00").filter(Boolean);
+var hayGit = (cwd) => !git(cwd, ["--version"]).sinGit;
+var esRepo = (cwd) => git(cwd, ["rev-parse", "--is-inside-work-tree"]).out === "true";
+var raiz = (cwd) => git(cwd, ["rev-parse", "--show-toplevel"]).out || cwd;
+var esCarpetaPeligrosa = (p) => {
+  const r = resolve(p);
+  return r === resolve(homedir3()) || r === resolve("/") || /^[A-Za-z]:\\?$/.test(r);
+};
+function asegurarRepo(cwd) {
+  if (!hayGit(cwd))
+    return false;
+  if (esRepo(cwd))
+    return !esCarpetaPeligrosa(raiz(cwd));
+  if (esCarpetaPeligrosa(cwd))
+    return false;
+  return git(cwd, ["init", "-q"]).ok;
+}
+function ctxGit(cwd) {
+  const root = raiz(cwd);
+  const prefijo = git(cwd, ["rev-parse", "--show-prefix"]).out.replace(/\\/g, "/");
+  const gd = git(root, ["rev-parse", "--git-dir"]).out || ".git";
+  const gitDir = isAbsolute4(gd) ? gd : join16(root, gd);
+  const clave = createHash("sha1").update(resolve(root) + "|" + prefijo).digest("hex").slice(0, 12);
+  return { root, prefijo, gitDir, clave, spec: prefijo ? prefijo.replace(/\/$/, "") : "." };
+}
+var dentro = (f, prefijo) => !prefijo || f.startsWith(prefijo);
+var REF = (c, grupo, ...resto) => ["refs/skill_dey", c.clave, grupo, ...resto].join("/");
+function indice(gitDir, nombre) {
+  const idx = join16(gitDir, nombre);
+  try {
+    if (existsSync11(idx + ".lock") && Date.now() - statSync7(idx + ".lock").mtimeMs > 120000)
+      rmSync3(idx + ".lock", { force: true });
+  } catch {}
+  return { GIT_INDEX_FILE: idx };
+}
+function arbolActual(c, nombreIdx) {
+  const env = indice(c.gitDir, nombreIdx);
+  const head = git(c.root, ["rev-parse", "--verify", "-q", "HEAD"]).out;
+  if (!git(c.root, head ? ["read-tree", "HEAD"] : ["read-tree", "--empty"], env).ok)
+    return null;
+  git(c.root, ["rm", "--cached", "-r", "-q", "--ignore-unmatch", "--", ...POSITIVOS], env);
+  const extra = [];
+  for (let i = 0;i < 6; i++) {
+    const a = git(c.root, ["add", "-A", "--", c.spec, ...EXCLUIR, ...extra], env);
+    if (a.ok)
+      break;
+    const sub = a.err.match(/'([^']+?)\/?' does not have a commit checked out/)?.[1];
+    if (!sub || i === 5)
+      return null;
+    extra.push(`:(exclude)${sub}`);
+  }
+  const forzados = lista0(git(c.root, ["ls-files", "-z", "-c", "-i", "--exclude-standard", "--", c.spec]).raw).filter((f) => !EXCL_RE.test(f) && !PROTEGIDO.test(f));
+  if (forzados.length)
+    git(c.root, ["add", "-f", "--pathspec-from-file=-", "--pathspec-file-nul"], env, forzados.join("\x00") + "\x00");
+  const secretos = lista0(git(c.root, ["ls-files", "-z"], env).raw).filter((f) => PROTEGIDO.test(f));
+  if (secretos.length)
+    git(c.root, ["rm", "--cached", "-q", "--ignore-unmatch", "--pathspec-from-file=-", "--pathspec-file-nul"], env, secretos.join("\x00") + "\x00");
+  return git(c.root, ["write-tree"], env).out || null;
+}
+function listar2(c, grupo) {
+  const r = git(c.root, ["for-each-ref", "--sort=-refname", "--format=%(refname) %(objectname) %(contents:subject)", REF(c, grupo) + "/"]);
+  if (!r.ok || !r.out)
+    return [];
+  return r.out.split(`
+`).map((l) => {
+    const [ref, commit, ...resto] = l.split(" ");
+    const subj = resto.join(" ");
+    const m = subj.match(/^skill_dey\[(\w[\w-]*)\] (.*)$/);
+    return { ref, commit, ts: Number(ref.split("/").pop()), tipo: m?.[1] ?? "?", nota: m?.[2] ?? subj };
+  }).filter((f) => Number.isFinite(f.ts));
+}
+var ultimoTs = 0;
+var nuevoTs = () => ultimoTs = Math.max(Date.now(), ultimoTs + 1);
+var arbolDe = (c, commit) => git(c.root, ["rev-parse", `${commit}^{tree}`]).out;
+function fotoInterna(cwd, grupo, tipo, nota, deduplicar = true) {
+  if (!asegurarRepo(cwd))
+    return null;
+  const c = ctxGit(cwd);
+  const tree = arbolActual(c, "skill_dey-index");
+  if (!tree)
+    return null;
+  const ultima = listar2(c, grupo)[0];
+  if (deduplicar && ultima && arbolDe(c, ultima.commit) === tree)
+    return { commit: ultima.commit, ts: ultima.ts };
+  const head = git(c.root, ["rev-parse", "--verify", "-q", "HEAD"]).out;
+  const commit = git(c.root, ["commit-tree", tree, ...head ? ["-p", head] : [], "-m", `skill_dey[${tipo}] ${(c.prefijo ? "[" + c.prefijo + "] " : "") + nota.replace(/\s+/g, " ").slice(0, 150)}`]).out;
+  if (!commit)
+    return null;
+  const ts = nuevoTs();
+  if (!git(c.root, ["update-ref", REF(c, grupo, ts), commit]).ok)
+    return null;
+  if (grupo === "pasos") {
+    for (const vieja of listar2(c, "pasos").slice(MAX_FOTOS))
+      git(c.root, ["update-ref", "-d", vieja.ref]);
+    if (tipo === "cambio")
+      archivarRehacer(c);
+  }
+  return { commit, ts };
+}
+function archivarRehacer(c) {
+  for (const g of ["rehacer", "deshecho"])
+    for (const f of listar2(c, g)) {
+      git(c.root, ["update-ref", REF(c, "archivo", nuevoTs()), f.commit]);
+      git(c.root, ["update-ref", "-d", f.ref]);
+    }
+  for (const vieja of listar2(c, "archivo").slice(MAX_ARCHIVO))
+    git(c.root, ["update-ref", "-d", vieja.ref]);
+}
+function foto(cwd, grupo, tipo, nota) {
+  return fotoInterna(cwd, grupo, tipo, nota)?.commit ?? null;
+}
+function aplicar(c, commit) {
+  const no = (error) => ({ ok: false, restaurados: 0, borrados: [], error });
+  if (!git(c.root, ["cat-file", "-e", `${commit}^{commit}`]).ok)
+    return no("la foto ya no existe en git");
+  const lt = git(c.root, ["ls-tree", "-r", "-z", "--full-tree", commit]);
+  if (!lt.ok)
+    return no("no pude leer la foto");
+  const blobs = new Map;
+  for (const e of lista0(lt.raw)) {
+    const m = e.match(/^\d+ blob ([0-9a-f]+)\t([\s\S]+)$/);
+    if (m && dentro(m[2], c.prefijo) && !PROTEGIDO.test(m[2]) && !EXCL_RE.test(m[2]))
+      blobs.set(m[2], m[1]);
+  }
+  const choque = [...blobs.keys()].find((f) => {
+    try {
+      return lstatSync(join16(c.root, f)).isDirectory();
+    } catch {
+      return false;
+    }
+  });
+  if (choque)
+    return no(`"${choque}" ahora es una carpeta y en la foto era un archivo; muévela o renómbrala y repite (no toco nada para no perder lo que tiene dentro)`);
+  const existentes = [...blobs.keys()].filter((f) => {
+    try {
+      return lstatSync(join16(c.root, f)).isFile();
+    } catch {
+      return false;
+    }
+  });
+  const hashes = existentes.length ? git(c.root, ["hash-object", "--stdin-paths"], {}, existentes.join(`
+`) + `
+`).out.split(`
+`) : [];
+  const igual = new Set(existentes.filter((f, i) => hashes[i] === blobs.get(f)));
+  const cambiar = [...blobs.keys()].filter((f) => !igual.has(f));
+  const actuales = lista0(git(c.root, ["ls-files", "-z", "-co", "--exclude-standard", "--", c.spec, ...EXCLUIR]).raw);
+  const forzados = lista0(git(c.root, ["ls-files", "-z", "-c", "-i", "--exclude-standard", "--", c.spec]).raw);
+  const env = indice(c.gitDir, "skill_dey-index");
+  if (!git(c.root, ["read-tree", commit], env).ok)
+    return no("no pude cargar la foto");
+  if (cambiar.length) {
+    const r = git(c.root, ["checkout-index", "-f", "-z", "--stdin"], env, cambiar.join("\x00") + "\x00");
+    if (!r.ok)
+      return no("no pude restaurar: " + r.err.slice(0, 160));
+  }
+  const candidatos = [...new Set([...actuales, ...forzados])].filter((f) => !blobs.has(f) && !PROTEGIDO.test(f) && !EXCL_RE.test(f) && dentro(f, c.prefijo));
+  const ignorados = new Set(candidatos.length ? lista0(git(c.root, ["check-ignore", "--no-index", "-z", "--stdin"], {}, candidatos.join("\x00") + "\x00").raw) : []);
+  const borrados = [];
+  for (const f of candidatos) {
+    if (ignorados.has(f) && !forzados.includes(f))
+      continue;
+    try {
+      unlinkSync(join16(c.root, f));
+      borrados.push(f);
+    } catch {}
+  }
+  return { ok: true, restaurados: cambiar.length, borrados };
+}
+var HITOS = (cwd) => join16(cwd, ".skill_dey", "HITOS.json");
+var leerHitos = (cwd) => {
+  try {
+    const j = JSON.parse(readFileSync13(HITOS(cwd), "utf8"));
+    return Array.isArray(j) ? j : [];
+  } catch {
+    return [];
+  }
+};
+function checkpoint(cwd, nombre) {
+  if (!nombre || !nombre.trim())
+    return "dale un nombre, ej: /skill_dey checkpoint antes-de-pagos";
+  if (!asegurarRepo(cwd))
+    return "los checkpoints necesitan git (haz git init)";
+  const f = fotoInterna(cwd, "pasos", "checkpoint", "hito: " + nombre);
+  if (!f)
+    return "no pude crear el checkpoint";
+  const c = ctxGit(cwd);
+  git(c.root, ["update-ref", REF(c, "hitos", nuevoTs()), f.commit]);
+  const j = leerHitos(cwd).filter((h) => h.nombre !== nombre.trim());
+  j.push({ nombre: nombre.trim(), commit: f.commit, ts: Date.now() });
+  try {
+    mkdirSync9(join16(cwd, ".skill_dey"), { recursive: true });
+    writeFileSync9(HITOS(cwd), JSON.stringify(j, null, 1));
+  } catch {}
+  return `\uD83D\uDCCD Checkpoint "${nombre.trim()}" guardado. Vuelve con: /skill_dey volver ${nombre.trim()}`;
+}
+function listarHitos(cwd) {
+  const j = leerHitos(cwd);
+  if (!j.length)
+    return "No hay checkpoints. Crea uno con /skill_dey checkpoint <nombre>.";
+  return `\uD83D\uDCCD Checkpoints (vuelve con /skill_dey volver <nombre>):
+` + j.slice().reverse().map((h) => `  · ${h.nombre} — ${new Date(h.ts).toLocaleString()}`).join(`
+`);
+}
+function volver(cwd, nombre) {
+  if (!esRepo(cwd))
+    return "volver necesita git";
+  const c = ctxGit(cwd);
+  const j = leerHitos(cwd);
+  const h = j.find((x) => x.nombre === (nombre || "").trim()) || (/^\d+$/.test((nombre || "").trim()) ? j.slice().reverse()[Number(nombre) - 1] : null);
+  if (!h)
+    return `no encuentro el checkpoint "${nombre}". Mira /skill_dey hitos`;
+  if (!/^[0-9a-f]{7,64}$/i.test(String(h.commit)) || !git(c.root, ["cat-file", "-e", `${h.commit}^{commit}`]).ok)
+    return `⛔ El checkpoint "${h.nombre}" ya no existe en git (¿copiaste el proyecto sin su .git?). No toqué nada.`;
+  const seguro = fotoInterna(cwd, "rehacer", "antes-de-volver", `estado antes de volver a ${h.nombre}`, false);
+  if (!seguro)
+    return "⛔ No volví: no pude guardar primero el estado actual. No toqué nada.";
+  const r = aplicar(c, h.commit);
+  if (!r.ok) {
+    git(c.root, ["update-ref", "-d", REF(c, "rehacer", seguro.ts)]);
+    return `⛔ No volví: ${r.error}. Tus archivos quedaron como estaban.`;
+  }
+  return `⏮ Restaurado al checkpoint "${h.nombre}" (${new Date(h.ts).toLocaleString()}). ${r.restaurados} archivo(s)${r.borrados.length ? `, ${r.borrados.length} creados después eliminados` : ""}. Reversible con /skill_dey rehacer. (.env y BD no se tocan)`;
+}
+
 // app/skill_dey-lib/organizar.ts
-import { readFileSync as readFileSync13 } from "node:fs";
-import { join as join14, basename as basename7, dirname as dirname2 } from "node:path";
+import { readFileSync as readFileSync14 } from "node:fs";
+import { join as join17, basename as basename7, extname, dirname as dirname2 } from "node:path";
 var leer8 = (p) => {
   try {
-    return readFileSync13(p, "utf8");
+    return readFileSync14(p, "utf8");
   } catch {
     return "";
   }
@@ -1454,7 +2049,7 @@ var COD = /\.(m?[jt]sx?|cjs|vue|svelte|php|py|go|java|cs|rb)$/;
 function duplicados(cwd, files) {
   const vistos = new Map;
   for (const f of files.filter((f) => COD.test(f))) {
-    const ls = leer8(join14(cwd, f)).split(/\r?\n/);
+    const ls = leer8(join17(cwd, f)).split(/\r?\n/);
     for (let i = 0;i + 6 < ls.length; i += 6) {
       const bloque = ls.slice(i, i + 6).map((l) => l.trim()).filter(Boolean);
       if (bloque.length < 5)
@@ -1468,27 +2063,42 @@ function duplicados(cwd, files) {
       vistos.get(k).push(`${f}:${i + 1}`);
     }
   }
+  const destino = (f) => {
+    const e = extname(f).toLowerCase();
+    if (/\.php$/.test(e))
+      return "app/Helpers/ (o includes/) como función/clase reutilizable";
+    if (/\.py$/.test(e))
+      return "utils.py como función reutilizable";
+    if (/\.(m?[jt]sx?|cjs)$/.test(e))
+      return /tsx?$/.test(e) && /[A-Z]/.test(basename7(f)[0] ?? "") ? "un componente compartido en src/components/ (o src/lib/)" : "src/lib/ (o utils/) como función exportada";
+    return "un módulo común reutilizable";
+  };
   const r = [];
   for (const [, locs] of vistos) {
     const arch = [...new Set(locs.map((l) => l.split(":")[0]))];
-    if (locs.length >= 2 && arch.length >= 2)
-      r.push(`bloque repetido en ${locs.slice(0, 3).join(" ≈ ")} → extrae a una función compartida`);
+    if (locs.length >= 2 && arch.length >= 2) {
+      const nombre = "comun" + (r.length + 1);
+      r.push(`bloque repetido en ${locs.slice(0, 3).join(" ≈ ")}
+     → PROPUESTA DRY: extrae ese bloque a ${destino(arch[0])}, nómbralo \`${nombre}()\` y reemplázalo en los ${arch.length} archivos. Hazlo con skill_dey_impacto + skill_dey_verificar (un cambio, con undo).`);
+    }
   }
   return [...new Set(r)].slice(0, 8);
 }
 function huerfanos(cwd, files) {
   const cod = files.filter((f) => COD.test(f) && !/(index|app|main|server|autoload|bootstrap|routes?|web|api)\.[a-z]+$|(^|[\\/])(pages|views|screens|app)[\\/]/i.test(f));
-  const todo = files.filter((f) => /\.(m?[jt]sx?|cjs|vue|svelte|php|py|html|blade\.php|twig)$/.test(f)).map((f) => leer8(join14(cwd, f))).join(`
-`);
+  const citados = new Set;
+  for (const f of files.filter((f) => /\.(m?[jt]sx?|cjs|vue|svelte|php|py|html|blade\.php|twig)$/.test(f)).slice(0, 8000))
+    for (const m of leer8(join17(cwd, f)).slice(0, 1e6).matchAll(/['"\/]([\w.-]+?)(?:\.[a-z]+)?(?=['"\s)/])/g))
+      citados.add(m[1]);
   return cod.filter((f) => {
     const base = basename7(f).replace(/\.[^.]+$/, "");
-    return base.length > 2 && !new RegExp(`['"\\/]${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\.[a-z]+)?['"\\s)/]`).test(todo);
+    return base.length > 2 && !citados.has(base);
   }).slice(0, 8);
 }
 function fueraDeLugar(cwd, files) {
   const r = [];
   for (const f of files.filter((f) => COD.test(f))) {
-    const d = dirname2(f).toLowerCase(), t = leer8(join14(cwd, f)).slice(0, 4000);
+    const d = dirname2(f).toLowerCase(), t = leer8(join17(cwd, f)).slice(0, 4000);
     if (/(controller|controlador)/i.test(basename7(f)) && !/controller|controlador|routes?|app|src/i.test(d))
       r.push(`${f} parece un controlador fuera de controllers/`);
     if (/(SELECT |INSERT |new mysqli|new PDO|->query\()/i.test(t) && /(components?|views?|pages?|ui)[\\/]/.test(d))
@@ -1498,14 +2108,15 @@ function fueraDeLugar(cwd, files) {
 }
 function organizar(cwd) {
   const files = archivos3(cwd);
+  const respaldo = foto(cwd, "pasos", "cambio", "antes de organizar (formato)");
   const fmt = formatear(cwd, false);
   const dup = duplicados(cwd, files), huer = huerfanos(cwd, files), lugar = fueraDeLugar(cwd, files);
-  const grandes = files.filter((f) => COD.test(f) && leer8(join14(cwd, f)).split(`
-`).length > 400).map((f) => `${f} (${leer8(join14(cwd, f)).split(`
+  const grandes = files.filter((f) => COD.test(f) && leer8(join17(cwd, f)).split(`
+`).length > 400).map((f) => `${f} (${leer8(join17(cwd, f)).split(`
 `).length} líneas) → dividir`);
   const L = [
     `SKILL_DEY organizar · ${files.length} archivos`,
-    "1) Indentación y estilo: " + fmt.replace(/^[✅⏭]\s*/, ""),
+    "1) Indentación y estilo: " + fmt.replace(/^[✅⏭]\s*/, "") + (respaldo ? ' (reversible: escribe "deshaz")' : ""),
     dup.length ? `2) Reutilizar (código repetido):
 ` + dup.map((d) => "   - " + d).join(`
 `) : "2) Reutilizar: sin duplicados evidentes ✅",
@@ -1526,13 +2137,13 @@ function organizar(cwd) {
 }
 
 // app/skill_dey-lib/pdf.ts
-import { spawnSync as spawnSync11 } from "node:child_process";
-import { readFileSync as readFileSync14, writeFileSync as writeFileSync9, existsSync as existsSync10, mkdirSync as mkdirSync9 } from "node:fs";
-import { join as join15, basename as basename8 } from "node:path";
+import { spawnSync as spawnSync13 } from "node:child_process";
+import { readFileSync as readFileSync15, writeFileSync as writeFileSync10, existsSync as existsSync12, mkdirSync as mkdirSync10 } from "node:fs";
+import { join as join18, basename as basename8 } from "node:path";
 import { tmpdir as tmpdir3 } from "node:os";
 var leer9 = (p) => {
   try {
-    return readFileSync14(p, "utf8");
+    return readFileSync15(p, "utf8");
   } catch {
     return "";
   }
@@ -1616,7 +2227,7 @@ function mdAhtml(md) {
 }
 var MARCA = process.env.SKILL_DEY_MARCA || "";
 function mdApdf(cwd, mdRel, titulo) {
-  const mdPath = join15(cwd, mdRel);
+  const mdPath = join18(cwd, mdRel);
   const md = leer9(mdPath);
   if (!md)
     return "";
@@ -1627,7 +2238,7 @@ function mdApdf(cwd, mdRel, titulo) {
   const fecha = new Date().toLocaleDateString("es");
   const app = (() => {
     try {
-      return JSON.parse(leer9(join15(cwd, "package.json"))).name;
+      return JSON.parse(leer9(join18(cwd, "package.json"))).name;
     } catch {
       return basename8(cwd);
     }
@@ -1644,20 +2255,20 @@ function mdApdf(cwd, mdRel, titulo) {
  <div class="marca"><span>${MARCA || "SKILL_DEY"} · ${app}</span><span>${titulo} · ${fecha}</span></div>
  <div class="cont">${cuerpo}<div class="pie">Generado automáticamente por SKILL_DEY${MARCA ? " para " + MARCA : ""} · ${fecha}</div></div>
 </body></html>`;
-  const htmlPath = join15(tmpdir3(), `skill_dey-doc-${Date.now()}.html`);
-  writeFileSync9(htmlPath, html);
-  const outDir = join15(cwd, "docs", "pdf");
-  mkdirSync9(outDir, { recursive: true });
-  const pdfPath = join15(outDir, basename8(mdRel).replace(/\.md$/i, ".pdf"));
-  const script = join15(tmpdir3(), `skill_dey-pdf-${Date.now()}.mjs`);
-  writeFileSync9(script, `
+  const htmlPath = join18(tmpdir3(), `skill_dey-doc-${Date.now()}.html`);
+  writeFileSync10(htmlPath, html);
+  const outDir = join18(cwd, "docs", "pdf");
+  mkdirSync10(outDir, { recursive: true });
+  const pdfPath = join18(outDir, basename8(mdRel).replace(/\.md$/i, ".pdf"));
+  const script = join18(tmpdir3(), `skill_dey-pdf-${Date.now()}.mjs`);
+  writeFileSync10(script, `
 import { createRequire } from 'node:module'; const require = createRequire(${JSON.stringify(pj)});
 const { chromium } = require('playwright'); const b = await chromium.launch(process.env.SKILL_DEY_CHROMIUM ? { executablePath: process.env.SKILL_DEY_CHROMIUM } : {});
 const p = await b.newPage(); await p.goto('file://' + ${JSON.stringify(htmlPath)}, { waitUntil: 'load' });
 await p.pdf({ path: ${JSON.stringify(pdfPath)}, format: 'A4', printBackground: true, margin: { top: '12mm', bottom: '14mm', left: '12mm', right: '12mm' } });
 await b.close();`);
-  const r = spawnSync11(`node "${script}"`, { cwd, shell: true, encoding: "utf8", timeout: 120000 });
-  return r.status === 0 && existsSync10(pdfPath) ? pdfPath : "";
+  const r = spawnSync13(`node "${script}"`, { cwd, shell: true, encoding: "utf8", timeout: 120000 });
+  return r.status === 0 && existsSync12(pdfPath) ? pdfPath : "";
 }
 function documentosPdf(cwd) {
   const docs = [
@@ -1668,7 +2279,7 @@ function documentosPdf(cwd) {
   ];
   const hechos = [], faltan = [];
   for (const [rel, tit] of docs)
-    if (existsSync10(join15(cwd, rel))) {
+    if (existsSync12(join18(cwd, rel))) {
       const p = mdApdf(cwd, rel, tit);
       if (p)
         hechos.push("docs/pdf/" + basename8(p));
@@ -1681,12 +2292,12 @@ function documentosPdf(cwd) {
 }
 
 // app/skill_dey-lib/seguridad.ts
-import { existsSync as existsSync11, readFileSync as readFileSync15, statSync as statSync8 } from "node:fs";
-import { join as join16 } from "node:path";
+import { existsSync as existsSync13, readFileSync as readFileSync16, statSync as statSync8 } from "node:fs";
+import { join as join19 } from "node:path";
 var IGN6 = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage|\.venv|venv|__pycache__|\.next|storage|tests?|__tests__|spec|migrations?)([\\/]|$)|\.min\.js$/i;
 var leer10 = (p) => {
   try {
-    return readFileSync15(p, "utf8");
+    return readFileSync16(p, "utf8");
   } catch {
     return "";
   }
@@ -1695,18 +2306,23 @@ var php = (f) => /\.php$/.test(f);
 var js = (f) => /\.(m?[jt]sx?|cjs)$/.test(f);
 var web = (f) => /\.(php|m?[jt]sx?|vue|svelte|html|blade\.php|twig)$/.test(f);
 function auditarSeguridad(cwd) {
-  const files = listarArchivos(cwd).filter((f) => !IGN6.test(f) && web(f) && existsSync11(join16(cwd, f)) && statSync8(join16(cwd, f)).size < 1500000);
+  const files = listarArchivos(cwd).filter((f) => !IGN6.test(f) && web(f) && existsSync13(join19(cwd, f)) && statSync8(join19(cwd, f)).size < 1500000);
   const H = [];
   const add = (prioridad, texto, donde) => {
     if (donde.length)
       H.push({ prioridad, texto, donde: [...new Set(donde)].slice(0, 10) });
   };
   const buscar = (re, filtro, excluir) => {
-    const r = [];
+    const r = [], g = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
     for (const f of files.filter(filtro)) {
-      const t = leer10(join16(cwd, f));
-      if (re.test(t) && !(excluir && excluir.test(t)))
-        r.push(f);
+      const t = leer10(join19(cwd, f));
+      for (const m of t.matchAll(g)) {
+        const i = m.index ?? 0;
+        if (!excluir || !excluir.test(t.slice(Math.max(0, i - 1500), i + 1500))) {
+          r.push(f);
+          break;
+        }
+      }
     }
     return r;
   };
@@ -1715,31 +2331,31 @@ function auditarSeguridad(cwd) {
     ...buscar(/\b(md5|sha1)\s*\(\s*\$?_?(POST|GET|REQUEST|password|pass|clave)/i, php),
     ...buscar(/password\s*:\s*(req\.body|input)\.\w+/i, js, /bcrypt|hash|argon/i)
   ]);
-  const conSesion = files.filter(php).filter((f) => /\$_SESSION\[|session_start\(|Auth::|->middleware\(['"]auth|require.*auth/i.test(leer10(join16(cwd, f))));
+  const conSesion = files.filter(php).filter((f) => /\$_SESSION\[|session_start\(|Auth::|->middleware\(['"]auth|require.*auth/i.test(leer10(join19(cwd, f))));
   if (conSesion.length >= 2) {
     const paginas = files.filter((f) => php(f) && !/(^|[\\/])(config|includes?|lib|clases?|class|models?|controllers?|conexion|db|functions?|helpers?|api|vendor)([\\/]|\.|$)/i.test(f));
-    add("ALTO", "Página sin verificar sesión mientras otras sí lo hacen (¿acceso sin login?)", paginas.filter((f) => !conSesion.includes(f) && !/login|logout|index|registro|register|recuperar|forgot|public|install/i.test(f) && /(echo|print|<\?=|<html|<form|<table|json_encode)/i.test(leer10(join16(cwd, f)))));
+    add("ALTO", "Página sin verificar sesión mientras otras sí lo hacen (¿acceso sin login?)", paginas.filter((f) => !conSesion.includes(f) && !/login|logout|index|registro|register|recuperar|forgot|public|install/i.test(f) && /(echo|print|<\?=|<html|<form|<table|json_encode)/i.test(leer10(join19(cwd, f)))));
   }
-  add("ALTO", "Formulario POST sin token CSRF (añade y valida un token)", buscar(/<form[^>]*method\s*=\s*["']?post/i, web, /csrf|_token|authenticity_token|nonce|csrf_field|@csrf/i));
+  add("ALTO", "Formulario POST sin token CSRF (añade y valida un token)", buscar(/<form[^>]*method\s*=\s*["']?post/i, web, /csrf|(?<![A-Za-z])_token\b|authenticity_token|csrf_field|@csrf|nonce/i));
   add("ALTO", "Consulta por id tomado de la URL sin validar el dueño (otro usuario ve/edita datos ajenos)", [
     ...buscar(/WHERE\s+id\s*=\s*['"]?\s*(\.|\$\{?)?\s*\$_(GET|POST|REQUEST)\[/i, php, /user_id|usuario_id|owner|and\s+\w*user/i),
     ...buscar(/findByPk|findOne\(\s*\{?\s*id\s*:\s*(req\.params|req\.query)/i, js, /user|owner|where.*user/i)
   ]);
   add("ALTO", "Subida de archivos sin validar tipo ni tamaño", [
-    ...buscar(/move_uploaded_file|\$_FILES\[/i, php, /mime|getimagesize|pathinfo|finfo|extension|type|size|MAX_FILE/i),
+    ...buscar(/move_uploaded_file|\$_FILES\[/i, php, /mime_content_type|getimagesize|finfo|pathinfo\s*\(|\[\s*['"](type|size)['"]\s*\]|MAX_FILE_SIZE|in_array\s*\([^)]*(ext|extension|mime)/i),
     ...buscar(/multer|formidable|busboy|\.upload\(/i, js, /fileFilter|limits|mimetype|allowed/i)
   ]);
   add("ALTO", "Modo depuración o errores visibles al usuario (expón solo en desarrollo)", [
     ...buscar(/display_errors\s*[,=]\s*['"]?(1|On)|error_reporting\s*\(\s*E_ALL\s*\)/i, php),
-    ...buscar(/APP_DEBUG\s*=\s*true/i, (f) => /\.env$/.test(f))
+    .../^\s*APP_DEBUG\s*=\s*["']?true/im.test(leer10(join19(cwd, ".env"))) && /^\s*APP_ENV\s*=\s*["']?prod/im.test(leer10(join19(cwd, ".env"))) ? [".env (APP_DEBUG=true con APP_ENV=production)"] : []
   ]);
   add("MEDIO", "CORS abierto a cualquier origen (*) (limita a los dominios necesarios)", [
     ...buscar(/Access-Control-Allow-Origin["'\s:,]+\*/i, web),
     ...buscar(/cors\(\s*\{\s*origin\s*:\s*["']?\*|cors\(\s*\)/i, js)
   ]);
   add("MEDIO", "Cookie sin HttpOnly/Secure (puede robarse desde el navegador)", buscar(/setcookie\s*\(|session_set_cookie_params\s*\(|res\.cookie\s*\(/i, web, /httponly|secure|samesite/i));
-  const login = files.filter((f) => /login|signin|autenticar|authenticate/i.test(f) && /password|contrasena|contraseña|passwd/i.test(leer10(join16(cwd, f))));
-  add("MEDIO", "Login sin límite de intentos (permite fuerza bruta)", login.filter((f) => !/intentos|attempts|rate.?limit|throttle|lockout|bloqueo|captcha/i.test(leer10(join16(cwd, f)))));
+  const login = files.filter((f) => /login|signin|autenticar|authenticate/i.test(f) && /password|contrasena|contraseña|passwd/i.test(leer10(join19(cwd, f))));
+  add("MEDIO", "Login sin límite de intentos (permite fuerza bruta)", login.filter((f) => !/intentos|attempts|rate.?limit|throttle|lockout|bloqueo|captcha/i.test(leer10(join19(cwd, f)))));
   const orden = { "CRÍTICO": 0, ALTO: 1, MEDIO: 2 };
   return H.sort((a, b) => orden[a.prioridad] - orden[b.prioridad]);
 }
@@ -1755,19 +2371,18 @@ function resumenSeguridad(cwd) {
 }
 
 // app/skill_dey-lib/testpro.ts
-import { spawnSync as spawnSync15 } from "node:child_process";
-import { writeFileSync as writeFileSync12, readFileSync as readFileSync18, mkdirSync as mkdirSync11, existsSync as existsSync14 } from "node:fs";
-import { join as join20, basename as basename9 } from "node:path";
+import { spawnSync as spawnSync16 } from "node:child_process";
+import { writeFileSync as writeFileSync12, readFileSync as readFileSync19, mkdirSync as mkdirSync11, existsSync as existsSync16, rmSync as rmSync5 } from "node:fs";
+import { join as join23, relative as relative4 } from "node:path";
 import { tmpdir as tmpdir5 } from "node:os";
 
 // app/skill_dey-lib/calidad.ts
-import { spawnSync as spawnSync12 } from "node:child_process";
-import { writeFileSync as writeFileSync10 } from "node:fs";
-import { join as join17 } from "node:path";
+import { writeFileSync as writeFileSync11, rmSync as rmSync4 } from "node:fs";
+import { join as join20 } from "node:path";
 import { tmpdir as tmpdir4 } from "node:os";
 async function calidadWeb(base, pj, rutas) {
-  const script = join17(tmpdir4(), `skill_dey-calidad-${Date.now()}.mjs`);
-  writeFileSync10(script, `
+  const script = join20(tmpdir4(), `skill_dey-calidad-${Date.now()}.mjs`);
+  writeFileSync11(script, `
 import { createRequire } from 'node:module'; const require=createRequire(${JSON.stringify(pj)});
 const { chromium } = require('playwright');
 let AxeBuilder=null; try { AxeBuilder = require('@axe-core/playwright').default || require('@axe-core/playwright').AxeBuilder; } catch {}
@@ -1793,7 +2408,10 @@ for(const ruta of rutas){ const p=await mob.newPage();
   }catch{} await p.close(); }
 await mob.close(); await b.close();
 console.log('CAL:'+JSON.stringify(R));`);
-  const r = spawnSync12(`node "${script}"`, { shell: true, encoding: "utf8", timeout: 600000, maxBuffer: 50000000 });
+  const r = await correrNodo(script, tmpdir4(), 600000);
+  try {
+    rmSync4(script, { force: true });
+  } catch {}
   const line = (r.stdout ?? "").split(`
 `).find((l) => l.startsWith("CAL:"));
   let R = [];
@@ -1810,6 +2428,9 @@ console.log('CAL:'+JSON.stringify(R));`);
   return { lineas, fallas };
 }
 async function carga(base, rutas, usuarios = 20, rondas = 3) {
+  if (!esLocal(base))
+    return ["⏭ carga: solo contra tu app local (no se estresa producción)"];
+  rutas = rutas.filter((r) => !ACCION_PELIGROSA.test(r));
   const objetivo = rutas.slice(0, 4);
   const L = [];
   for (const ruta of objetivo) {
@@ -1839,14 +2460,14 @@ async function carga(base, rutas, usuarios = 20, rondas = 3) {
 }
 
 // app/skill_dey-lib/movil.ts
-import { spawnSync as spawnSync13 } from "node:child_process";
-import { existsSync as existsSync12, readFileSync as readFileSync16 } from "node:fs";
-import { join as join18 } from "node:path";
+import { spawnSync as spawnSync14 } from "node:child_process";
+import { existsSync as existsSync14, readFileSync as readFileSync17 } from "node:fs";
+import { join as join21 } from "node:path";
 function esMovil(cwd) {
-  if (existsSync12(join18(cwd, "pubspec.yaml")))
+  if (existsSync14(join21(cwd, "pubspec.yaml")))
     return "flutter";
   try {
-    const pkg = JSON.parse(readFileSync16(join18(cwd, "package.json"), "utf8"));
+    const pkg = JSON.parse(readFileSync17(join21(cwd, "package.json"), "utf8"));
     const deps = { ...pkg.dependencies, ...pkg.devDependencies };
     if (deps["react-native"] || deps["expo"])
       return "react-native";
@@ -1857,12 +2478,12 @@ function revisarMovil(cwd) {
   const tipo = esMovil(cwd);
   if (!tipo)
     return { ok: true, lineas: ["⏭ móvil: no es un proyecto Flutter ni React Native"], fallas: 0 };
-  const run = (cmd) => spawnSync13(cmd, { cwd, shell: true, encoding: "utf8", timeout: 300000, maxBuffer: 50000000 });
+  const run = (cmd) => spawnSync14(cmd, { cwd, shell: true, encoding: "utf8", timeout: 300000, maxBuffer: 50000000 });
   const L = [];
   let fallas = 0;
   const hay = (bin) => {
     try {
-      return spawnSync13(bin, ["--version"], { shell: true, timeout: 15000 }).status === 0;
+      return spawnSync14(bin, ["--version"], { shell: true, timeout: 15000 }).status === 0;
     } catch {
       return false;
     }
@@ -1876,7 +2497,7 @@ function revisarMovil(cwd) {
         fallas++;
       L.push(`${okA ? "✅" : "❌"} flutter analyze${okA ? " sin problemas" : ": " + (a.stdout + a.stderr).split(`
 `).filter((x) => /error|warning/i.test(x)).slice(0, 3).join(" · ").slice(0, 160)}`);
-      if (existsSync12(join18(cwd, "test"))) {
+      if (existsSync14(join21(cwd, "test"))) {
         const t = run("flutter test");
         L.push(`${t.status === 0 ? "✅" : "❌"} flutter test`);
         if (t.status !== 0)
@@ -1888,7 +2509,7 @@ function revisarMovil(cwd) {
     L.push("\uD83D\uDCF1 React Native detectado");
     const pkg = (() => {
       try {
-        return JSON.parse(readFileSync16(join18(cwd, "package.json"), "utf8"));
+        return JSON.parse(readFileSync17(join21(cwd, "package.json"), "utf8"));
       } catch {
         return {};
       }
@@ -1913,58 +2534,64 @@ function revisarMovil(cwd) {
 }
 
 // app/skill_dey-lib/pro.ts
-import { spawnSync as spawnSync14 } from "node:child_process";
-import { existsSync as existsSync13, readFileSync as readFileSync17, writeFileSync as writeFileSync11, mkdirSync as mkdirSync10 } from "node:fs";
-import { join as join19 } from "node:path";
+import { spawnSync as spawnSync15 } from "node:child_process";
+import { existsSync as existsSync15, readFileSync as readFileSync18 } from "node:fs";
+import { join as join22 } from "node:path";
 var leer11 = (p) => {
   try {
-    return readFileSync17(p, "utf8");
+    return readFileSync18(p, "utf8");
   } catch {
     return "";
   }
 };
 var tiene = (bin) => {
   try {
-    return spawnSync14(bin, ["--version"], { shell: true, timeout: 15000 }).status === 0;
+    return spawnSync15(bin, ["--version"], { shell: true, timeout: 15000 }).status === 0;
   } catch {
     return false;
   }
 };
-var run = (cmd, cwd) => spawnSync14(cmd, { cwd, shell: true, encoding: "utf8", timeout: 300000, maxBuffer: 50000000 });
-function coberturaCodigo(cwd) {
+var run = async (cmd, cwd) => {
+  const r = await correrShell(cmd, cwd, 300000);
+  return { status: r.code, stdout: r.out, stderr: "" };
+};
+async function coberturaCodigo(cwd) {
   const pkg = (() => {
     try {
-      return JSON.parse(leer11(join19(cwd, "package.json")));
+      return JSON.parse(leer11(join22(cwd, "package.json")));
     } catch {
       return null;
     }
   })();
   if (pkg?.scripts?.test && !/no test specified/.test(pkg.scripts.test)) {
     const s = pkg.scripts.test;
-    const cmd = /vitest/.test(s) ? "npx vitest run --coverage 2>&1" : /jest/.test(s) ? "npx jest --coverage 2>&1" : /node\s+--test/.test(s) ? "node --test --experimental-test-coverage 2>&1" : "npm test 2>&1";
-    const t = (() => {
-      const r = run(cmd, cwd);
+    const cmd = /vitest/.test(s) ? "npx vitest run --coverage" : /jest/.test(s) ? "npx jest --coverage" : /node\s+--test/.test(s) ? "node --test --experimental-test-coverage" : "npm test";
+    const t = await (async () => {
+      const r = await run(cmd, cwd);
       return r.stdout + r.stderr;
     })();
     const m = t.match(/all files\s*\|\s*(\d+(?:\.\d+)?)/i) || t.match(/(\d+(?:\.\d+)?)\s*%\s*(?:Stmts|statements|coverage|Lines)/i);
     return m ? `\uD83D\uDCC8 cobertura de código: ${m[1]}%` : "⏭ cobertura de código: el runner no reportó % (agrega c8/istanbul o la bandera --coverage)";
   }
-  if (existsSync13(join19(cwd, "vendor", "bin", "phpunit")) || existsSync13(join19(cwd, "phpunit.xml"))) {
-    const r = run('"vendor/bin/phpunit" --coverage-text 2>/dev/null || phpunit --coverage-text 2>/dev/null', cwd);
+  if (existsSync15(join22(cwd, "vendor", "bin", "phpunit")) || existsSync15(join22(cwd, "phpunit.xml"))) {
+    const r = await (async () => {
+      const a = await run(`${existsSync15(join22(cwd, "vendor", "bin", "phpunit")) ? "php vendor/bin/phpunit" : "phpunit"} --coverage-text`, cwd);
+      return a;
+    })();
     const m = r.stdout.match(/Lines:\s*(\d+(?:\.\d+)?)%/);
     return m ? `\uD83D\uDCC8 cobertura de código (PHP): ${m[1]}%` : "⏭ cobertura PHP: instala Xdebug o pcov para medir el %";
   }
   if (listarArchivos(cwd).some((f) => /test_.*\.py$|_test\.py$/.test(f))) {
-    const r = run("python -m pytest --cov -q 2>/dev/null", cwd);
+    const r = await run(`${process.platform === "win32" ? "python" : "python3"} -m pytest --cov -q`, cwd);
     const m = r.stdout.match(/TOTAL\s+\d+\s+\d+\s+(\d+)%/);
     return m ? `\uD83D\uDCC8 cobertura de código (Python): ${m[1]}%` : "⏭ cobertura Python: instala pytest-cov";
   }
   return "⏭ cobertura de código: el proyecto no tiene runner de pruebas";
 }
-function auditarDependencias(cwd) {
+async function auditarDependencias(cwd) {
   const L = [];
-  if (existsSync13(join19(cwd, "package.json")) && tiene("npm")) {
-    const r = run("npm audit --json 2>/dev/null", cwd);
+  if (existsSync15(join22(cwd, "package.json")) && tiene("npm")) {
+    const r = await run("npm audit --json", cwd);
     try {
       const j = JSON.parse(r.stdout);
       const v = j.metadata?.vulnerabilities || {};
@@ -1974,18 +2601,18 @@ function auditarDependencias(cwd) {
       L.push("⏭ npm audit: falta package-lock.json o no hay red");
     }
   }
-  if (existsSync13(join19(cwd, "composer.json")) && tiene("composer")) {
-    const r = run("composer audit --format=plain 2>/dev/null", cwd);
+  if (existsSync15(join22(cwd, "composer.json")) && tiene("composer")) {
+    const r = await run("composer audit --format=plain", cwd);
     L.push(/no\s+security\s+vulnerabilit/i.test(r.stdout + r.stderr) ? "✅ deps PHP: sin vulnerabilidades" : "⚠ deps PHP: revisa `composer audit`");
   }
-  if (existsSync13(join19(cwd, "requirements.txt")))
-    L.push(tiene("pip-audit") ? /no known/i.test(run("pip-audit 2>/dev/null", cwd).stdout) ? "✅ deps Python: sin vulnerabilidades" : "⚠ deps Python: revisa `pip-audit`" : "⏭ deps Python: instala pip-audit para auditarlas");
+  if (existsSync15(join22(cwd, "requirements.txt")))
+    L.push(tiene("pip-audit") ? /no known/i.test((await run("pip-audit", cwd)).stdout) ? "✅ deps Python: sin vulnerabilidades" : "⚠ deps Python: revisa `pip-audit`" : "⏭ deps Python: instala pip-audit para auditarlas");
   return L;
 }
-function semgrep(cwd) {
+async function semgrep(cwd) {
   if (!tiene("semgrep"))
     return "⏭ semgrep no instalado (opcional): `pip install semgrep` para análisis estático estándar";
-  const r = run("semgrep --config auto --json --quiet 2>/dev/null", cwd);
+  const r = await run("semgrep --config auto --json --quiet", cwd);
   try {
     const j = JSON.parse(r.stdout);
     const n = j.results?.length || 0;
@@ -1996,32 +2623,29 @@ function semgrep(cwd) {
   }
 }
 function apiOpenapi(cwd, rutas) {
-  const spec = ["openapi.json", "openapi.yaml", "swagger.json", join19("docs", "openapi.json")].map((f) => join19(cwd, f)).find(existsSync13);
+  const spec = ["openapi.json", "openapi.yaml", "swagger.json", join22("docs", "openapi.json")].map((f) => join22(cwd, f)).find(existsSync15);
+  if (spec && /"auto \(completar\)"/.test(leer11(spec)))
+    return "ℹ️ OpenAPI: solo está el borrador que generó skill_dey (docs/openapi.json); complétalo para que sirva";
   if (spec)
     return `✅ OpenAPI: encontrado ${spec.split(/[\\/]/).pop()} (sirve para probar endpoints y documentar la API)`;
-  const esApi = listarArchivos(cwd).some((f) => /(^|[\\/])(api|routes)[\\/]/i.test(f)) || /express|fastify|@nestjs|fastapi|flask|laravel\/framework/.test(leer11(join19(cwd, "package.json")) + leer11(join19(cwd, "composer.json")) + leer11(join19(cwd, "requirements.txt")));
+  const esApi = listarArchivos(cwd).some((f) => /(^|[\\/])(api|routes)[\\/]/i.test(f)) || /express|fastify|@nestjs|fastapi|flask|laravel\/framework/.test(leer11(join22(cwd, "package.json")) + leer11(join22(cwd, "composer.json")) + leer11(join22(cwd, "requirements.txt")));
   if (!esApi)
     return "";
-  const paths = {};
-  for (const r of rutas.length ? rutas : ["/"])
-    paths[r] = { get: { summary: "auto (completar)", responses: { "200": { description: "ok" } } } };
-  mkdirSync10(join19(cwd, "docs"), { recursive: true });
-  writeFileSync11(join19(cwd, "docs", "openapi.json"), JSON.stringify({ openapi: "3.0.0", info: { title: "API", version: "1.0.0" }, paths }, null, 2));
-  return "\uD83E\uDDE9 OpenAPI: generé un starter en docs/openapi.json desde tus rutas (complétalo con los cuerpos y respuestas)";
+  return `ℹ️ OpenAPI: la API no tiene especificación (openapi.json). Si la quieres, pídela y la armo desde tus ${rutas.length || "las"} rutas (no la creo sin que la pidas)`;
 }
-function docker(cwd) {
-  const df = existsSync13(join19(cwd, "Dockerfile")), comp = existsSync13(join19(cwd, "docker-compose.yml")) || existsSync13(join19(cwd, "compose.yml"));
+async function docker(cwd) {
+  const df = existsSync15(join22(cwd, "Dockerfile")), comp = existsSync15(join22(cwd, "docker-compose.yml")) || existsSync15(join22(cwd, "compose.yml"));
   if (!df && !comp)
     return "";
   if (!tiene("docker"))
     return "⏭ Docker: hay Dockerfile pero `docker` no está disponible aquí para validar el build";
-  const r = comp ? run("docker compose build 2>&1 | tail -6", cwd) : run("docker build -t skill_dey_check . 2>&1 | tail -6", cwd);
+  const r = comp ? await run("docker compose build", cwd) : await run("docker build -t skill_dey_check .", cwd);
   return r.status === 0 ? "✅ Docker: la imagen construye correctamente" : "❌ Docker: el build falla → " + (r.stdout + r.stderr).split(`
 `).filter(Boolean).slice(-2).join(" ").slice(0, 160);
 }
 function sentryCheck(cwd) {
-  const dep = /@sentry\/|sentry-sdk|sentry\/sentry|getsentry/.test(leer11(join19(cwd, "package.json")) + leer11(join19(cwd, "composer.json")) + leer11(join19(cwd, "requirements.txt")));
-  const dsn = /SENTRY_DSN/.test(leer11(join19(cwd, ".env")) + leer11(join19(cwd, ".env.example")));
+  const dep = /@sentry\/|sentry-sdk|sentry\/sentry|getsentry/.test(leer11(join22(cwd, "package.json")) + leer11(join22(cwd, "composer.json")) + leer11(join22(cwd, "requirements.txt")));
+  const dsn = /SENTRY_DSN/.test(leer11(join22(cwd, ".env")) + leer11(join22(cwd, ".env.example")));
   if (dep && dsn)
     return "✅ Sentry: integrado (librería + SENTRY_DSN)";
   if (dep && !dsn)
@@ -2029,11 +2653,11 @@ function sentryCheck(cwd) {
   return "";
 }
 function i18nCheck(cwd) {
-  const lib = /i18next|vue-i18n|react-intl|formatjs|next-intl/.test(leer11(join19(cwd, "package.json"))) || ["lang", "locales", join19("resources", "lang"), "i18n"].some((d) => existsSync13(join19(cwd, d)));
+  const lib = /i18next|vue-i18n|react-intl|formatjs|next-intl/.test(leer11(join22(cwd, "package.json"))) || ["lang", "locales", join22("resources", "lang"), "i18n"].some((d) => existsSync15(join22(cwd, d)));
   return lib ? "\uD83C\uDF10 i18n: soporte de idiomas detectado (revisa que no queden textos quemados sin traducir en las vistas)" : "";
 }
-function extrasPro(cwd, rutas) {
-  const L = [coberturaCodigo(cwd), ...auditarDependencias(cwd), semgrep(cwd), apiOpenapi(cwd, rutas), docker(cwd), sentryCheck(cwd), i18nCheck(cwd)].filter(Boolean);
+async function extrasPro(cwd, rutas) {
+  const L = [await coberturaCodigo(cwd), ...await auditarDependencias(cwd), await semgrep(cwd), apiOpenapi(cwd, rutas), await docker(cwd), sentryCheck(cwd), i18nCheck(cwd)].filter(Boolean);
   if (L.some((x) => /Sentry|OpenAPI|i18n|Docker/.test(x)))
     L.push("ℹ️ nota: Sentry/OpenAPI/i18n son detección y Docker es validación de build — no auditoría profunda; úsalos como señal, no como garantía.");
   return L;
@@ -2042,7 +2666,7 @@ function extrasPro(cwd, rutas) {
 // app/skill_dey-lib/testpro.ts
 var leer12 = (p) => {
   try {
-    return readFileSync18(p, "utf8");
+    return readFileSync19(p, "utf8");
   } catch {
     return "";
   }
@@ -2050,12 +2674,9 @@ var leer12 = (p) => {
 function escenarios(cwd) {
   const root = docrootPhp(cwd);
   const base = rutasAProbar(cwd, listarArchivos(cwd));
-  const conForm = listarArchivos(cwd).filter((f) => /\.(php|html)$/i.test(f) && /<form/i.test(leer12(join20(cwd, f))) && !/vendor|config|includes?|conexion|node_modules/i.test(f)).map((f) => {
-    const r = "/" + f.replace(root + "/", "").replace(/\\/g, "/");
-    return r.startsWith("/..") ? "/" + basename9(f) : r;
-  });
+  const conForm = listarArchivos(cwd).filter((f) => /\.(php|html)$/i.test(f) && /<form/i.test(leer12(join23(cwd, f))) && !/vendor|config|includes?|conexion|node_modules/i.test(f)).map((f) => "/" + relative4(root, join23(cwd, f)).replace(/\\/g, "/")).filter((r) => !r.startsWith("/.."));
   const excluir = /\/docs\/|\/tests?\/|\.skill_dey|node_modules|\/vendor\//i;
-  const rutas = [...new Set([...base, ...conForm])].filter((r) => !excluir.test(r)).slice(0, 12);
+  const rutas = [...new Set([...base, ...conForm])].filter((r) => !excluir.test(r) && !ACCION_PELIGROSA.test(r)).slice(0, 12);
   return rutas.map((r) => ({ ruta: r, form: conForm.includes(r) }));
 }
 function specEstandar(base, esc) {
@@ -2086,7 +2707,7 @@ export default defineConfig({
 `;
 }
 async function smokeEnVivo(cwd, base, pj, esc) {
-  const script = join20(tmpdir5(), `skill_dey-testpro-${Date.now()}.mjs`);
+  const script = join23(tmpdir5(), `skill_dey-testpro-${Date.now()}.mjs`);
   writeFileSync12(script, `
 import { createRequire } from 'node:module'; const require=createRequire(${JSON.stringify(pj)});
 const { chromium } = require('playwright');
@@ -2112,7 +2733,10 @@ for(const e of esc){ const p=await ctx.newPage(); const errs=[];
   else R.push('PASS · '+e.ruta+' · carga ok');
   await p.close(); }
 await b.close(); console.log('RES:'+JSON.stringify(R));`);
-  const r = spawnSync15(`node "${script}"`, { cwd, shell: true, encoding: "utf8", timeout: 600000, maxBuffer: 50000000 });
+  const r = await correrNodo(script, cwd, 600000);
+  try {
+    rmSync5(script, { force: true });
+  } catch {}
   const line = (r.stdout ?? "").split(`
 `).find((l) => l.startsWith("RES:"));
   try {
@@ -2125,42 +2749,27 @@ await b.close(); console.log('RES:'+JSON.stringify(R));`);
 function correrUnitarias(cwd) {
   const pkg = (() => {
     try {
-      return JSON.parse(readFileSync18(join20(cwd, "package.json"), "utf8"));
+      return JSON.parse(readFileSync19(join23(cwd, "package.json"), "utf8"));
     } catch {
       return null;
     }
   })();
   const L = [];
-  const run = (cmd) => spawnSync15(cmd, { cwd, shell: true, encoding: "utf8", timeout: 300000, maxBuffer: 50000000 });
+  const run = (cmd) => spawnSync16(cmd, { cwd, shell: true, encoding: "utf8", timeout: 300000, maxBuffer: 50000000 });
   if (pkg?.scripts?.test && !/no test specified/.test(pkg.scripts.test)) {
     const r = run("npm test --silent");
     const ok = r.status === 0;
     L.push(`${ok ? "PASS" : "FAIL"} · unitarias (npm test): ${(r.stdout + r.stderr).split(`
 `).filter((x) => /pass|fail|✓|✗|Tests:|test/i.test(x)).slice(-2).join(" ").slice(0, 120) || (ok ? "ok" : "revisa salida")}`);
-  } else if (existsSync14(join20(cwd, "phpunit.xml")) || existsSync14(join20(cwd, "phpunit.xml.dist")) || existsSync14(join20(cwd, "vendor", "bin", "phpunit"))) {
-    const r = run(existsSync14(join20(cwd, "vendor", "bin", "phpunit")) ? '"vendor/bin/phpunit"' : "phpunit");
+  } else if (existsSync16(join23(cwd, "phpunit.xml")) || existsSync16(join23(cwd, "phpunit.xml.dist")) || existsSync16(join23(cwd, "vendor", "bin", "phpunit"))) {
+    const r = run(existsSync16(join23(cwd, "vendor", "bin", "phpunit")) ? '"vendor/bin/phpunit"' : "phpunit");
     L.push(`${r.status === 0 ? "PASS" : "FAIL"} · unitarias PHP (phpunit)`);
-  } else if (existsSync14(join20(cwd, "pytest.ini")) || existsSync14(join20(cwd, "tests")) && listarArchivos(cwd).some((f) => /test_.*\.py$|_test\.py$/.test(f))) {
+  } else if (existsSync16(join23(cwd, "pytest.ini")) || existsSync16(join23(cwd, "tests")) && listarArchivos(cwd).some((f) => /test_.*\.py$|_test\.py$/.test(f))) {
     const r = run("python -m pytest -q");
     L.push(`${r.status === 0 ? "PASS" : "FAIL"} · unitarias Python (pytest)`);
   } else
     L.push("⏭ unitarias: el proyecto no tiene runner configurado (puedo generar un ejemplo si quieres)");
   return L;
-}
-function ciWorkflow() {
-  return `name: pruebas (SKILL_DEY)
-on: [push, pull_request]
-jobs:
-  e2e:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm ci || npm i
-      - run: npm i -D @playwright/test && npx playwright install --with-deps chromium
-      - run: npx playwright test
-`;
 }
 async function pruebasProfesionales(cwd, url) {
   if (esMovil(cwd))
@@ -2171,40 +2780,49 @@ async function pruebasProfesionales(cwd, url) {
     let base = url;
     if (!base && servicios(cwd).length) {
       arr = await conTiempo(arranqueLimpio(cwd), 95000, null).catch(() => null);
+      if (!arr)
+        detenerNuestros(cwd);
       base = (arr?.lista.find((a) => a.ok && a.s.tipo === "frontend") ?? arr?.lista.find((a) => a.ok))?.url;
     }
-    if (!base)
+    if (!base && !servicios(cwd).length)
       base = (app = await iniciarApp(cwd).catch(() => null))?.url;
     base = base || "http://localhost:3000";
     const esc = escenarios(cwd);
-    const dir = join20(cwd, "tests", "e2e");
+    const dir = join23(cwd, "tests", "e2e"), spec = join23(dir, "app.spec.ts");
     mkdirSync11(dir, { recursive: true });
-    writeFileSync12(join20(dir, "app.spec.ts"), specEstandar(base, esc));
-    if (!existsSync14(join20(cwd, "playwright.config.ts")) && !existsSync14(join20(cwd, "playwright.config.js")))
-      writeFileSync12(join20(cwd, "playwright.config.ts"), config(base));
-    const ciDir = join20(cwd, ".github", "workflows");
-    mkdirSync11(ciDir, { recursive: true });
-    if (!existsSync14(join20(ciDir, "skill_dey.yml")))
-      writeFileSync12(join20(ciDir, "skill_dey.yml"), ciWorkflow());
-    const L = [`\uD83E\uDDEA Suite profesional generada: tests/e2e/app.spec.ts (${esc.length} escenarios) + playwright.config.ts + CI (.github/workflows/skill_dey.yml)`, "   Para CI local: `npm i -D @playwright/test && npx playwright test`"];
+    const propio = !existsSync16(spec) || /Generado por skill_dey/.test(readFileSync19(spec, "utf8"));
+    const destino = propio ? spec : join23(dir, "skill_dey.spec.ts");
+    writeFileSync12(destino, `// @ts-nocheck — Generado por skill_dey (no rompe tu build aunque no tengas @playwright/test)
+` + specEstandar(base, esc));
+    if (!existsSync16(join23(cwd, "playwright.config.ts")) && !existsSync16(join23(cwd, "playwright.config.js")))
+      writeFileSync12(join23(cwd, "playwright.config.ts"), `// @ts-nocheck
+` + config(base));
+    const L = [`\uD83E\uDDEA Suite profesional generada: ${relative4(cwd, destino).replace(/\\/g, "/")} (${esc.length} escenarios) + playwright.config.ts`, "   Para correrla: `npm i -D @playwright/test && npx playwright test` (para CI agrega un paso que arranque tu app antes)"];
     let fallas = 0;
     const viva = pj && (app || arr?.lista?.some((a) => a.ok) || url);
     if (viva) {
       const res = await smokeEnVivo(cwd, base, pj, esc);
       fallas = res.filter((x) => x.startsWith("FAIL")).length;
       const ok = res.filter((x) => x.startsWith("PASS")).length;
-      L.push(fallas ? `❌ prueba en vivo: ${fallas} fallo(s) de ${res.length}` : `✅ prueba en vivo: ${res.length} escenario(s) pasaron`, ...res.map((x) => "   " + x));
+      if (!ok && !fallas) {
+        fallas = 1;
+        L.push("❌ prueba en vivo: no se pudo ejecutar (navegador o app no disponibles)", ...res.map((x) => "   " + x));
+      } else
+        L.push(fallas ? `❌ prueba en vivo: ${fallas} fallo(s) de ${res.length}` : `✅ prueba en vivo: ${res.length} escenario(s) pasaron`, ...res.map((x) => "   " + x));
       L.push(`\uD83D\uDCCA cobertura funcional: ${ok}/${esc.length} rutas descubiertas ejercitadas (${Math.round(ok / Math.max(1, esc.length) * 100)}%)`);
       const cal = await calidadWeb(base, pj, esc.map((e) => e.ruta));
       fallas += cal.fallas;
       L.push(...cal.lineas);
-      L.push(...await carga(base, esc.map((e) => e.ruta)));
+      if (esLocal(base))
+        L.push(...await carga(base, esc.map((e) => e.ruta)));
+      else
+        L.push("⏭ carga: solo contra tu app local (no se estresa producción)");
     } else
       L.push("⏭ prueba en vivo/calidad/carga: no pude levantar la app (pásame la url); la suite igual quedó en el repo");
     L.push(...correrUnitarias(cwd));
-    L.push(...extrasPro(cwd, esc.map((e) => e.ruta)));
-    mkdirSync11(join20(cwd, ".skill_dey"), { recursive: true });
-    writeFileSync12(join20(cwd, ".skill_dey", "PRUEBAS-PROFESIONALES.md"), [`# Testeo profesional · ${new Date().toISOString().slice(0, 16).replace("T", " ")}`, ...L].join(`
+    L.push(...await extrasPro(cwd, esc.map((e) => e.ruta)));
+    mkdirSync11(join23(cwd, ".skill_dey"), { recursive: true });
+    writeFileSync12(join23(cwd, ".skill_dey", "PRUEBAS-PROFESIONALES.md"), [`# Testeo profesional · ${new Date().toISOString().slice(0, 16).replace("T", " ")}`, ...L].join(`
 `));
     return { ok: fallas === 0, fallas, lineas: L };
   } finally {
@@ -2215,20 +2833,20 @@ async function pruebasProfesionales(cwd, url) {
 }
 
 // app/skill_dey-lib/video.ts
-import { spawnSync as spawnSync16 } from "node:child_process";
-import { writeFileSync as writeFileSync13, readFileSync as readFileSync19, mkdirSync as mkdirSync12, existsSync as existsSync15, unlinkSync } from "node:fs";
-import { join as join21, basename as basename10 } from "node:path";
+import { spawnSync as spawnSync17 } from "node:child_process";
+import { writeFileSync as writeFileSync13, readFileSync as readFileSync20, mkdirSync as mkdirSync12, existsSync as existsSync17, unlinkSync as unlinkSync2, rmSync as rmSync6 } from "node:fs";
+import { join as join24, basename as basename9, relative as relative5 } from "node:path";
 import { tmpdir as tmpdir6 } from "node:os";
 var leer13 = (p) => {
   try {
-    return readFileSync19(p, "utf8");
+    return readFileSync20(p, "utf8");
   } catch {
     return "";
   }
 };
 var hayFfmpeg = () => {
   try {
-    return spawnSync16("ffmpeg", ["-version"], { encoding: "utf8", timeout: 1e4, shell: true }).status === 0;
+    return spawnSync17("ffmpeg", ["-version"], { encoding: "utf8", timeout: 1e4, shell: true }).status === 0;
   } catch {
     return false;
   }
@@ -2240,15 +2858,14 @@ function guion(cwd) {
   const pasos = [];
   const vistas = new Set;
   for (const f of archivos) {
-    const src = leer13(join21(cwd, f));
-    const ruta0 = "/" + f.replace(root + "/", "").replace(/\\/g, "/");
-    const r = ruta0.startsWith("/..") ? "/" + basename10(f) : ruta0;
-    if (vistas.has(r))
+    const src = leer13(join24(cwd, f));
+    const r = "/" + relative5(root, join24(cwd, f)).replace(/\\/g, "/");
+    if (r.startsWith("/..") || ACCION_PELIGROSA.test(r) || vistas.has(r))
       continue;
     const h1 = src.match(/<h1[^>]*>([^<]{2,60})</i)?.[1]?.trim() || src.match(/<title[^>]*>([^<]{2,60})</i)?.[1]?.trim();
     const campos = [...src.matchAll(/<(?:input|select|textarea)\b[^>]*name\s*=\s*["']([^"']+)/gi)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
     const tieneForm = /<form/i.test(src);
-    const titulo = (h1 || basename10(f).replace(/\.(php|html)$/i, "")).slice(0, 60);
+    const titulo = (h1 || basename9(f).replace(/\.(php|html)$/i, "")).slice(0, 60);
     const texto = tieneForm && campos.length ? `Completa los campos (${campos.join(", ")}) y usa el botón para guardar.` : `Pantalla "${titulo}".`;
     pasos.push({ ruta: r, titulo, texto });
     vistas.add(r);
@@ -2302,16 +2919,18 @@ async function capacitar(cwd, url) {
     let base = url;
     if (!base && servicios(cwd).length) {
       arr = await conTiempo(arranqueLimpio(cwd), 95000, null).catch(() => null);
+      if (!arr)
+        detenerNuestros(cwd);
       base = (arr?.lista.find((a) => a.ok && a.s.tipo === "frontend") ?? arr?.lista.find((a) => a.ok))?.url;
     }
-    if (!base)
+    if (!base && !servicios(cwd).length)
       base = (app = await iniciarApp(cwd).catch(() => null))?.url;
     if (!base)
       return { ok: true, lineas: ["⏭ capacitar: no pude levantar la app; pásame la url o levántala"] };
     const pasos = guion(cwd);
-    const out = join21(cwd, "docs", "capacitacion");
+    const out = join24(cwd, "docs", "capacitacion");
     mkdirSync12(out, { recursive: true });
-    const script = join21(tmpdir6(), `skill_dey-video-${Date.now()}.mjs`);
+    const script = join24(tmpdir6(), `skill_dey-video-${Date.now()}.mjs`);
     writeFileSync13(script, `
 import { createRequire } from 'node:module'; const require=createRequire(${JSON.stringify(pj)});
 import { join } from 'node:path';
@@ -2328,7 +2947,10 @@ for(let i=0;i<pasos.length;i++){ const paso=pasos[i];
   hechos.push({...paso,img:nombre});
 }
 await b.close(); console.log('PASOS:'+JSON.stringify(hechos));`);
-    const r = spawnSync16(`node "${script}"`, { cwd, shell: true, encoding: "utf8", timeout: 600000, maxBuffer: 50000000 });
+    const r = await correrNodo(script, cwd, 600000);
+    try {
+      rmSync6(script, { force: true });
+    } catch {}
     const line = (r.stdout ?? "").split(`
 `).find((l) => l.startsWith("PASOS:"));
     let hechos = [];
@@ -2340,29 +2962,29 @@ await b.close(); console.log('PASOS:'+JSON.stringify(hechos));`);
     }
     if (!hechos.length)
       return { ok: true, lineas: ["⏭ capacitar: no encontré pantallas para grabar"] };
-    writeFileSync13(join21(out, "guion.srt"), srt(hechos));
-    writeFileSync13(join21(out, "tutorial.html"), htmlTutorial(hechos, basename10(cwd) || "app"));
+    writeFileSync13(join24(out, "guion.srt"), srt(hechos));
+    writeFileSync13(join24(out, "tutorial.html"), htmlTutorial(hechos, basename9(cwd) || "app"));
     const L = [`✅ capacitación: ${hechos.length} pantalla(s) grabadas → docs/capacitacion/`, "   tutorial.html (se abre en cualquier navegador, con subtítulos) · guion.srt"];
     if (hayFfmpeg()) {
-      const lista = join21(out, "_lista.txt");
+      const lista = join24(out, "_lista.txt");
       writeFileSync13(lista, hechos.map((h) => `file '${h.img}'
 duration ${SEG}`).join(`
 `) + `
 file '${hechos[hechos.length - 1].img}'
 `);
-      const mp4 = join21(out, "capacitacion.mp4");
-      const conSub = spawnSync16(`ffmpeg -y -f concat -safe 0 -i "${lista}" -vf "subtitles=guion.srt:force_style='FontSize=18,PrimaryColour=&H00FFFFFF,BorderStyle=3,Outline=1'" -pix_fmt yuv420p -r 25 "${mp4}"`, { cwd: out, shell: true, encoding: "utf8", timeout: 300000 });
-      if (conSub.status === 0 && existsSync15(mp4))
+      const mp4 = join24(out, "capacitacion.mp4");
+      const conSub = spawnSync17(`ffmpeg -y -f concat -safe 0 -i "${lista}" -vf "subtitles=guion.srt:force_style='FontSize=18,PrimaryColour=&H00FFFFFF,BorderStyle=3,Outline=1'" -pix_fmt yuv420p -r 25 "${mp4}"`, { cwd: out, shell: true, encoding: "utf8", timeout: 300000 });
+      if (conSub.status === 0 && existsSync17(mp4))
         L.push("   capacitacion.mp4 (video con subtítulos quemados)");
       else {
-        const r2 = spawnSync16(`ffmpeg -y -f concat -safe 0 -i "${lista}" -pix_fmt yuv420p -r 25 "${mp4}"`, { cwd: out, shell: true, encoding: "utf8", timeout: 300000 });
-        if (r2.status === 0 && existsSync15(mp4))
+        const r2 = spawnSync17(`ffmpeg -y -f concat -safe 0 -i "${lista}" -pix_fmt yuv420p -r 25 "${mp4}"`, { cwd: out, shell: true, encoding: "utf8", timeout: 300000 });
+        if (r2.status === 0 && existsSync17(mp4))
           L.push("   capacitacion.mp4 (video; subtítulos en guion.srt)");
       }
     } else
       L.push("   (sin ffmpeg: usa tutorial.html; si instalas ffmpeg, genero también el .mp4)");
     try {
-      unlinkSync(join21(out, "_lista.txt"));
+      unlinkSync2(join24(out, "_lista.txt"));
     } catch {}
     return { ok: true, lineas: L };
   } finally {
@@ -2373,8 +2995,8 @@ file '${hechos[hechos.length - 1].img}'
 }
 
 // app/skill_dey-lib/multiia.ts
-import { writeFileSync as writeFileSync14, mkdirSync as mkdirSync13, existsSync as existsSync16, readFileSync as readFileSync20 } from "node:fs";
-import { join as join22 } from "node:path";
+import { writeFileSync as writeFileSync14, mkdirSync as mkdirSync13, existsSync as existsSync18, readFileSync as readFileSync21 } from "node:fs";
+import { join as join25 } from "node:path";
 function reglasPortables() {
   return `# Reglas de trabajo — SKILL_DEY (portátil)
 Trabaja como SKILL_DEY en este proyecto, con esta ley y este flujo.
@@ -2399,17 +3021,17 @@ var DESTINOS = [
   { archivo: "CLAUDE.md" },
   { archivo: "GEMINI.md" },
   { archivo: ".cursorrules" },
-  { archivo: join22(".cursor", "rules", "skill_dey.mdc"), pre: `---
+  { archivo: join25(".cursor", "rules", "skill_dey.mdc"), pre: `---
 description: SKILL_DEY
 alwaysApply: true
 ---
 
 ` },
   { archivo: ".windsurfrules" },
-  { archivo: join22(".github", "copilot-instructions.md") },
+  { archivo: join25(".github", "copilot-instructions.md") },
   { archivo: ".clinerules" },
   { archivo: ".rules" },
-  { archivo: join22(".idx", "airules.md") }
+  { archivo: join25(".idx", "airules.md") }
 ];
 function instalarMultiIA(cwd) {
   const reglas = reglasPortables();
@@ -2421,12 +3043,12 @@ ${fin}
 `;
   const hechos = [];
   for (const d of DESTINOS) {
-    const ruta = join22(cwd, d.archivo);
+    const ruta = join25(cwd, d.archivo);
     try {
-      mkdirSync13(join22(ruta, ".."), { recursive: true });
+      mkdirSync13(join25(ruta, ".."), { recursive: true });
       let contenido = "";
       try {
-        contenido = existsSync16(ruta) ? readFileSync20(ruta, "utf8") : "";
+        contenido = existsSync18(ruta) ? readFileSync21(ruta, "utf8") : "";
       } catch {}
       if (contenido.includes(marca)) {
         contenido = contenido.replace(new RegExp(`${marca}[\\s\\S]*?${fin}\\n?`), bloque);
@@ -2441,8 +3063,8 @@ ${fin}
       hechos.push(d.archivo + " (no se pudo: " + e.message + ")");
     }
   }
-  mkdirSync13(join22(cwd, ".skill_dey"), { recursive: true });
-  writeFileSync14(join22(cwd, ".skill_dey", "MULTI-IA.md"), `# SKILL_DEY multi-IA
+  mkdirSync13(join25(cwd, ".skill_dey"), { recursive: true });
+  writeFileSync14(join25(cwd, ".skill_dey", "MULTI-IA.md"), `# SKILL_DEY multi-IA
 Reglas escritas para: ${DESTINOS.map((d) => d.archivo).join(", ")}
 
 ${reglasPortables()}`);
@@ -2458,10 +3080,10 @@ ${reglasPortables()}`);
 }
 
 // app/skill_dey-lib/robustez.ts
-import { existsSync as existsSync17, readFileSync as readFileSync21, statSync as statSync9, writeFileSync as writeFileSync15, chmodSync, mkdirSync as mkdirSync14 } from "node:fs";
-import { join as join23 } from "node:path";
-import { homedir as homedir3 } from "node:os";
-var OC = () => process.env.OPENCODE_CONFIG_DIR || join23(homedir3(), ".config", "opencode");
+import { spawnSync as spawnSync18 } from "node:child_process";
+import { existsSync as existsSync19, readFileSync as readFileSync22, statSync as statSync9, writeFileSync as writeFileSync15, chmodSync, mkdirSync as mkdirSync14, copyFileSync as copyFileSync3 } from "node:fs";
+import { join as join26, isAbsolute as isAbsolute5 } from "node:path";
+var OC = () => ocDir();
 function doctor() {
   const oc = OC();
   const L = [];
@@ -2473,7 +3095,7 @@ function doctor() {
   };
   const ver = (() => {
     try {
-      return readFileSync21(join23(oc, "skill_dey", "VERSION"), "utf8").trim();
+      return readFileSync22(join26(oc, "skill_dey", "VERSION"), "utf8").trim();
     } catch {
       return "";
     }
@@ -2493,36 +3115,56 @@ function doctor() {
     "skill_dey/skill_dey-mcp.mjs"
   ];
   for (const f of need)
-    chk(existsSync17(join23(oc, f)), f, "falta " + f);
+    chk(existsSync19(join26(oc, f)), f, "falta " + f);
   try {
-    const g = readFileSync21(join23(oc, "plugins", "skill_dey-guardian.ts"), "utf8");
-    const m = g.match(/VERSION\s*=\s*"([\d.]+)"/);
+    const g = readFileSync22(join26(oc, "plugins", "skill_dey-guardian.ts"), "utf8");
+    const m = g.match(/VERSION_CODIGO\s*=\s*"([\d.]+)"/);
     chk(!!m && m[1] === ver, `plugin y VERSION coinciden (${m?.[1] ?? "?"})`, `instalación mezclada (plugin ${m?.[1] ?? "?"} vs ${ver}): reinstala`);
   } catch {
     chk(false, "", "no pude leer el plugin");
   }
   for (const b of ["skill_dey/skill_dey.mjs", "skill_dey/skill_dey-mcp.mjs"]) {
     try {
-      chk(statSync9(join23(oc, b)).size > 1e4, b + " (bundle OK)", b + " vacío/corrupto");
+      chk(statSync9(join26(oc, b)).size > 1e4, b + " (bundle OK)", b + " vacío/corrupto");
     } catch {}
   }
   L.push(mal ? `❌ doctor: ${mal} problema(s) → reinstala skill_dey o corre el instalador` : "✅ doctor: instalación sana. Test funcional completo: /skill_dey prueba (o eval)");
   return L;
 }
 function instalarHook(cwd) {
-  const g = join23(cwd, ".git");
-  if (!existsSync17(g))
+  const gp = spawnSync18("git", ["rev-parse", "--git-path", "hooks"], { cwd, encoding: "utf8", timeout: 1e4 });
+  const gitDir = join26(cwd, ".git"), esDir = (() => {
+    try {
+      return statSync9(gitDir).isDirectory();
+    } catch {
+      return false;
+    }
+  })();
+  if (gp.status !== 0 && !esDir)
     return "⏭ git hook: esta carpeta no es un repositorio git (haz `git init` primero)";
-  const hooks = join23(g, "hooks");
-  mkdirSync14(hooks, { recursive: true });
-  const mjs = join23(homedir3(), ".config", "opencode", "skill_dey", "skill_dey.mjs");
+  const hooks = gp.status === 0 ? isAbsolute5(gp.stdout.trim()) ? gp.stdout.trim() : join26(cwd, gp.stdout.trim()) : join26(gitDir, "hooks");
+  try {
+    mkdirSync14(hooks, { recursive: true });
+  } catch (e) {
+    return "no pude preparar la carpeta de hooks: " + e.message;
+  }
+  const mjs = sdDir("skill_dey.mjs");
   const hook = `#!/bin/sh
 # SKILL_DEY pre-commit — no deja commitear con errores (salta con: git commit --no-verify)
 node "${mjs}" revisar . || { echo "SKILL_DEY: hay errores, corrígelos (o usa --no-verify)"; exit 1; }
 `;
-  const f = join23(hooks, "pre-commit");
+  const f = join26(hooks, "pre-commit");
   try {
-    writeFileSync15(f, hook);
+    const actual = readFileSync22(f, "utf8");
+    if (!/SKILL_DEY pre-commit/.test(actual))
+      copyFileSync3(f, f + ".antes-skill_dey");
+  } catch {}
+  const previo = existsSync19(f + ".antes-skill_dey") ? `
+# tu hook anterior sigue corriendo:
+"${f}.antes-skill_dey" || exit 1
+` : "";
+  try {
+    writeFileSync15(f, hook + previo);
     chmodSync(f, 493);
     return "✅ git hook instalado: antes de cada commit corre `revisar` y bloquea si hay errores (salta con --no-verify). Funciona en cualquier editor.";
   } catch (e) {
@@ -2530,10 +3172,10 @@ node "${mjs}" revisar . || { echo "SKILL_DEY: hay errores, corrígelos (o usa --
   }
 }
 function reporte(cwd) {
-  const d = join23(cwd, ".skill_dey");
+  const d = join26(cwd, ".skill_dey");
   const leer = (f) => {
     try {
-      return readFileSync21(join23(d, f), "utf8");
+      return readFileSync22(join26(d, f), "utf8");
     } catch {
       return "";
     }
@@ -2566,11 +3208,477 @@ function reporte(cwd) {
   return L;
 }
 
+// app/skill_dey-lib/mapa_mental.ts
+import { readFileSync as readFileSync23, writeFileSync as writeFileSync16, mkdirSync as mkdirSync15 } from "node:fs";
+import { join as join27 } from "node:path";
+var IGN7 = /(^|[\\/])(node_modules|vendor|dist|build|\.git|\.skill_dey|coverage|\.venv|venv|__pycache__|\.next|docs)([\\/]|$)|\.min\.|\.lock$/i;
+var limpio = (s) => s.replace(/[()\[\]{}:;#"'`]/g, "").replace(/\s+/g, " ").trim().slice(0, 48) || "-";
+function requisitos(cwd) {
+  try {
+    const t = readFileSync23(join27(cwd, ".skill_dey", "REQUISITOS.md"), "utf8");
+    return t.split(/\r?\n/).filter((l) => /^\s*-\s*\[[ xX]\]/.test(l)).map((l) => l.replace(/^\s*-\s*\[[ xX]\]\s*/, "")).slice(0, 12);
+  } catch {
+    return [];
+  }
+}
+function arquitectura(cwd) {
+  const files = listarArchivos(cwd).filter((f) => !IGN7.test(f));
+  const por = {};
+  for (const f of files) {
+    const g = f.includes("/") ? f.split("/")[0] : "(raíz)";
+    (por[g] ||= []).push(f);
+  }
+  return Object.entries(por).sort((a, b) => b[1].length - a[1].length).slice(0, 8).map(([grupo, fs]) => ({ grupo: `${grupo} (${fs.length})`, ejemplos: fs.slice(0, 3).map((x) => x.split("/").pop() || x) }));
+}
+function mapaMental(cwd, tarea = "") {
+  const raiz = limpio(tarea || cwd.split(/[\\/]/).pop() || "Proyecto");
+  const reqs = requisitos(cwd);
+  const arq = arquitectura(cwd);
+  const L = ["mindmap", `  root((${raiz}))`];
+  if (reqs.length) {
+    L.push("    Requisitos");
+    for (const r of reqs)
+      L.push("      " + limpio(r));
+  }
+  if (arq.length) {
+    L.push("    Arquitectura");
+    for (const a of arq) {
+      L.push("      " + limpio(a.grupo));
+      for (const e of a.ejemplos)
+        L.push("        " + limpio(e));
+    }
+  }
+  if (!reqs.length && !arq.length)
+    L.push("    (sin plan ni archivos aún)");
+  const mermaid = L.join(`
+`);
+  mkdirSync15(join27(cwd, ".skill_dey"), { recursive: true });
+  const md = `# Mapa mental — ${raiz}
+_Se dibuja solo en GitHub/VS Code. Para el navegador abre MAPA.html._
+
+\`\`\`mermaid
+${mermaid}
+\`\`\`
+`;
+  writeFileSync16(join27(cwd, ".skill_dey", "MAPA.md"), md);
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Mapa mental · ${raiz}</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script></head>
+<body style="font-family:system-ui;margin:0;padding:16px">
+<h3>\uD83E\uDDE0 Mapa mental — ${raiz}</h3>
+<pre class="mermaid">${mermaid}</pre>
+<script>mermaid.initialize({startOnLoad:true});</script></body></html>`;
+  writeFileSync16(join27(cwd, ".skill_dey", "MAPA.html"), html);
+  return { ok: true, lineas: [`\uD83E\uDDE0 Mapa mental guardado en .skill_dey/MAPA.md (requisitos: ${reqs.length}, grupos: ${arq.length}). Ábrelo en VS Code/GitHub o MAPA.html en el navegador.`, "```mermaid", mermaid, "```"], mermaid };
+}
+
+// app/skill_dey-lib/diseno.ts
+import { writeFileSync as writeFileSync17, mkdirSync as mkdirSync16, existsSync as existsSync20 } from "node:fs";
+import { join as join28 } from "node:path";
+var esc = (s) => s.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c]);
+function secciones(brief) {
+  const t = brief.toLowerCase();
+  const S = [];
+  if (/login|ingres|sesi[oó]n|acceso|entrar/.test(t))
+    S.push(`<section class="card centro"><h2>Iniciar sesión</h2><form><label>Correo<input type="email" placeholder="tu@correo.com"></label><label>Contraseña<input type="password" placeholder="••••••••"></label><button class="primario">Entrar</button><a class="link" href="#">¿Olvidaste tu contraseña?</a></form></section>`);
+  if (/dashboard|tablero|panel|indicador|kpi|m[eé]trica/.test(t))
+    S.push(`<section><h2>Panel</h2><div class="grid">${["Ventas", "Usuarios", "Tickets", "Disponibilidad"].map((k, i) => `<div class="card kpi"><span class="etq">${k}</span><strong>${["$ 1.2M", "3,480", "27", "99.8%"][i]}</strong><span class="delta">▲ 4.2%</span></div>`).join("")}</div></section>`);
+  if (/tabla|listado|registros|reporte/.test(t))
+    S.push(`<section class="card"><h2>Registros</h2><table><thead><tr><th>Fecha</th><th>Cliente</th><th>Estado</th><th>Total</th></tr></thead><tbody>${[1, 2, 3].map((i) => `<tr><td>2026-10-${10 + i}</td><td>Cliente ${i}</td><td><span class="chip ok">Activo</span></td><td>$ ${i}00.00</td></tr>`).join("")}</tbody></table></section>`);
+  if (/formulario|registro|crear|alta|nuevo/.test(t) && !/login/.test(t))
+    S.push(`<section class="card"><h2>Nuevo registro</h2><form class="dos"><label>Nombre<input placeholder="Nombre"></label><label>Correo<input type="email" placeholder="correo"></label><label>Teléfono<input placeholder="300..."></label><label>Ciudad<input placeholder="Ciudad"></label><label class="full">Notas<textarea placeholder="..."></textarea></label><button class="primario">Guardar</button></form></section>`);
+  if (/landing|inicio|home|p[aá]gina|portada|producto/.test(t) || !S.length)
+    S.unshift(`<section class="hero"><h1>${esc(brief.slice(0, 60) || "Tu producto")}</h1><p>Una descripción clara y breve de lo que ofreces. Llama a la acción.</p><div><button class="primario">Empezar</button><button class="ghost">Ver más</button></div></section>`);
+  return S.join(`
+`);
+}
+function generarMockup(cwd, brief) {
+  if (!brief || !brief.trim())
+    return { ok: false, lineas: ["di qué pantalla quieres, ej: /skill_dey mockup login con dashboard y tabla"] };
+  const cuerpo = secciones(brief);
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup — ${esc(brief.slice(0, 40))}</title><style>
+:root{--bg:#f7f8fa;--fg:#1a1d21;--card:#fff;--bor:#e5e7eb;--pri:#2d6cdf;--mut:#6b7280;color-scheme:light dark}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1115;--fg:#e8eaed;--card:#171a1f;--bor:#2a2e35}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,Arial,sans-serif;background:var(--bg);color:var(--fg);line-height:1.5}
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--bor)}
+nav a{margin-left:16px;color:var(--mut);text-decoration:none}main{max-width:1000px;margin:0 auto;padding:24px 16px;display:flex;flex-direction:column;gap:24px}
+h1{font-size:2rem;margin:.2em 0}h2{margin:.2em 0 .6em}.hero{text-align:center;padding:48px 16px}
+.card{background:var(--card);border:1px solid var(--bor);border-radius:12px;padding:20px}.centro{max-width:380px;margin:0 auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px}.kpi{display:flex;flex-direction:column;gap:4px}
+.etq{color:var(--mut);font-size:.85rem}.kpi strong{font-size:1.6rem}.delta{color:#16a34a;font-size:.85rem}
+form{display:flex;flex-direction:column;gap:12px}form.dos{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}
+label{display:flex;flex-direction:column;gap:4px;font-size:.9rem;color:var(--mut)}input,textarea{padding:10px;border:1px solid var(--bor);border-radius:8px;background:transparent;color:var(--fg)}
+button{padding:10px 16px;border-radius:8px;border:1px solid var(--bor);background:transparent;color:var(--fg);cursor:pointer;font-size:.95rem}
+.primario{background:var(--pri);color:#fff;border-color:var(--pri)}.ghost{}.link{color:var(--pri);text-decoration:none;font-size:.9rem;text-align:center}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--bor)}th{color:var(--mut);font-weight:600}
+.chip{padding:2px 8px;border-radius:999px;font-size:.8rem}.chip.ok{background:#16a34a22;color:#16a34a}
+@media(max-width:560px){form.dos{grid-template-columns:1fr}}
+</style></head><body>
+<header><strong>Mi App</strong><nav><a href="#">Inicio</a><a href="#">Panel</a><a href="#">Cuenta</a></nav></header>
+<main>${cuerpo}</main></body></html>`;
+  mkdirSync16(join28(cwd, "docs", "mockups"), { recursive: true });
+  const base = "mockup-" + ((brief || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "pantalla");
+  let f = join28(cwd, "docs", "mockups", base + ".html");
+  for (let n = 2;existsSync20(f); n++)
+    f = join28(cwd, "docs", "mockups", `${base}-${n}.html`);
+  writeFileSync17(f, html);
+  return { ok: true, lineas: [`\uD83C\uDFA8 Mockup generado: docs/mockups/${f.split(/[\\/]/).pop()} (ábrelo en el navegador). Punto de partida responsive y claro/oscuro; ajústalo a tu marca.`, "   Secciones según tu brief: " + brief.slice(0, 80)] };
+}
+
+// app/skill_dey-lib/modelos.ts
+import { join as join29, extname as extname2, isAbsolute as isAbsolute6 } from "node:path";
+var CATALOGO = sdDir("MODELOS.json");
+var DIR = sdDir();
+var LIMITES = join29(DIR, "LIMITES.json");
+var RANKING = join29(DIR, "RANKING.json");
+var SALUD = join29(DIR, "SALUD.json");
+
+// app/skill_dey-lib/ruteo.ts
+function clasificar(texto) {
+  const t = (texto || "").toLowerCase();
+  if (/\b(bd|base de datos|migrac|auth|login|sesi[oó]n|pago|dinero|arquitect|refactor|varios archivos|m[uú]ltiples|app nueva|aplicaci[oó]n nueva|integr|seguridad|despleg|desplieg|api\b|concurren|optimiz|algoritmo|dise[nñ]a|planifica|complejo|a fondo)/.test(t))
+    return "complejo";
+  if (texto.length <= 180 && /(cambia|corrige|arregla|ajusta|color|el texto|renombra|typo|traduce|comenta|formatea|mueve|quita|agrega un (texto|campo|bot[oó]n|enlace))/.test(t))
+    return "simple";
+  return texto.length > 420 ? "complejo" : "simple";
+}
+
+// app/skill_dey-lib/prompt.ts
+function optimizarPrompt(texto) {
+  const t = (texto || "").trim();
+  if (!t)
+    return "escribe el pedido a optimizar, ej: /skill_dey prompt agrega el login de usuarios";
+  const nivel = clasificar(t);
+  const tl = t.toLowerCase();
+  const falta = [];
+  if (!/\b(archivo|pantalla|p[aá]gina|vista|componente|ruta|secci[oó]n|\.php|\.js|\.ts|\.vue|\.html)\b/i.test(tl))
+    falta.push("¿en qué pantalla/archivo exactamente?");
+  if (/\b(crea|agrega|formulario|registro|guardar|campo|alta)\b/i.test(tl) && !/valida/i.test(tl))
+    falta.push("¿qué campos y cuáles son obligatorios?");
+  if (/\b(usuario|login|acceso|rol|privado|admin)\b/i.test(tl) && !/permiso|rol/i.test(tl))
+    falta.push("¿qué permisos o roles?");
+  if (/\b(lista|tabla|reporte|datos|consulta)\b/i.test(tl) && !/vac[ií]o|sin datos/i.test(tl))
+    falta.push("¿qué mostrar si no hay datos o si falla?");
+  if (/\b(integr|conecta|api|servicio|pago|correo|whatsapp)\b/i.test(tl) && !/credencial|clave|token|\.env/i.test(tl))
+    falta.push("¿qué credenciales/servicio? (van en .env, no en el código)");
+  return [
+    "\uD83D\uDCDD Pedido optimizado (úsalo tal cual o pégalo):",
+    "",
+    `\uD83C\uDFAF Objetivo: ${t}`,
+    `\uD83D\uDCD0 Nivel estimado: ${nivel}${nivel === "complejo" ? " → conviene un modelo potente" : " → basta un modelo rápido/barato"}`,
+    "\uD83D\uDCCB Incluir por defecto (deducido, no hace falta pedirlo): validación de entradas · permisos/sesión · estados vacío y de error · responsive (móvil) · mensajes claros al usuario.",
+    "✅ Criterios de aceptación: funciona sin errores (código y consola) · no rompe lo existente (deja cómo deshacer) · cubre CADA punto pedido · con pruebas reales si toca UI o datos.",
+    "\uD83D\uDEAB Restricciones: cambios quirúrgicos · no inventar nombres/rutas/APIs · sin secretos en el código (usar .env).",
+    falta.length ? "⚠ Conviene aclarar antes (si aplica): " + falta.join(" · ") : "✔ Tiene suficiente detalle para empezar."
+  ].join(`
+`);
+}
+
+// app/skill_dey-lib/trazas.ts
+import { appendFileSync as appendFileSync2, readFileSync as readFileSync24, writeFileSync as writeFileSync18, mkdirSync as mkdirSync17 } from "node:fs";
+import { join as join30 } from "node:path";
+var F = (cwd) => join30(cwd, ".skill_dey", "TRACE.jsonl");
+function leer14(cwd) {
+  try {
+    return readFileSync24(F(cwd), "utf8").split(`
+`).filter(Boolean).map((l) => JSON.parse(l));
+  } catch {
+    return [];
+  }
+}
+var k = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(Math.round(n));
+function panel(cwd) {
+  const t = leer14(cwd);
+  if (!t.length)
+    return { ok: true, lineas: ["⏭ panel: aún no hay trazas (aparecen al terminar cada respuesta)."] };
+  const ult = t.slice(-40);
+  const totTok = t.reduce((a, x) => a + (x.tokens || 0), 0), totCost = t.reduce((a, x) => a + (x.costo || 0), 0);
+  const maxTok = Math.max(1, ...ult.map((x) => x.tokens || 0)), maxDur = Math.max(1, ...ult.map((x) => x.dur || 0));
+  const barras = (vals, max, color) => ult.map((_, i) => `<rect x="${i * 14}" y="${60 - Math.round(vals[i] / max * 56)}" width="11" height="${Math.max(1, Math.round(vals[i] / max * 56))}" fill="${color}"><title>${vals[i]}</title></rect>`).join("");
+  const w = ult.length * 14;
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Panel · SKILL_DEY</title>
+<style>:root{color-scheme:light dark}body{font-family:system-ui;margin:0;padding:20px;background:#0f1115;color:#e8eaed}
+@media(prefers-color-scheme:light){body{background:#f7f8fa;color:#1a1d21}}
+.kpis{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px}.card{background:#171a1f22;border:1px solid #8884;border-radius:12px;padding:14px 18px}
+.card strong{font-size:1.5rem;display:block}.card span{opacity:.7;font-size:.85rem}svg{max-width:100%}.g{margin:18px 0}</style></head><body>
+<h2>\uD83D\uDCCA Panel de observabilidad — SKILL_DEY</h2>
+<div class="kpis">
+<div class="card"><span>Consultas</span><strong>${t.length}</strong></div>
+<div class="card"><span>Tokens totales</span><strong>${k(totTok)}</strong></div>
+<div class="card"><span>Costo total</span><strong>${totCost > 0 ? "US$" + totCost.toFixed(2) : "gratis"}</strong></div>
+<div class="card"><span>Prom. tokens/consulta</span><strong>${k(totTok / t.length)}</strong></div>
+<div class="card"><span>Modelo más usado</span><strong>${(Object.entries(t.reduce((a, x) => (a[x.modelo] = (a[x.modelo] || 0) + 1, a), {})).sort((a, b) => b[1] - a[1])[0]?.[0] || "—").split("/").pop()}</strong></div>
+</div>
+<div class="g"><b>Tokens por consulta</b> (últimas ${ult.length})<br><svg width="${w}" height="64">${barras(ult.map((x) => x.tokens || 0), maxTok, "#2d6cdf")}</svg></div>
+<div class="g"><b>Tiempo por consulta (ms)</b><br><svg width="${w}" height="64">${barras(ult.map((x) => x.dur || 0), maxDur, "#16a34a")}</svg></div>
+<p style="opacity:.6">Local y gratis. Datos crudos en .skill_dey/TRACE.jsonl</p></body></html>`;
+  mkdirSync17(join30(cwd, ".skill_dey"), { recursive: true });
+  writeFileSync18(join30(cwd, ".skill_dey", "PANEL.html"), html);
+  return { ok: true, lineas: [`\uD83D\uDCCA Panel de observabilidad → .skill_dey/PANEL.html · ${t.length} consultas · ${k(totTok)} tokens${totCost > 0 ? " · US$" + totCost.toFixed(2) : ""}. Ábrelo en el navegador.`] };
+}
+
+// app/skill_dey-lib/indice.ts
+import { readFileSync as readFileSync25, existsSync as existsSync21, readdirSync as readdirSync6 } from "node:fs";
+import { join as join31 } from "node:path";
+var FUENTES = ["LECCIONES.md", "DECISIONES.md", "NEGOCIO.md", "BITACORA.md", "ESTADO.md", "APRENDIZAJE.md", "PRINCIPIOS.md"];
+var norm = (s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").split(/[^a-z0-9]+/).filter((w) => w.length > 2);
+function trozos(cwd) {
+  const dir = join31(cwd, ".skill_dey");
+  const out = [];
+  const archivos = existsSync21(dir) ? readdirSync6(dir).filter((f) => FUENTES.includes(f)) : [];
+  for (const f of archivos) {
+    const t = (() => {
+      try {
+        return readFileSync25(join31(dir, f), "utf8");
+      } catch {
+        return "";
+      }
+    })();
+    for (const linea of t.split(/\r?\n/)) {
+      const l = linea.trim().replace(/^[-*#>\s]+/, "");
+      if (l.length < 8 || l.startsWith("name:") || l.startsWith("description:"))
+        continue;
+      out.push({ fuente: f, texto: l.slice(0, 220), toks: norm(l) });
+    }
+  }
+  try {
+    const g = readFileSync25(memoriaGlobal("LECCIONES-GLOBALES.md"), "utf8");
+    for (const linea of g.split(/\r?\n/)) {
+      const l = linea.trim().replace(/^[-*#>\s]+/, "");
+      if (l.length < 8 || l.startsWith("name:") || l.startsWith("description:"))
+        continue;
+      out.push({ fuente: "GLOBAL.md", texto: l.slice(0, 220), toks: norm(l) });
+    }
+  } catch {}
+  return out;
+}
+function buscarMemoria(cwd, consulta, k = 6) {
+  const docs = trozos(cwd);
+  if (!docs.length)
+    return [];
+  const q = [...new Set(norm(consulta))];
+  if (!q.length)
+    return [];
+  const N = docs.length, avgdl = docs.reduce((a, d) => a + d.toks.length, 0) / N;
+  const df = {};
+  for (const term of q)
+    df[term] = docs.filter((d) => d.toks.includes(term)).length || 0;
+  const idf = (term) => Math.log(1 + (N - (df[term] || 0) + 0.5) / ((df[term] || 0) + 0.5));
+  const k1 = 1.5, b = 0.75;
+  const puntuar = (d) => q.reduce((s, term) => {
+    const tf = d.toks.filter((x) => x === term).length;
+    if (!tf)
+      return s;
+    return s + idf(term) * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * (d.toks.length / avgdl)));
+  }, 0);
+  return docs.map((d) => ({ d, s: puntuar(d) })).filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, k).map((x) => `[${x.d.fuente.replace(".md", "")}] ${x.d.texto}`);
+}
+
+// app/skill_dey-lib/sitio.ts
+import { writeFileSync as writeFileSync19, readFileSync as readFileSync26, mkdirSync as mkdirSync18, rmSync as rmSync7 } from "node:fs";
+import { join as join32, dirname as dirname3 } from "node:path";
+import { tmpdir as tmpdir7 } from "node:os";
+var DESTRUCTIVO = /(logout|log-out|signout|salir|cerrar[-_]?(sesion|caja)|delete|elimin|borr|destroy|remove|quitar|anular|\bbaja|reset|truncate|drop|vaciar|\bdel(\.php|\b))/i;
+var SOLO_LECTURA = /(aprob|approve|rechaz|reject|confirm|activar|desactivar|enable|disable|cancel|anular|pagar|pay|checkout|enviar|send|toggle|publicar|publish|archivar|archive|restaurar|restore|importar|sync|ejecutar|execute|run|cron|install|setup|migrat|seed|backup|respald|export)/i;
+var DESCARGA = /\.(pdf|zip|rar|7z|xlsx?|csv|docx?|pptx?|mp4|mp3|png|jpe?g|gif|webp|svg|ico|exe|dmg|apk)(\?|$)/i;
+var ERROR_TEXTO = /(Fatal error|Parse error|Warning:|Notice:|Deprecated:|Uncaught |Stack trace:|SQLSTATE\[|Traceback \(most recent|Exception in |Undefined (index|variable|array key|offset)|mysqli_|You have an error in your SQL syntax|NaN|undefined(?![\w-]))/;
+function loginPrueba(cwd) {
+  const env = (() => {
+    try {
+      return readFileSync26(join32(cwd, ".env"), "utf8");
+    } catch {
+      return "";
+    }
+  })();
+  const v = (k) => env.match(new RegExp(`^\\s*${k}\\s*=\\s*"?([^"\\r\\n]*)"?`, "m"))?.[1];
+  const u = v("SKILL_DEY_TEST_USER"), p = v("SKILL_DEY_TEST_PASS");
+  return u && p ? { u, p } : null;
+}
+function resumir(errores, paginas, conNavegador) {
+  if (!errores.length)
+    return [`✅ sitio completo: ${paginas} página(s) recorridas sin errores${conNavegador ? " (servidor, consola, red, imágenes y enlaces)" : " (servidor y enlaces; sin navegador)"}`];
+  const grupos = new Map;
+  for (const e of errores) {
+    const k = `${e.tipo}: ${e.detalle}`;
+    if (!grupos.has(k))
+      grupos.set(k, []);
+    grupos.get(k).push(e.pagina);
+  }
+  const n = (re) => errores.filter((e) => re.test(e.tipo)).length;
+  const cats = [["consola", n(/^consola error/)], ["avisos consola", n(/^consola warning/)], ["JS", n(/excepción JS/)], ["red", n(/petición fallida|sin respuesta/)], ["HTTP", n(/^(HTTP|recurso|document|xhr|fetch|script|stylesheet|image|font) ?\d/)], ["página", n(/error (visible|impreso)/)]].filter(([, c]) => c).map(([k, c]) => `${k} ${c}`).join(" · ");
+  const L = [`❌ sitio: ${errores.length} error(es) en ${new Set(errores.map((e) => e.pagina)).size} de ${paginas} página(s)${cats ? " — " + cats : ""}`];
+  for (const [k, ps] of [...grupos].slice(0, 20))
+    L.push(`   ${k.slice(0, 200)} ← ${[...new Set(ps)].slice(0, 3).join(", ")}${ps.length > 3 ? ` (+${ps.length - 3})` : ""}`);
+  if (grupos.size > 20)
+    L.push(`   … y ${grupos.size - 20} tipos más (ver .skill_dey/ERRORES-SITIO.md)`);
+  return L;
+}
+async function rastrearFetch(cwd, base, max, DESTR = DESTRUCTIVO) {
+  const origen = new URL(base).origin, cola = [new URL(base).pathname || "/"], vistas = new Set, recursos = new Map;
+  const errores = [];
+  while (cola.length && vistas.size < max) {
+    const ruta = cola.shift();
+    if (vistas.has(ruta))
+      continue;
+    vistas.add(ruta);
+    try {
+      const r = await fetch(origen + ruta, { redirect: "follow", signal: AbortSignal.timeout(15000) });
+      const html = /html|text/.test(r.headers.get("content-type") ?? "") ? await r.text() : "";
+      if (r.status >= 400)
+        errores.push({ pagina: ruta, tipo: `HTTP ${r.status}`, detalle: "la página responde con error" });
+      const m = html.replace(/<script[\s\S]*?<\/script>/gi, "").match(ERROR_TEXTO);
+      if (m && m[0] !== "NaN" && !/^undefined/.test(m[0])) {
+        const i = html.indexOf(m[0]);
+        errores.push({ pagina: ruta, tipo: "error impreso en la página", detalle: html.slice(i, i + 150).replace(/<[^>]+>/g, "").replace(/\s+/g, " ").split(cwd + "/").join("") });
+      }
+      for (const x of html.matchAll(/<a\b[^>]*href=["']([^"'#]+)["']/gi)) {
+        try {
+          const u = new URL(x[1], origen + ruta);
+          if (u.origin === origen && !DESTR.test(u.pathname + u.search) && !DESCARGA.test(u.pathname)) {
+            const p = u.pathname + u.search;
+            if (!vistas.has(p))
+              cola.push(p);
+          }
+        } catch {}
+      }
+      for (const x of html.matchAll(/<(?:script|img|link|source)\b[^>]*(?:src|href)=["']([^"']+)["']/gi)) {
+        try {
+          const u = new URL(x[1], origen + ruta);
+          if (u.origin === origen && !recursos.has(u.href))
+            recursos.set(u.href, ruta);
+        } catch {}
+      }
+    } catch {
+      errores.push({ pagina: ruta, tipo: "sin respuesta", detalle: "la página no respondió en 15 s" });
+    }
+  }
+  for (const [u, pagina] of [...recursos].slice(0, 200)) {
+    try {
+      const r = await fetch(u, { method: "GET", signal: AbortSignal.timeout(1e4) });
+      if (r.status >= 400)
+        errores.push({ pagina, tipo: `recurso ${r.status}`, detalle: u.replace(origen, "") });
+    } catch {
+      errores.push({ pagina, tipo: "recurso sin respuesta", detalle: u.replace(origen, "") });
+    }
+  }
+  return { errores, paginas: vistas.size };
+}
+async function rastrearSitio(cwd, base, pj, max = 40, opc = {}) {
+  let errores = [], paginas = 0, conNavegador = false, nota = "", capturas = [];
+  const local = esLocal(base), DESTR = local ? DESTRUCTIVO : new RegExp(DESTRUCTIVO.source + "|" + SOLO_LECTURA.source, "i");
+  if (!local)
+    max = Math.min(max, 15);
+  const SHOTS = join32(cwd, ".skill_dey", "shots", "sitio");
+  try {
+    rmSync7(SHOTS, { recursive: true, force: true });
+    mkdirSync18(SHOTS, { recursive: true });
+  } catch {}
+  if (pj) {
+    const script = join32(tmpdir7(), `skill_dey-sitio-${Date.now()}.mjs`);
+    writeFileSync19(script, `
+import { createRequire } from 'node:module'; const require = createRequire(${JSON.stringify(pj)});
+const { chromium } = require('playwright');
+const base = ${JSON.stringify(base)}, origen = new URL(base).origin, max = ${max}, login = ${JSON.stringify(loginPrueba(cwd))};
+const DESTR = ${DESTR}, DESC = ${DESCARGA}, TXT = ${ERROR_TEXTO}, SHOTS = ${JSON.stringify(SHOTS)}, CAPT = [], LOCAL = ${local};
+${ABRIR_NAVEGADOR}
+ctx.on('dialog', d => d.dismiss().catch(() => {}));
+const cola = [new URL(base).pathname || '/'], vistas = new Set(), E = []; let logueado = false;
+const RAIZ = ${JSON.stringify(cwd)};
+const add = (pagina, tipo, detalle) => E.push({ pagina, tipo, detalle: String(detalle).split(origen).join('').split(RAIZ + '/').join('').split(RAIZ + '\\\\').join('').slice(0, 180) });
+async function visitar(ruta) {
+  // (ruta ya marcada como vista por el trabajador)
+  const p = await ctx.newPage(); p.on('dialog', d => d.dismiss().catch(() => {}));
+  p.on('console', m => { if (['error', 'warning'].includes(m.type()) && !/DevTools|favicon|Download the React DevTools|\\[vite\\] connect|Failed to load resource/.test(m.text())) add(ruta, 'consola ' + m.type(), m.text()) });
+  p.on('pageerror', e => add(ruta, 'excepción JS', e.message));
+  p.on('requestfailed', r => { const f = r.failure()?.errorText || ''; if (!/ERR_ABORTED|favicon/.test(f + r.url())) add(ruta, 'petición fallida', r.method() + ' ' + r.url() + ' ' + f) });
+  p.on('response', r => { if (r.status() >= 400 && !/favicon/.test(r.url())) add(ruta, (r.request().resourceType() === 'document' ? 'HTTP ' : r.request().resourceType() + ' ') + r.status(), r.url()) });
+  try { await p.goto(origen + ruta, { waitUntil: 'networkidle', timeout: 30000 }) } catch (e) { add(ruta, 'no cargó', e.message.split('\\n')[0]) }
+  if (login && !logueado && LOCAL && /login|ingres|acceso|signin|sign-in|auth|entrar|iniciar/i.test(ruta + ' ' + p.url()) && (await p.$$('input[type=password]')).length === 1) {
+    try { await p.fill('input[type=email], input[name*=user i], input[name*=correo i], input[name*=email i], input[type=text]', login.u); await p.fill('input[type=password]', login.p);
+      await Promise.all([p.waitForLoadState('networkidle').catch(() => {}), p.press('input[type=password]', 'Enter')]); logueado = true; if (!vistas.has(new URL(p.url()).pathname)) cola.unshift(new URL(p.url()).pathname) } catch (e) { add(ruta, 'login de prueba falló', e.message.split('\\n')[0]) }
+  }
+  const info = await p.evaluate(() => ({
+    texto: (document.body?.innerText || '').slice(0, 200000),
+    rotas: [...document.images].filter(i => i.complete && i.naturalWidth === 0 && i.src).map(i => i.src).slice(0, 5),
+    mixto: location.protocol === 'https:' ? [...document.querySelectorAll('[src^="http:"],link[href^="http:"]')].length : 0,
+    hscroll: document.documentElement.scrollWidth > window.innerWidth + 1,
+    enlaces: [...document.querySelectorAll('a[href]')].map(a => a.href),
+  })).catch(() => null);
+  if (CAPT.length < 6 && E.some(e => e.pagina === ruta)) { const f = SHOTS + '/' + (ruta.replace(/^\\/+/, '').replace(/[^\\w-]+/g, '_').slice(0, 60) || 'inicio') + '.png'; try { await p.screenshot({ path: f }); CAPT.push(f) } catch {} }
+  if (info) {
+    let k = 0, fin = -1; for (const m of info.texto.matchAll(new RegExp(TXT.source, 'g'))) { const i = m.index; if (i < fin) continue; if (k++ >= 3) break; fin = i + 140; add(ruta, 'error visible en la página', info.texto.slice(Math.max(0, i - 20), i + 140).replace(/\\s+/g, ' ')) }
+    for (const s of info.rotas) add(ruta, 'imagen rota', s);
+    if (info.mixto) add(ruta, 'contenido mixto', info.mixto + ' recurso(s) http en página https');
+    if (info.hscroll) add(ruta, 'diseño', 'scroll horizontal (algo se sale del ancho)');
+    for (const h of info.enlaces) { try { const u = new URL(h); if (u.origin === origen && !DESTR.test(u.pathname + u.search) && !DESC.test(u.pathname)) { const r = u.pathname + u.search; if (!vistas.has(r) && !cola.includes(r)) cola.push(r) } } catch {} }
+  }
+  await p.close();
+}
+// 4 páginas a la vez (antes 1): mismo resultado, mucho menos tiempo en sitios grandes. La 1ª página va sola (posible login).
+let activos = 0; const t0 = Date.now();
+const trabajador = async () => { for (;;) {
+  if (Date.now() - t0 > 150000) return; // guardia de reloj: nunca más de 150s por worker (evita cuelgues)
+  if (!cola.length) { if (!activos) return; await new Promise(r => setTimeout(r, 40)); continue; }
+  if (vistas.size >= max) return;
+  const ruta = cola.shift(); if (vistas.has(ruta)) continue; vistas.add(ruta);
+  activos++; try { await visitar(ruta) } finally { activos-- }
+} };
+await trabajador_inicial(); await Promise.all((_CDP || _VIS ? [1] : [1, 2, 3, 4]).map(trabajador)); // en tu Chrome / visible: 1 pestaña a la vez
+async function trabajador_inicial() { const r = cola.shift(); vistas.add(r); await visitar(r) }
+console.log(JSON.stringify({ errores: E, paginas: vistas.size, capturas: CAPT })); await _cerrar(); process.exit(0);`);
+    const env = { SKILL_DEY_VISIBLE: opc.visible ? "1" : "0", SKILL_DEY_CDP: opc.cdp ?? "", SKILL_DEY_PERFIL: opc.visible && !opc.cdp ? perfilChrome() : "" };
+    const correr = () => correrNodo(script, cwd, 170000, env, opc.senal);
+    let r = await correr();
+    if (opc.senal?.aborted) {
+      try {
+        rmSync7(script, { force: true });
+      } catch {}
+      return { ok: false, paginas: 0, errores: [], lineas: ["⏹ prueba en Chrome cancelada por el usuario"], conNavegador: false, capturas: [] };
+    }
+    if (!process.env.SKILL_DEY_CHROMIUM && /Executable doesn't exist|playwright install/i.test(r.stderr)) {
+      await correrProceso("npx", ["playwright", "install", "chromium"], dirname3(pj), 300000);
+      r = await correr();
+    }
+    try {
+      const j = JSON.parse(r.stdout.trim().split(`
+`).pop() ?? "");
+      errores = j.errores;
+      paginas = j.paginas;
+      capturas = j.capturas ?? [];
+      conNavegador = true;
+    } catch {
+      nota = r.tiempoAgotado ? "   ⚠ el navegador superó 170 s y se cortó (sin colgar OpenCode): revisé servidor y enlaces; repite con menos páginas (max)" : `   ⚠ el navegador de pruebas no arrancó (${(r.stderr.match(/\w*Error[^\n]*/)?.[0] ?? "sin detalle").slice(0, 120)}): consola y JS NO revisados, solo servidor y enlaces`;
+    }
+    try {
+      rmSync7(script, { force: true });
+    } catch {}
+  }
+  if (!conNavegador)
+    ({ errores, paginas } = await rastrearFetch(cwd, base, max, DESTR));
+  const unicos = [...new Map(errores.map((e) => [`${e.pagina}|${e.tipo}|${e.detalle}`, e])).values()];
+  const lineas = resumir(unicos, paginas, conNavegador);
+  if (nota)
+    lineas.push(nota);
+  if (capturas.length)
+    lineas.push(`   \uD83D\uDCF8 capturas de las páginas con error: .skill_dey/shots/sitio/ (${capturas.length}) — míralas para ver el fallo`);
+  if (!local)
+    lineas.push("   \uD83D\uDD12 sitio remoto: modo solo lectura (máx. 15 páginas, sin enlaces que cambien datos)");
+  mkdirSync18(join32(cwd, ".skill_dey"), { recursive: true });
+  writeFileSync19(join32(cwd, ".skill_dey", "ERRORES-SITIO.md"), [`# Errores del sitio · ${new Date().toISOString().slice(0, 16).replace("T", " ")} · ${paginas} páginas`, ...unicos.length ? unicos.map((e) => `- [ ] ${e.pagina} · ${e.tipo} · ${e.detalle}`) : ["Sin errores."]].join(`
+`));
+  if (paginas <= 1 && !loginPrueba(cwd))
+    lineas.push("   ℹ solo se pudo ver 1 página: si el resto está tras el login, agrega un usuario de PRUEBA en .env (SKILL_DEY_TEST_USER / SKILL_DEY_TEST_PASS) y repite");
+  return { ok: unicos.length === 0, paginas, errores: unicos, lineas, conNavegador, capturas };
+}
+
 // app/skill_dey-lib/cli.ts
-var [cmd = "ayuda", carpeta = ".", url] = process.argv.slice(2);
-var cwd = resolve(carpeta);
-var AYUDA = `skill_dey por Ing. Dey (@IngDey) · terminal, funciona con cualquier IA
+var banderas = process.argv.slice(2).filter((x) => x.startsWith("--"));
+var posicionales = process.argv.slice(2).filter((x) => !x.startsWith("--"));
+var [cmd = "ayuda", carpeta = ".", url] = posicionales;
+var cwd = resolve2(carpeta);
+var AYUDA = `skill_dey (terminal · funciona con cualquier IA)
   node skill_dey.mjs revisar [carpeta]          Errores de código, arranque y sitio
+  node skill_dey.mjs chrome [carpeta] [url]     Abre la app en Chrome y lee consola/JS/red/HTTP (--visible · --conectar)
   node skill_dey.mjs seguridad [carpeta]        Huecos de seguridad + auditoría de dependencias + semgrep
   node skill_dey.mjs pruebas [carpeta] [url]    Suite E2E + prueba en vivo + a11y + carga + cobertura + CI
   node skill_dey.mjs capacitar [carpeta] [url]  Video subtitulado de capacitación (docs/capacitacion)
@@ -2582,6 +3690,14 @@ var AYUDA = `skill_dey por Ing. Dey (@IngDey) · terminal, funciona con cualquie
   node skill_dey.mjs doctor                      Revisa que la instalación esté completa y coherente
   node skill_dey.mjs hook [carpeta]             Instala un git pre-commit que bloquea commits con errores
   node skill_dey.mjs reporte [carpeta]          Resumen de tu uso real (para recortar con datos)
+  node skill_dey.mjs mapa [carpeta]             Mapa mental (Mermaid) con requisitos + arquitectura
+  node skill_dey.mjs mockup . "<brief>"         Mockup de UI responsive desde un brief (docs/mockups)
+  node skill_dey.mjs prompt <texto>             Reescribe tu pedido como instrucción clara y completa
+  node skill_dey.mjs panel [carpeta]            Panel de observabilidad (tokens/costo/tiempo) en .skill_dey/PANEL.html
+  node skill_dey.mjs checkpoint . <nombre>      Guarda un punto exacto para volver luego (time-travel)
+  node skill_dey.mjs volver . <nombre>          Restaura el proyecto a ese checkpoint (reversible)
+  node skill_dey.mjs hitos [carpeta]            Lista los checkpoints
+  node skill_dey.mjs buscar-memoria <texto>     Busca en tu memoria solo lo relevante (BM25)
   node skill_dey.mjs ayuda                       Esta ayuda
 Dentro de OpenCode: /skill_dey ayuda`;
 async function main() {
@@ -2607,7 +3723,7 @@ async function main() {
     case "pdf":
       return console.log(documentosPdf(cwd));
     case "seguridad":
-      return console.log([...resumenSeguridad(cwd).lineas, ...auditarDependencias(cwd), semgrep(cwd)].filter(Boolean).join(`
+      return console.log([...resumenSeguridad(cwd).lineas, ...await auditarDependencias(cwd), await semgrep(cwd)].filter(Boolean).join(`
 `));
     case "movil":
       return console.log(revisarMovil(cwd).lineas.join(`
@@ -2626,6 +3742,37 @@ async function main() {
     case "informe":
       return console.log(reporte(cwd).join(`
 `));
+    case "mapa":
+    case "mapa-mental":
+    case "mindmap":
+      return console.log(mapaMental(cwd).lineas.join(`
+`));
+    case "mockup":
+    case "diseno":
+      return console.log(generarMockup(cwd, url || "").lineas.join(`
+`));
+    case "prompt":
+    case "optimizar":
+      return console.log(optimizarPrompt(process.argv.slice(3).join(" ")));
+    case "panel":
+    case "observabilidad":
+      return console.log(panel(cwd).lineas.join(`
+`));
+    case "checkpoint":
+    case "hito":
+      return console.log(checkpoint(cwd, url || ""));
+    case "volver":
+    case "restaurar":
+      return console.log(volver(cwd, url || ""));
+    case "hitos":
+    case "checkpoints":
+      return console.log(listarHitos(cwd));
+    case "buscar-memoria":
+    case "memoria": {
+      const r = buscarMemoria(cwd, process.argv.slice(3).join(" "), 8);
+      return console.log(r.length ? r.join(`
+`) : "sin resultados");
+    }
     case "pruebas":
     case "test": {
       const r = await pruebasProfesionales(cwd, url);
@@ -2639,6 +3786,36 @@ async function main() {
       const r = await capacitar(cwd, url);
       return console.log(r.lineas.join(`
 `));
+    }
+    case "chrome":
+    case "navegador":
+    case "consola": {
+      let base = url, app = null;
+      if (!base) {
+        app = await iniciarApp(cwd).catch(() => null);
+        base = app?.url;
+      }
+      if (!base) {
+        console.log("❌ no pude levantar la app: pásame la url");
+        process.exitCode = 1;
+        return;
+      }
+      try {
+        const cdp = banderas.includes("--conectar") ? await chromeAbierto() : null;
+        if (banderas.includes("--conectar") && !cdp) {
+          console.log(`❌ no encontré tu Chrome con depuración. Ábrelo así y repite:
+` + comoAbrirChrome());
+          process.exitCode = 1;
+          return;
+        }
+        const r = await rastrearSitio(cwd, base, asegurarPlaywright(cwd), 40, { visible: banderas.includes("--visible"), cdp });
+        console.log(r.lineas.join(`
+`));
+        process.exitCode = r.ok ? 0 : 1;
+      } finally {
+        app?.detener?.();
+      }
+      return;
     }
     case "revisar": {
       const t = revisarTodo(cwd);

@@ -1,9 +1,9 @@
 ---
 name: politicas-ia
-description: Redacta, revisa o adapta la política de uso seguro de IA para las personas de una empresa (qué pueden hacer, qué herramientas usar y cuáles no, qué datos nunca compartir, cómo reportar). Úsala cuando pidan una política, norma, guía, capacitación o lista de chequeo de uso de IA, o evaluar si un uso de IA es seguro para la compañía.
+description: Política de uso seguro de IA para las personas de una empresa (qué usar, qué no, qué datos nunca compartir), o evaluar si un uso de IA es seguro.
 license: MIT
 metadata:
-  version: "40.0.0"
+  version: "41.0.0"
   author: Ing. Dey (@IngDey)
   idioma: es
 ---

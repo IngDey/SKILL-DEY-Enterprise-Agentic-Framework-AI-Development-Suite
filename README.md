@@ -38,6 +38,10 @@ AI assistants write code fast, and they also break working features, leak secret
 | ✅ **Zero-error delivery** | A task only closes after verification: whole-project review, security audit, automatic tester, formatting, N+1 performance check and server-side validation. |
 | 🛟 **Undo anything** | An automatic snapshot before every request. Say *"deshaz"* (undo) and your files are back, even for small changes. It never touches your branches or history. |
 | 🛡️ **Execution guardian** | Blocks secrets in code, reading `.env`, `git push --force`, commits that weren't verified, `.env` going to git, DB migrations without a backup, truncated code (`// ...rest of the code`) and writes outside your project. |
+| 🎯 **Changes only what you ask** | If the AI wants to touch a file you didn't ask for, it stops and asks you. No rewriting whole files, no "improvements" nobody requested. |
+| 🧩 **Thinks before touching** | Before the first change it writes what it understood, the cause and the plan. Every edit is measured: it tells you which other files use what changed. |
+| 🚑 **Never leaves the app broken** | If the app was healthy and the change breaks it and can't be fixed in 3 tries, it goes back to the healthy state on its own (you can "rehaz"). |
+| 🌍 **Chrome testing** | Walks your app in your own Chrome and reads the console, JS errors, network and HTTP responses, with screenshots. |
 | 🧠 **Persistent project memory** | Decisions, lessons and business rules live in `.skill_dey/` (`BITACORA`, `DECISIONES`, `LECCIONES`, `NEGOCIO`, `ESTADO`, `MARCA`) so context survives across sessions. |
 | 🤖 **Multi-agent** | A main agent, a read-only **explorer** for big searches, a **vision** agent that turns mockups/screenshots into UI, and an **independent reviewer** that audits changes it didn't write. |
 | 📉 **Token-aware** | Small tasks don't load the skill; heavy workflows load only when needed. A usage board shows tokens, cost and time per answer. |
@@ -45,14 +49,17 @@ AI assistants write code fast, and they also break working features, leak secret
 | 🌐 **Native in 4 AIs** | **OpenCode, Claude Code, Gemini CLI and Antigravity CLI** with the same live guardian, the same skill and the same rules. |
 | 🏢 **Safe AI use at work** | `politicas-ia` skill: drafts and reviews your company's AI usage policy for people (what to use, what not, which data never to share). |
 
-### 🆕 What's new in version 40
+### 🆕 What's new in version 41
 
-- **Now native in Claude Code, Gemini CLI and Antigravity CLI**, besides OpenCode, with the **same live guardian** in all four.
-- **Stronger data protection:** blocks dropping or emptying databases and tables, `DELETE` without `WHERE`, `migrate:fresh`, `prisma migrate reset`, `git reset --hard` and downloaded scripts piped into a shell.
-- **Instant `deshaz` (undo)** in Claude Code: runs by code, with zero model tokens.
-- **Modern MCP server:** negotiates the protocol up to 2025-11-25, marks destructive tools, and adds verify, undo, redo, history and freeze.
+Built on v38.14.1 (everything in OpenCode stays the same) and adds:
+
+- **Native in Claude Code, Gemini CLI and Antigravity CLI** with the **same guardian** as OpenCode: only what you asked, reason before touching, impact of every edit, undo, never leave the app broken, and continuity across sessions.
+- **One rule source** (`app/skill_dey-lib/guardia.ts`) for all four AIs; a fix reaches all of them at once.
+- **More protection:** blocks running downloaded scripts unread (`curl … | sh`) and recognizes today's AI and cloud keys (Anthropic, OpenAI, Google, GitHub, Slack, temporary AWS).
+- **Fixed:** answering *"sí"* with an accent wasn't taken as approval.
+- **Modern MCP server:** protocol up to 2025-11-25, verify, undo (with redo and history), freeze, and fewer tokens per message.
 - **New `politicas-ia` skill:** a safe-AI-use policy for the people in your company.
-- **One source of truth:** `scripts/build.mjs` generates every AI package, and 30 automated tests validate them.
+- **36 automated tests** on Windows, macOS and Linux on every change.
 
 ---
 
@@ -191,23 +198,22 @@ You don't need commands. Write normally: *"add the field `owner` to tickets"*, *
 
 | Protection | OpenCode | Claude Code | Gemini CLI | Antigravity |
 |---|:-:|:-:|:-:|:-:|
-| Snapshot before the first change of each request + `deshaz` | ✅ | ✅ | ✅ | ✅ |
-| Blocks dropping/emptying DBs and tables, `DELETE` without `WHERE`, `migrate:fresh`, `prisma migrate reset` | ✅ | ✅ | ✅ | ✅ |
-| Requires a backup before migrating or modifying data | ✅ | ✅ | ✅ | ✅ |
-| Blocks secrets in code and reading real `.env` files | ✅ | ✅ | ✅ | ✅ |
-| Blocks `push --force`, `reset --hard`, mass deletes, `curl … \| sh` | ✅ | ✅ | ✅ | ✅ |
-| Blocks truncated code and changes outside the project or in frozen zones | ✅ | ✅ | ✅ | ✅ |
-| New dependencies only if you asked for them | ✅ | ✅ | ✅ | — |
-| Instant syntax check on every edited file | ✅ | ✅ | ✅ | ✅ (at close) |
-| Won't finish with errors or without a green verification | ✅ | ✅ | ✅ | ✅ |
-| Anti-loop (stops useless repetition) | ✅ | ✅ | ✅ | ✅ |
-| Automatic model switch on quota exhaustion · usage board | ✅ | — | — | — |
+| Snapshot before each request · `deshaz`, `deshaz solo <file>`, `vuelve a antes de <request>` | ✅ | ✅ | ✅ | ✅ (via the tool) |
+| Never drops or empties DBs/tables (SQL, ORM, `.sqlite` file, Docker volumes) · backup before migrating | ✅ | ✅ | ✅ | ✅ |
+| Blocks secrets in code, reading or writing real `.env`, `push --force`, mass deletes, `curl … \| sh` | ✅ | ✅ | ✅ | ✅ |
+| Changes only what you ask · no whole-file rewrites | ✅ | ✅ | ✅ | ✅ |
+| Reason before touching (`Entendí · Causa · Plan`) | ✅ | ✅ | — | — |
+| Impact: tells you which other files use what changed | ✅ | ✅ | ✅ | ✅ (at close) |
+| Instant syntax check · won't finish with errors · rolls back to the healthy state | ✅ | ✅ | ✅ | ✅ |
+| Truncated code, outside the project, frozen zones, unrequested dependencies, anti-loop | ✅ | ✅ | ✅ | ✅ |
+| "Where were we?" and new sessions get the latest requests | ✅ | ✅ | ✅ | — |
+| Model by task · automatic model switch · usage board | ✅ | — | — | — |
 
-All four use **the same rules** (one file: `app/skill_dey-lib/guardia.ts`). If a guardian piece hits something unexpected, it **lets you keep working** and logs it to `~/.config/skill_dey/errores-hook.log`: it never freezes your AI.
+All four use **the same rules** (`app/skill_dey-lib/guardia.ts`). If a guardian piece hits something unexpected, it **lets you keep working** and logs it to `~/.config/skill_dey/errores-hook.log`: it never freezes your AI.
 
 ### MCP server
 
-Tools: `skill_dey_verificar`, `skill_dey_deshacer`, `skill_dey_rehacer`, `skill_dey_historial`, `skill_dey_congelar`, `skill_dey_revisar`, `skill_dey_seguridad`, `skill_dey_validar`, `skill_dey_documentar`, `skill_dey_organizar`, `skill_dey_produccion`, `skill_dey_movil`, `skill_dey_pruebas`, `skill_dey_capacitar`, `skill_dey_multi_ia`. Each one is marked read-only or destructive so your AI asks permission when it should.
+Tools: `skill_dey_verificar`, `skill_dey_deshacer` (also redo and history), `skill_dey_chrome`, `skill_dey_seguridad`, `skill_dey_validar`, `skill_dey_documentar`, `skill_dey_organizar`, `skill_dey_produccion`, `skill_dey_movil`, `skill_dey_pruebas`, `skill_dey_capacitar`, `skill_dey_congelar`. Each one is marked read-only or destructive so your AI asks permission when it should. The project folder is required: it never uses your home folder or the disk root.
 
 Manual setup (any MCP client):
 
@@ -235,12 +241,13 @@ node ~/.config/opencode/skill_dey/skill_dey.mjs revisar|seguridad|pruebas|capaci
 
 ## 🧪 Tested, with receipts
 
-- **Public log of 135 tests** for the OpenCode edition (installers, undo/redo, guardian blocks, site crawler, security tester, docs, model switch…): [`docs/PRUEBAS-REALIZADAS.md`](docs/PRUEBAS-REALIZADAS.md).
-- **30 automated tests** for the cross-platform guardian and the MCP server, using the real payload formats of Claude Code, Gemini CLI and Antigravity: `npm test`. They run on Windows, macOS and Linux on every change (GitHub Actions).
+- **In-depth review of v38.14.1** and its tests (Chrome with seeded errors, a 30,000-file project, security, installation): [`docs/PRUEBAS-REALIZADAS.md`](docs/PRUEBAS-REALIZADAS.md). History of versions 13 to 32: [`docs/PRUEBAS-HISTORICO.md`](docs/PRUEBAS-HISTORICO.md).
+- **36 automated tests** for the Claude Code, Gemini CLI and Antigravity guardian and the MCP server: `npm test`. They run on Windows, macOS and Linux on every change (GitHub Actions).
+- **The OpenCode guardian decides exactly as in v38.14.1:** the same 19 situations tested side by side; only the two new blocks differ.
 - The plugin passes `claude plugin validate` and installs on Claude Code 2.1; the extension passes `gemini extensions validate` and installs on Gemini CLI 0.67.
 - A [10-case benchmark](app/skills/skill-dey/evals/BANCO-DE-PRUEBAS.md) and a comparer (`evals/comparar.mjs`) to measure SKILL DEY against the raw AI **with your own model**.
 
-Known limits, stated plainly: the Antigravity package follows the official plugin specification but hasn't been run with `agy` on a real machine yet (run `agy plugin validate --strict ./hosts/antigravity` and let us know). Decision quality depends on the model you use. Reports from your environment are very welcome.
+Known limits, stated plainly: the Antigravity package follows the official plugin specification but hasn't been run with `agy` on a real machine yet (run `agy plugin validate --strict ./hosts/antigravity` and let us know). Decision quality depends on the model you use.
 
 ---
 

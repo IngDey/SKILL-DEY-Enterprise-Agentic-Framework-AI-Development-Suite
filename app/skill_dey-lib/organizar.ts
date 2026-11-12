@@ -1,8 +1,8 @@
 // SKILL_DEY — /organizar: ordena el proyecto por código (0 tokens). SEGURO: lo que no rompe se aplica solo
 // (indentación/formato); lo que puede romper (mover archivos, cambiar rutas) se PROPONE para que el modelo lo haga
 // con skill_dey_impacto + verificar. Detecta: código duplicado (reutilizar), archivos huérfanos, estructura fuera de convención.
-import { spawnSync } from "node:child_process"
-import { readFileSync, statSync } from "node:fs"
+import { foto } from "./respaldo.ts"
+import { readFileSync } from "node:fs"
 import { join, basename, extname, dirname } from "node:path"
 import { formatear } from "./extras.ts"
 import { listarArchivos } from "./listar.ts"
@@ -25,16 +25,31 @@ function duplicados(cwd: string, files: string[]): string[] {
       const k = norm; if (!vistos.has(k)) vistos.set(k, []); vistos.get(k)!.push(`${f}:${i + 1}`)
     }
   }
+  // Dónde proponer el helper común, según el lenguaje del proyecto (propuesta concreta, no se aplica solo)
+  const destino = (f: string) => { const e = extname(f).toLowerCase()
+    if (/\.php$/.test(e)) return "app/Helpers/ (o includes/) como función/clase reutilizable"
+    if (/\.py$/.test(e)) return "utils.py como función reutilizable"
+    if (/\.(m?[jt]sx?|cjs)$/.test(e)) return /tsx?$/.test(e) && /[A-Z]/.test(basename(f)[0] ?? "") ? "un componente compartido en src/components/ (o src/lib/)" : "src/lib/ (o utils/) como función exportada"
+    return "un módulo común reutilizable" }
   const r: string[] = []
-  for (const [, locs] of vistos) { const arch = [...new Set(locs.map((l) => l.split(":")[0]))]; if (locs.length >= 2 && arch.length >= 2) r.push(`bloque repetido en ${locs.slice(0, 3).join(" ≈ ")} → extrae a una función compartida`) }
+  for (const [, locs] of vistos) {
+    const arch = [...new Set(locs.map((l) => l.split(":")[0]))]
+    if (locs.length >= 2 && arch.length >= 2) {
+      const nombre = "comun" + (r.length + 1)
+      r.push(`bloque repetido en ${locs.slice(0, 3).join(" ≈ ")}\n     → PROPUESTA DRY: extrae ese bloque a ${destino(arch[0])}, nómbralo \`${nombre}()\` y reemplázalo en los ${arch.length} archivos. Hazlo con skill_dey_impacto + skill_dey_verificar (un cambio, con undo).`)
+    }
+  }
   return [...new Set(r)].slice(0, 8)
 }
 
 /** Archivos de código que nadie importa/incluye (posibles huérfanos; propone revisar, no borra). */
 function huerfanos(cwd: string, files: string[]): string[] {
   const cod = files.filter((f) => COD.test(f) && !/(index|app|main|server|autoload|bootstrap|routes?|web|api)\.[a-z]+$|(^|[\\/])(pages|views|screens|app)[\\/]/i.test(f))
-  const todo = files.filter((f) => /\.(m?[jt]sx?|cjs|vue|svelte|php|py|html|blade\.php|twig)$/.test(f)).map((f) => leer(join(cwd, f))).join("\n")
-  return cod.filter((f) => { const base = basename(f).replace(/\.[^.]+$/, ""); return base.length > 2 && !new RegExp(`['"\\/]${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\.[a-z]+)?['"\\s)/]`).test(todo) }).slice(0, 8)
+  // UNA pasada: nombres que aparecen referenciados entre comillas o rutas (antes: una regex sobre TODO el código por cada archivo → cuadrático)
+  const citados = new Set<string>()
+  for (const f of files.filter((f) => /\.(m?[jt]sx?|cjs|vue|svelte|php|py|html|blade\.php|twig)$/.test(f)).slice(0, 8000))
+    for (const m of leer(join(cwd, f)).slice(0, 1_000_000).matchAll(/['"\/]([\w.-]+?)(?:\.[a-z]+)?(?=['"\s)/])/g)) citados.add(m[1])
+  return cod.filter((f) => { const base = basename(f).replace(/\.[^.]+$/, ""); return base.length > 2 && !citados.has(base) }).slice(0, 8)
 }
 
 /** Archivos que probablemente están en la carpeta equivocada según su contenido. */
@@ -51,12 +66,13 @@ function fueraDeLugar(cwd: string, files: string[]): string[] {
 /** Ejecuta /organizar: aplica formato (seguro) y devuelve el informe + el plan de lo que el modelo debe mover con cuidado. */
 export function organizar(cwd: string): string {
   const files = archivos(cwd)
-  const fmt = formatear(cwd, false) // indentación/estilo en TODO el proyecto (seguro, no cambia la lógica)
+  const respaldo = foto(cwd, "pasos", "cambio", "antes de organizar (formato)") // se puede deshacer con "deshaz"
+  const fmt = formatear(cwd, false) // estilo en TODO el proyecto con el formateador que TU proyecto configuró (no cambia la lógica)
   const dup = duplicados(cwd, files), huer = huerfanos(cwd, files), lugar = fueraDeLugar(cwd, files)
   const grandes = files.filter((f) => COD.test(f) && leer(join(cwd, f)).split("\n").length > 400).map((f) => `${f} (${leer(join(cwd, f)).split("\n").length} líneas) → dividir`)
   const L = [
     `SKILL_DEY organizar · ${files.length} archivos`,
-    "1) Indentación y estilo: " + fmt.replace(/^[✅⏭]\s*/, ""),
+    "1) Indentación y estilo: " + fmt.replace(/^[✅⏭]\s*/, "") + (respaldo ? " (reversible: escribe \"deshaz\")" : ""),
     dup.length ? "2) Reutilizar (código repetido):\n" + dup.map((d) => "   - " + d).join("\n") : "2) Reutilizar: sin duplicados evidentes ✅",
     lugar.length ? "3) Código fuera de su capa:\n" + lugar.map((d) => "   - " + d).join("\n") : "3) Capas: todo en su lugar ✅",
     grandes.length ? "4) Archivos muy grandes:\n" + grandes.map((d) => "   - " + d).join("\n") : "4) Tamaño de archivos: ok ✅",

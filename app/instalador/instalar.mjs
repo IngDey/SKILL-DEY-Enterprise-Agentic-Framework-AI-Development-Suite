@@ -11,7 +11,7 @@ const OC = process.env.OPENCODE_CONFIG_DIR || join(homedir(), ".config", "openco
 const ok = (t) => console.log(`  \x1b[32m[OK]\x1b[0m ${t}`)
 const av = (t) => console.log(`  \x1b[33m[!]\x1b[0m  ${t}`)
 const md = (p) => mkdirSync(p, { recursive: true })
-const leerJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")) } catch { return undefined } }
+const leerJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8").replace(/^\uFEFF/, "")) } catch { return undefined } }
 const esc = (p, s) => writeFileSync(p, s, "utf8")
 const cmd = (c, a = []) => { const r = spawnSync(c, a, { encoding: "utf8", shell: platform() === "win32", timeout: 60_000 }); return r.status === 0 ? (r.stdout || "").trim() : null }
 const hay = (c) => cmd(platform() === "win32" ? "where" : "which", [c]) !== null
@@ -49,7 +49,7 @@ export function elegirRapido(lista, principal) {
 }
 
 function main() {
-  console.log(`\n\x1b[36mInstalando SKILL_DEY, creado por Ing. Dey (@IngDey) · ${SO} ${release()} ${arch()} · ${OC}\x1b[0m\n`)
+  console.log(`\n\x1b[36mInstalando SKILL_DEY · ${SO} ${release()} ${arch()} · ${OC}\x1b[0m\n`)
   if (!existsSync(join(SRC, "skills", "skill-dey", "SKILL.md"))) throw new Error("No encuentro los archivos: descomprime el zip completo y ejecuta desde esa carpeta.")
   for (const d of ["skills", "agents", "commands", "tools", "plugins", "skill_dey"]) md(join(OC, d))
 
@@ -65,11 +65,26 @@ function main() {
   if (existsSync(viejaPref) && !existsSync(nuevaPref)) copyFileSync(viejaPref, nuevaPref)
   rmSync(join(OC, "skills", "skill-dey"), { recursive: true, force: true })
   cpSync(join(SRC, "skills", "skill-dey"), join(OC, "skills", "skill-dey"), { recursive: true }); ok("Skill skill_dey")
-  rmSync(join(OC, "skills", "politicas-ia"), { recursive: true, force: true })
-  cpSync(join(SRC, "portable", "skills", "politicas-ia"), join(OC, "skills", "politicas-ia"), { recursive: true }); ok("Skill politicas-ia (uso seguro de IA para las personas)")
+  if (existsSync(join(SRC, "portable", "skills", "politicas-ia"))) { rmSync(join(OC, "skills", "politicas-ia"), { recursive: true, force: true }); cpSync(join(SRC, "portable", "skills", "politicas-ia"), join(OC, "skills", "politicas-ia"), { recursive: true }); ok("Skill politicas-ia (uso seguro de IA para las personas)") }
   copyFileSync(join(SRC, "tools", "skill_dey.ts"), join(OC, "tools", "skill_dey.ts")); ok("Herramientas skill_dey_verificar · skill_dey_impacto · skill_dey_leccion · skill_dey_recordar · skill_dey_deshacer")
   rmSync(join(OC, "skill_dey-lib"), { recursive: true, force: true }); cpSync(join(SRC, "skill_dey-lib"), join(OC, "skill_dey-lib"), { recursive: true })
   copyFileSync(join(SRC, "plugins", "skill_dey-guardian.ts"), join(OC, "plugins", "skill_dey-guardian.ts")); ok("Plugin guardián + respaldo automático (deshacer siempre disponible)")
+  // Navegador de pruebas: usa tu Chrome/Edge/Brave (sin bajar 150 MB de Chromium) y deja Playwright listo para que la 1ª prueba sea inmediata
+  try {
+    const H = homedir(), E = process.env, W = platform() === "win32"
+    const cands = platform() === "darwin" ? ["Google Chrome.app/Contents/MacOS/Google Chrome", "Microsoft Edge.app/Contents/MacOS/Microsoft Edge", "Brave Browser.app/Contents/MacOS/Brave Browser", "Chromium.app/Contents/MacOS/Chromium"].flatMap((a) => ["/Applications/" + a, join(H, "Applications", a)])
+      : W ? [E.PROGRAMFILES, E["PROGRAMFILES(X86)"], E.LOCALAPPDATA].filter(Boolean).flatMap((b) => [join(b, "Google", "Chrome", "Application", "chrome.exe"), join(b, "Microsoft", "Edge", "Application", "msedge.exe"), join(b, "BraveSoftware", "Brave-Browser", "Application", "brave.exe")])
+      : ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/opt/google/chrome/chrome", "/usr/bin/microsoft-edge", "/usr/bin/brave-browser", "/usr/bin/chromium", "/usr/bin/chromium-browser", "/snap/bin/chromium"]
+    const chrome = cands.find((c) => existsSync(c))
+    const pw = join(OC, "skill_dey", "playwright"); md(pw)
+    if (!existsSync(join(pw, "package.json"))) esc(join(pw, "package.json"), JSON.stringify({ name: "skill-dey-playwright", private: true }))
+    if (!existsSync(join(pw, "node_modules", "playwright"))) {
+      console.log("  … preparando el navegador de pruebas (una sola vez, ~30 s)")
+      spawnSync("npm", ["i", "playwright", "@axe-core/playwright", "--no-audit", "--no-fund", "--silent"], { cwd: pw, shell: W, timeout: 300_000, env: { ...E, PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1" } })
+    }
+    if (!existsSync(join(pw, "node_modules", "playwright"))) av("No pude preparar Playwright (¿sin internet?): se instalará solo la primera vez que pruebes en el navegador.")
+    else ok(chrome ? `Pruebas en tu navegador: ${chrome.split(/[\\/]/).pop().replace(/\.exe$/i, "")} (consola, errores JS, red · /skill_dey chrome)` : "Pruebas en navegador listas (no vi Chrome: la 1ª vez se baja Chromium de pruebas)")
+  } catch (e) { av("Navegador de pruebas: se preparará la primera vez que lo uses (" + (e?.message ?? e) + ")") }
 
   const pj = join(OC, "package.json"); const p = leerJson(pj) ?? (existsSync(pj) ? null : {})
   if (p) { p.dependencies ??= {}; p.dependencies["@opencode-ai/plugin"] ??= "latest"; esc(pj, JSON.stringify(p, null, 2)); ok("Dependencias (OpenCode las instala al abrir)") }
@@ -80,7 +95,7 @@ function main() {
   const fj = ["opencode.json", "opencode.jsonc"].map((f) => join(OC, f)).find(existsSync) ?? join(OC, "opencode.json")
   let conf = leerJson(fj)
   if (conf === undefined && existsSync(fj)) { av(`${fj.split(/[\\/]/).pop()} tiene comentarios: agrega a mano  "default_agent": "skill_dey"`); conf = null }
-  else { conf ??= { $schema: "https://opencode.ai/config.json" }; if (existsSync(fj)) copyFileSync(fj, fj + ".bak") }
+  else { conf ??= { $schema: "https://opencode.ai/config.json" }; if (existsSync(fj)) copyFileSync(fj, existsSync(fj + ".bak") ? `${fj}.${new Date().toISOString().slice(0, 10)}.bak` : fj + ".bak") } // el respaldo original nunca se pisa
 
   // agentes + modelo rápido
   copyFileSync(join(SRC, "agents", "skill_dey.md"), join(OC, "agents", "skill_dey.md"))
@@ -113,14 +128,14 @@ function main() {
   for (const f of ["LECCIONES-GLOBALES.md", "PREFERENCIAS.md"]) if (!existsSync(join(OC, "skill_dey", f))) copyFileSync(join(SRC, "global", f), join(OC, "skill_dey", f))
   { const pf = join(OC, "skill_dey", "PREFERENCIAS.md"); const tiene = readFileSync(pf, "utf8"); const faltan = readFileSync(join(SRC, "global", "PREFERENCIAS.md"), "utf8").split(/\r?\n/).filter((l) => l.startsWith("⭐") && !tiene.includes(l.split("]")[0] + "]"))
     if (faltan.length) writeFileSync(pf, tiene.trimEnd() + "\n" + faltan.join("\n") + "\n") }
-  esc(join(OC, "skill_dey", "VERSION"), "40.0.0")
+  { let _ver = "41.0.0"; try { _ver = readFileSync(join(SRC, "skill_dey", "VERSION"), "utf8").trim() || _ver } catch {} esc(join(OC, "skill_dey", "VERSION"), _ver) }
   ok("Memoria global (lo aprendido se conserva)")
 
   const ag = join(OC, "AGENTS.md"); let o = existsSync(ag) ? readFileSync(ag, "utf8") : ""
   o = o.replace(/<!-- FORJA-INICIO -->[\s\S]*?<!-- FORJA-FIN -->\r?\n?/g, "").replace(/<!-- SKILL_DEY-INICIO -->[\s\S]*?<!-- SKILL_DEY-FIN -->\r?\n?/g, "").replace(/# Reglas globales \(todas las apps\)[\s\S]*?capturas\)\.\r?\n?/g, "")
   esc(ag, (o.trimEnd() + "\n" + readFileSync(join(SRC, "AGENTS.md"), "utf8")).trimStart()); ok("Reglas globales")
 
-  if (conf) { conf.compaction = { auto: true, prune: true, ...(conf.compaction ?? {}) } /* resume solo al llenarse y poda salidas viejas de herramientas: menos tokens por consulta */; conf.default_agent = "skill_dey"; esc(fj, JSON.stringify(conf, null, 2)); ok("SKILL_DEY es el agente por defecto") }
+  if (conf) { conf.compaction = { auto: true, prune: true, ...(conf.compaction ?? {}) } /* resume solo al llenarse y poda salidas viejas de herramientas: menos tokens por consulta */; if (conf.default_agent && conf.default_agent !== "skill_dey") esc(join(OC, "skill_dey", "AGENTE-ANTERIOR.txt"), String(conf.default_agent)); conf.default_agent = "skill_dey"; esc(fj, JSON.stringify(conf, null, 2)); ok("SKILL_DEY es el agente por defecto") }
 
   // diagnóstico del equipo según el sistema operativo
   const py = ["python3", "python", "py"].find(hay)
@@ -132,8 +147,11 @@ function main() {
   const falt = [["git", hay("git")], ["opencode", hay("opencode")], ["python", !!py]].filter(([, v]) => !v).map(([n]) => n)
   for (const n of falt) av(`Falta ${n}${n === "python" ? " (opcional)" : ""} en ${SO} → ${guias[n][SO] ?? guias[n].Linux}`)
   if (!falt.length) ok(`Equipo ${SO} listo (git, opencode, ${py})`)
+  let _vok = "41.0.0"; try { _vok = readFileSync(join(OC, "skill_dey", "VERSION"), "utf8").trim() || _vok } catch {}
+  console.log(`\n  \x1b[32m\u2714 SKILL_DEY v${_vok} instalado correctamente.\x1b[0m`)
+  console.log(`  \x1b[36mCierra y abre OpenCode. Para confirmar, escribe:  /skill_dey version\x1b[0m\n`)
   const otras = instalarOtrasIAs()
-  console.log(`\n  \x1b[36mLISTO. Cierra y abre ${["OpenCode", ...otras].join(", ")} y escribe normal.\x1b[0m\n  SKILL_DEY · creado por Ing. Dey (@IngDey) · github.com/IngDey\n`)
+  if (otras.length) console.log(`\n  \x1b[36mTambién quedó en: ${otras.join(", ")}. Ciérralas y ábrelas de nuevo.\x1b[0m\n`)
 }
 
 // ---------- Claude Code, Gemini CLI y Antigravity CLI ----------

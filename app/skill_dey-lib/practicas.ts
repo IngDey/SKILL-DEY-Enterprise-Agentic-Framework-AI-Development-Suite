@@ -18,7 +18,7 @@ const GRAVES: Regla[] = [
   { re: /\b(eval|assert)\s*\(\s*\$|extract\s*\(\s*\$_(GET|POST|REQUEST)/i, ext: PHP, texto: "eval/extract con datos del usuario" },
   { re: /(echo|print|<\?=)\s*[^;]*\$_(GET|POST|REQUEST|COOKIE)/i, ext: PHP, texto: "imprime entrada del usuario sin escapar (XSS)", excluir: /htmlspecialchars|htmlentities|intval|\(int\)|filter_var|json_encode/i },
   { re: /\b(eval|exec)\s*\(|pickle\.loads?\s*\(|subprocess\.[a-z_]+\([^)]*shell\s*=\s*True/, ext: PY, texto: "eval/exec/pickle/shell=True (ejecución arbitraria)" },
-  { re: /execute\s*\(\s*f["']|execute\s*\([^)]*%\s*\(?[\w]/, ext: PY, texto: "SQL armado con texto (inyección): usa parámetros" },
+  { re: /execute\s*\(\s*f["']|execute\s*\(\s*["'][^"']*["']\s*%\s*\(?[\w]|execute\s*\([^)]*["']\s*\+\s*\w/, ext: PY, texto: "SQL armado con texto (inyección): usa parámetros" }, // "%s" con tupla aparte es correcto; lo malo es "..." % x
 ]
 const AVISOS: Regla[] = [
   { re: /console\.(log|debug)\s*\(|\bdebugger\s*;/, ext: JS, texto: "console.log/debugger olvidado" },

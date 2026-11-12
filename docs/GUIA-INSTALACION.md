@@ -1,4 +1,4 @@
-# SKILL DEY v40 — guía de instalación
+# SKILL DEY v41 — guía de instalación
 
 ## Instalar en todas tus IAs de una vez
 1. Instala [Node.js](https://nodejs.org/) 20+ y, recomendado, [Git](https://git-scm.com/).
